@@ -88,10 +88,10 @@ class PomodoroViewModel(
                 it.copy(
                     currentMode = Mode.BREAK,
                     timeLeft = it.settings.breakTime * 60,
-                    currentScreen = Screen.Animal,
+                    currentScreen = Screen.Main, // AnimalScreen으로 전환하는 대신 MainScreen 유지
                     activeSprites = it.activeSprites + sprite,
                     totalSessions = it.totalSessions + 1,
-                    isRunning = it.settings.autoStart,  // ✅ 자동 시작 여부 반영
+                    isRunning = it.settings.autoStart,
                     isPaused = false
                 )
             }
@@ -103,7 +103,7 @@ class PomodoroViewModel(
                     currentMode = Mode.STUDY,
                     timeLeft = it.settings.studyTime * 60,
                     currentScreen = Screen.Main,
-                    isRunning = it.settings.autoStart,  // ✅ 자동 시작 여부 반영
+                    isRunning = it.settings.autoStart,
                     isPaused = false
                 )
             }
@@ -116,7 +116,7 @@ class PomodoroViewModel(
         updateSettings {
             copy(studyTime = v)
         }
-        
+
         //시간 ui 변경
         _uiState.update { state ->
             state.copy(
@@ -233,4 +233,3 @@ class PomodoroViewModel(
         return AnimalsTable.randomByRarity(rarity)
     }
 }
-

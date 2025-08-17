@@ -5,7 +5,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.malrang.pomodoro.data.Screen
-import com.malrang.pomodoro.ui.screen.AnimalScreen
 import com.malrang.pomodoro.ui.screen.CollectionScreen
 import com.malrang.pomodoro.ui.screen.MainScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen
@@ -23,9 +22,10 @@ fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
     val s by vm.uiState.collectAsState()
     when (s.currentScreen) {
         Screen.Main -> MainScreen(vm)
-        Screen.Animal -> AnimalScreen(vm)
         Screen.Collection -> CollectionScreen(vm)
         Screen.Settings -> SettingsScreen(vm)
         Screen.Stats -> StatsScreen(vm)
+        // AnimalScreen은 MainScreen에 통합되었으므로 제거
+        else -> MainScreen(vm)
     }
 }
