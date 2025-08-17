@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -224,7 +225,6 @@ fun SpriteSheetImage(
                 srcOffset = IntOffset(col * frameWidth, row * frameHeight),
                 srcSize = IntSize(frameWidth, frameHeight),
                 dstSize = IntSize(dstWidth, dstHeight),
-                dstOffset = IntOffset(0, 0)
             )
         }
     }

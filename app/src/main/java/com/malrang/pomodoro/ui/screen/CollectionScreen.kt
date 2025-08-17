@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,8 +29,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.malrang.pomodoro.data.Animal
+import com.malrang.pomodoro.data.AnimalSprite
 import com.malrang.pomodoro.data.Rarity
 import com.malrang.pomodoro.data.Screen
+import com.malrang.pomodoro.data.SpriteMap
+import com.malrang.pomodoro.data.SpriteState
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -47,7 +53,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
             .padding(16.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("🐾 동물 도감", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("🐾 움직이는 동물 도감", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Button(onClick = { viewModel.showScreen(Screen.Main) }) { Text("← 돌아가기") }
         }
 
@@ -67,7 +73,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
                         colors = CardDefaults.cardColors(containerColor = Color(0x33FFFFFF))
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
-                            Text(animal.emoji, fontSize = 32.sp)
+                            SpriteItem(animal = animal)
                             Text(animal.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Text(
                                 when (animal.rarity) {
@@ -85,4 +91,34 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
             }
         }
     }
+}
+
+@Composable
+fun SpriteItem(animal: Animal) {
+    val spriteData = SpriteMap.map[animal.id]
+    if(spriteData == null) return
+    val tempSprite = remember(animal.id) {
+        AnimalSprite(
+            id = animal.id + "-collection",
+            animalId = animal.id,
+            idleSheetRes = spriteData.idleRes,
+            idleCols = spriteData.idleCols,
+            idleRows = spriteData.idleRows,
+            jumpSheetRes = spriteData.jumpRes,
+            jumpCols = spriteData.jumpCols,
+            jumpRows = spriteData.jumpRows,
+            spriteState = SpriteState.IDLE,
+            x = 0f,
+            y = 0f,
+            vx = 0f,
+            vy = 0f,
+            sizeDp = 64f
+        )
+    }
+
+    SpriteSheetImage(
+        sprite = tempSprite,
+        onJumpFinished = {},
+        modifier = Modifier.size(64.dp)
+    )
 }
