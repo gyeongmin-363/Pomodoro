@@ -9,6 +9,7 @@ import com.malrang.pomodoro.ui.screen.AnimalScreen
 import com.malrang.pomodoro.ui.screen.CollectionScreen
 import com.malrang.pomodoro.ui.screen.MainScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen
+import com.malrang.pomodoro.ui.screen.StatsScreen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -18,13 +19,13 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
  * @param viewModel [PomodoroViewModel]의 인스턴스입니다.
  */
 @Composable
-fun PomodoroApp(viewModel: PomodoroViewModel = viewModel()) {
-    val state by viewModel.uiState.collectAsState()
-
-    when (state.currentScreen) {
-        Screen.Main -> MainScreen(viewModel)
-        Screen.Animal -> AnimalScreen(viewModel)
-        Screen.Collection -> CollectionScreen(viewModel)
-        Screen.Settings -> SettingsScreen(viewModel)
+fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
+    val s by vm.uiState.collectAsState()
+    when (s.currentScreen) {
+        Screen.Main -> MainScreen(vm)
+        Screen.Animal -> AnimalScreen(vm)
+        Screen.Collection -> CollectionScreen(vm)
+        Screen.Settings -> SettingsScreen(vm)
+        Screen.Stats -> StatsScreen(vm)
     }
 }

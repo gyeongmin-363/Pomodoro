@@ -15,14 +15,26 @@ package com.malrang.pomodoro.data
  */
 data class PomodoroUiState(
     val currentScreen: Screen = Screen.Main,
+    val currentMode: Mode = Mode.STUDY,
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,
-    val currentMode: Mode = Mode.STUDY,
     val timeLeft: Int = 30 * 60,
     val cycleCount: Int = 1,
-    val collectedAnimals: List<Animal> = emptyList(),
-    val totalSessions: Int = 0,
+
+    // 도감(영구) + 이번 세션 스프라이트(비영구)
+    val collectedAnimals: List<Animal> = emptyList(), // 도감(영구 저장분 + 이번에 새로 만난 것 반영된 메모리 상태)
+    val activeSprites: List<AnimalSprite> = emptyList(), // 브레이크마다 추가, 앱 종료 시 초기화
+
+    // 통계
+    val totalSessions: Int = 0, // 총합(메모리용)
+    val dailyStats: Map<String, DailyStat> = emptyMap(), // 일별(영구)
     val settings: Settings = Settings()
+)
+
+// 일별 기록
+data class DailyStat(
+    val date: String,          // "yyyy-MM-dd"
+    val studySessions: Int     // 완료한 공부 세션 수
 )
 
 /**
@@ -36,7 +48,9 @@ enum class Screen {
     /** 동물 도감 화면 */
     Collection,
     /** 설정 화면 */
-    Settings
+    Settings,
+    /** 얜 뭐임? */
+    Stats
 }
 
 /**

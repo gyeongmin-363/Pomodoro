@@ -51,6 +51,9 @@ dependencies {
     implementation(libs.androidx.material3)
    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("com.google.code.gson:gson:2.13.1")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

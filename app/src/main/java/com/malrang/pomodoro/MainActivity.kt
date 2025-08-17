@@ -1,11 +1,17 @@
 package com.malrang.pomodoro
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.malrang.pomodoro.data.PomodoroRepository
 import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
+import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
  * 앱의 메인 액티비티입니다.
@@ -21,8 +27,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PomodoroTheme {
-                PomodoroApp()
+                val vm: PomodoroViewModel = viewModel(factory = PomodoroVMFactory(application))
+                PomodoroApp(vm)
             }
         }
+    }
+}
+
+class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        val repo = PomodoroRepository(app)
+        @Suppress("UNCHECKED_CAST")
+        return PomodoroViewModel(repo, app) as T
     }
 }

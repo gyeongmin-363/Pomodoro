@@ -105,6 +105,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Button(onClick = { viewModel.showScreen(Screen.Collection) }) { Text("📚 동물 도감") }
             Button(onClick = { viewModel.showScreen(Screen.Settings) }) { Text("⚙️ 설정") }
+            Button(onClick = { viewModel.showScreen(Screen.Stats) }) { Text("📊 통계") }
         }
     }
 }

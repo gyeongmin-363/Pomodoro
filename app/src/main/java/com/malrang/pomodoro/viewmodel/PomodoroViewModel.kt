@@ -1,32 +1,53 @@
 package com.malrang.pomodoro.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.malrang.pomodoro.R
 import com.malrang.pomodoro.data.Animal
+import com.malrang.pomodoro.data.AnimalSprite
+import com.malrang.pomodoro.data.AnimalsTable
+import com.malrang.pomodoro.data.DailyStat
 import com.malrang.pomodoro.data.Mode
+import com.malrang.pomodoro.data.PomodoroRepository
 import com.malrang.pomodoro.data.PomodoroUiState
 import com.malrang.pomodoro.data.Rarity
 import com.malrang.pomodoro.data.Screen
+import com.malrang.pomodoro.data.SpriteData
+import com.malrang.pomodoro.data.SpriteMap
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import kotlin.random.Random
 
-/**
- * Pomodoro 앱의 UI 상태를 관리하고 비즈니스 로직을 처리하는 ViewModel입니다.
- */
-class PomodoroViewModel : ViewModel() {
+class PomodoroViewModel(
+    private val repo: PomodoroRepository,
+    private val app: Application
+) : AndroidViewModel(app) {
+
     private val _uiState = MutableStateFlow(PomodoroUiState())
-    val uiState: StateFlow<PomodoroUiState> = _uiState
+    val uiState: StateFlow<PomodoroUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
 
-    /**
-     * 타이머를 시작합니다. 이미 실행 중인 경우 아무 작업도 수행하지 않습니다.
-     */
+    // 초기 로드
+    init {
+        viewModelScope.launch {
+            val seenIds = repo.loadSeenIds()
+            val daily = repo.loadDailyStats()
+
+            // 도감 채우기: id만 있으니 이름/희귀도는 테이블에서 채움
+            val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
+            _uiState.update { it.copy(collectedAnimals = seenAnimals, dailyStats = daily) }
+        }
+    }
+
+    // —— 타이머 제어 ——
     fun startTimer() {
         if (_uiState.value.isRunning) return
         _uiState.update { it.copy(isRunning = true, isPaused = false) }
@@ -34,141 +55,138 @@ class PomodoroViewModel : ViewModel() {
         timerJob = viewModelScope.launch {
             while (_uiState.value.timeLeft > 0 && _uiState.value.isRunning) {
                 delay(1000)
-                _uiState.update { it.copy(timeLeft = it.timeLeft - 1) }
+                _uiState.update { s -> s.copy(timeLeft = s.timeLeft - 1) }
             }
             if (_uiState.value.timeLeft <= 0) completeSession()
         }
     }
 
-    /**
-     * 타이머를 일시정지합니다.
-     */
     fun pauseTimer() {
         timerJob?.cancel()
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
     }
 
-    /**
-     * 현재 모드에 맞게 타이머를 리셋합니다.
-     */
     fun resetTimer() {
         timerJob?.cancel()
         val s = _uiState.value
-        val newTime = if (s.currentMode == Mode.STUDY) s.settings.studyTime else s.settings.breakTime
-        _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = newTime * 60) }
+        val base = if (s.currentMode == Mode.STUDY) s.settings.studyTime else s.settings.breakTime
+        _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = base * 60) }
     }
 
-    /**
-     * 현재 세션을 완료하고 다음 모드로 전환합니다.
-     * 공부 세션이 끝나면 동물을 획득하고 휴식 모드로, 휴식 세션이 끝나면 다음 사이클의 공부 모드로 전환합니다.
-     */
     private fun completeSession() {
         val s = _uiState.value
         if (s.currentMode == Mode.STUDY) {
-            // 공부 끝나면 → 무조건 동물 화면
-            val newAnimal = getRandomAnimal()
+            // 공부 세션 완료 → 일별 통계 +1, 브레이크 시작 + 스프라이트 추가 + 도감 저장
+            viewModelScope.launch { incTodayStat() }
+            val animal = getRandomAnimal()
+
+            // 도감 업데이트(영구)
+            viewModelScope.launch {
+                val curr = repo.loadSeenIds().toMutableSet()
+                if (!curr.contains(animal.id)) {
+                    curr.add(animal.id)
+                    repo.saveSeenIds(curr)
+                }
+                // 메모리 도감 동기화
+                val merged = (curr.mapNotNull { AnimalsTable.byId(it) }).distinctBy { it.id }
+                _uiState.update { it.copy(collectedAnimals = merged) }
+            }
+
+            // 스프라이트 추가(세션 메모리 전용)
+            val sprite = makeSprite(animal.id)
             _uiState.update {
                 it.copy(
-                    totalSessions = s.totalSessions + 1,
                     currentMode = Mode.BREAK,
-                    timeLeft = s.settings.breakTime * 60,
-                    currentScreen = Screen.Animal,
-                    collectedAnimals = if (newAnimal != null && it.collectedAnimals.none { a -> a.id == newAnimal.id }) {
-                        it.collectedAnimals + newAnimal
-                    } else it.collectedAnimals
+                    timeLeft = it.settings.breakTime * 60,
+                    currentScreen = Screen.Animal,      // 동물 화면
+                    activeSprites = it.activeSprites + sprite,
+                    totalSessions = it.totalSessions + 1
                 )
             }
         } else {
-            // 휴식 끝나면 → 다음 공부 시작
+            // 브레이크 끝 → 다음 공부
             _uiState.update {
                 it.copy(
-                    cycleCount = s.cycleCount + 1,
+                    cycleCount = it.cycleCount + 1,
                     currentMode = Mode.STUDY,
-                    timeLeft = s.settings.studyTime * 60,
+                    timeLeft = it.settings.studyTime * 60,
                     currentScreen = Screen.Main
                 )
             }
         }
     }
 
+    // —— 설정 변경 ——
+    fun updateStudyTime(v: Int) {
+        _uiState.update { it.copy(settings = it.settings.copy(studyTime = v), timeLeft = if (it.currentMode == Mode.STUDY) v * 60 else it.timeLeft) }
+    }
+    fun updateBreakTime(v: Int) {
+        _uiState.update { it.copy(settings = it.settings.copy(breakTime = v), timeLeft = if (it.currentMode == Mode.BREAK) v * 60 else it.timeLeft) }
+    }
+    fun toggleSound(b: Boolean) { _uiState.update { it.copy(settings = it.settings.copy(soundEnabled = b)) } }
+    fun toggleVibration(b: Boolean) { _uiState.update { it.copy(settings = it.settings.copy(vibrationEnabled = b)) } }
+
+    fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
+
+    // —— 통계 업데이트 ——
+    private suspend fun incTodayStat() {
+        val today = LocalDate.now().toString()
+        val current = repo.loadDailyStats().toMutableMap()
+        val prev = current[today]?.studySessions ?: 0
+        current[today] = DailyStat(today, prev + 1)
+        repo.saveDailyStats(current)
+        _uiState.update { it.copy(dailyStats = current) }
+    }
+
+    // —— 스프라이트 유틸 ——
+    private fun makeSprite(animalId: String): AnimalSprite {
+        val spriteData = SpriteMap.map[animalId] ?: SpriteData(R.drawable.idle_catttt, 7, 1)
+
+
+        val rnd = Random(System.currentTimeMillis())
+        return AnimalSprite(
+            animalId = animalId,
+            sheetRes = spriteData.sheetRes,
+            frameCols = spriteData.cols,
+            frameRows = spriteData.rows,
+            frameDurationMs = 120L,
+            x = rnd.nextInt(0, 600).toFloat(),
+            y = rnd.nextInt(0, 1000).toFloat(),
+            vx = listOf(-70f, 70f).random(),
+            vy = listOf(-50f, 50f).random(),
+            sizeDp = 48f
+        )
+    }
+
+
+    fun updateSprites(deltaSec: Float, widthPx: Int, heightPx: Int) {
+        _uiState.update { s ->
+            val updated = s.activeSprites.map { sp ->
+                var nx = sp.x + sp.vx * deltaSec
+                var ny = sp.y + sp.vy * deltaSec
+                var vx = sp.vx
+                var vy = sp.vy
+                val margin = 16f
+                if (nx < margin) { nx = margin; vx = -vx }
+                if (ny < margin) { ny = margin; vy = -vy }
+                if (nx > widthPx - margin) { nx = widthPx - margin; vx = -vx }
+                if (ny > heightPx - margin) { ny = heightPx - margin; vy = -vy }
+                sp.copy(x = nx, y = ny, vx = vx, vy = vy)
+            }
+            s.copy(activeSprites = updated)
+        }
+    }
+
+    // —— 랜덤 동물 뽑기 (등장 확률은 고정 분포) ——
     private fun getRandomAnimal(): Animal {
-        val rarityRoll = Random.nextInt(100)
+        val roll = kotlin.random.Random.nextInt(100)
         val rarity = when {
-            rarityRoll < 60 -> Rarity.COMMON
-            rarityRoll < 85 -> Rarity.RARE
-            rarityRoll < 97 -> Rarity.EPIC
+            roll < 60 -> Rarity.COMMON
+            roll < 85 -> Rarity.RARE
+            roll < 97 -> Rarity.EPIC
             else -> Rarity.LEGENDARY
         }
-
-        val pool = when (rarity) {
-            Rarity.COMMON -> listOf(
-                Animal("cat", "고양이", "🐱", rarity),
-                Animal("dog", "강아지", "🐶", rarity),
-                Animal("rabbit", "토끼", "🐰", rarity),
-                Animal("hamster", "햄스터", "🐹", rarity)
-            )
-            Rarity.RARE -> listOf(
-                Animal("panda", "팬더", "🐼", rarity),
-                Animal("koala", "코알라", "🐨", rarity),
-                Animal("penguin", "펭귄", "🐧", rarity),
-                Animal("fox", "여우", "🦊", rarity)
-            )
-            Rarity.EPIC -> listOf(
-                Animal("lion", "사자", "🦁", rarity),
-                Animal("tiger", "호랑이", "🐅", rarity),
-                Animal("wolf", "늑대", "🐺", rarity),
-                Animal("eagle", "독수리", "🦅", rarity)
-            )
-            Rarity.LEGENDARY -> listOf(
-                Animal("unicorn", "유니콘", "🦄", rarity),
-                Animal("dragon", "드래곤", "🐉", rarity),
-                Animal("phoenix", "피닉스", "🔥🐦", rarity),
-                Animal("griffin", "그리핀", "🦅🦁", rarity)
-            )
-        }
-
-        return pool.random()
-    }
-
-
-
-    /**
-     * 지정된 화면으로 UI를 전환합니다.
-     * @param screen 표시할 화면입니다.
-     */
-    fun showScreen(screen: Screen) {
-        _uiState.update { it.copy(currentScreen = screen) }
-    }
-
-    /**
-     * 공부 시간을 업데이트합니다.
-     * @param value 새로운 공부 시간(분)입니다.
-     */
-    fun updateStudyTime(value: Int) {
-        _uiState.update { it.copy(settings = it.settings.copy(studyTime = value), timeLeft = value * 60) }
-    }
-
-    /**
-     * 휴식 시간을 업데이트합니다.
-     * @param value 새로운 휴식 시간(분)입니다.
-     */
-    fun updateBreakTime(value: Int) {
-        _uiState.update { it.copy(settings = it.settings.copy(breakTime = value)) }
-    }
-
-    /**
-     * 알림음 사용 여부를 토글합니다.
-     * @param enabled 알림음 사용 여부입니다.
-     */
-    fun toggleSound(enabled: Boolean) {
-        _uiState.update { it.copy(settings = it.settings.copy(soundEnabled = enabled)) }
-    }
-
-    /**
-     * 진동 사용 여부를 토글합니다.
-     * @param enabled 진동 사용 여부입니다.
-     */
-    fun toggleVibration(enabled: Boolean) {
-        _uiState.update { it.copy(settings = it.settings.copy(vibrationEnabled = enabled)) }
+        return AnimalsTable.randomByRarity(rarity)
     }
 }
+
