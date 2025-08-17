@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.data.AnimalSprite
 import com.malrang.pomodoro.data.Screen
+import com.malrang.pomodoro.data.SpriteState
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.delay
 
@@ -68,6 +70,7 @@ fun AnimalScreen(vm: PomodoroViewModel) {
             state.activeSprites.forEach { sp ->
                 SpriteSheetImage(
                     sprite = sp,
+                    onJumpFinished = { id -> vm.onJumpFinished(id) },
                     modifier = Modifier
                         .absoluteOffset { IntOffset(sp.x.toInt(), sp.y.toInt()) }
                         .size(sp.sizeDp.dp)
@@ -75,7 +78,7 @@ fun AnimalScreen(vm: PomodoroViewModel) {
             }
         }
 
-        // 프레임 루프(이동)
+        // 이동 루프
         LaunchedEffect(widthPx, heightPx, state.activeSprites.size) {
             if (widthPx == 0 || heightPx == 0) return@LaunchedEffect
             var last = System.nanoTime()
@@ -100,36 +103,49 @@ fun AnimalScreen(vm: PomodoroViewModel) {
 }
 
 
+
 @Composable
 fun SpriteSheetImage(
     sprite: AnimalSprite,
+    onJumpFinished: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val image = ImageBitmap.imageResource(id = sprite.sheetRes)
+    val (res, cols, rows) = when (sprite.spriteState) {
+        SpriteState.IDLE -> Triple(sprite.idleSheetRes, sprite.idleCols, sprite.idleRows)
+        SpriteState.JUMP -> Triple(sprite.jumpSheetRes, sprite.jumpCols, sprite.jumpRows)
+    }
 
-    val frameWidth = image.width / sprite.frameCols
-    val frameHeight = image.height / sprite.frameRows
+    val image = ImageBitmap.imageResource(id = res)
+    val frameWidth = image.width / cols
+    val frameHeight = image.height / rows
 
-    var frameIndex by remember { mutableStateOf(0) }
+    var frameIndex by remember(sprite.id, sprite.spriteState) { mutableStateOf(0) }
 
-    // 프레임 애니메이션 루프
-    LaunchedEffect(sprite.animalId) {
+    LaunchedEffect(sprite.id, sprite.spriteState) {
+        frameIndex = 0
         while (true) {
             delay(sprite.frameDurationMs)
-            frameIndex = (frameIndex + 1) % (sprite.frameCols * sprite.frameRows)
+            frameIndex++
+            if (frameIndex >= cols * rows) {
+                if (sprite.spriteState == SpriteState.JUMP) {
+                    // Jump 끝 → Idle로 되돌리기
+                    onJumpFinished(sprite.id)
+                }
+                frameIndex = 0
+            }
         }
     }
 
-    val col = frameIndex % sprite.frameCols
-    val row = frameIndex / sprite.frameCols
+    val col = frameIndex % cols
+    val row = frameIndex / cols
 
     Canvas(modifier = modifier) {
         drawImage(
             image = image,
             srcOffset = IntOffset(col * frameWidth, row * frameHeight),
             srcSize = IntSize(frameWidth, frameHeight),
-            dstSize = IntSize(size.width.toInt(), size.height.toInt()),
-            dstOffset = IntOffset(0, 0)
+            dstSize = IntSize(size.width.toInt(), size.height.toInt())
         )
     }
 }
+

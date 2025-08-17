@@ -3,13 +3,16 @@ package com.malrang.pomodoro.data
 import com.malrang.pomodoro.R
 
 data class SpriteData(
-    val sheetRes: Int,
-    val cols: Int,
-    val rows: Int
+    val idleRes: Int,
+    val idleCols: Int = 7,
+    val idleRows: Int = 1,
+    val jumpRes: Int = 13,
+    val jumpCols: Int = 13,
+    val jumpRows: Int = 1,
 )
 object SpriteMap {
     val map: Map<String, SpriteData> = mapOf(
-        "cat" to SpriteData(R.drawable.idle_catttt, 7, 1),
+        "cat" to SpriteData(idleRes = R.drawable.idle_catttt, jumpRes = R.drawable.jump_cat),
 //        TODO()
 //        "dog" to SpriteData(R.drawable.sheet_dog, 6, 1),
 //        "rabbit" to SpriteData(R.drawable.pixel_rabbit, 1, 1), // 예시

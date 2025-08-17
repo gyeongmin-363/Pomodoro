@@ -15,6 +15,7 @@ import com.malrang.pomodoro.data.Rarity
 import com.malrang.pomodoro.data.Screen
 import com.malrang.pomodoro.data.SpriteData
 import com.malrang.pomodoro.data.SpriteMap
+import com.malrang.pomodoro.data.SpriteState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 import kotlin.random.Random
 
 class PomodoroViewModel(
@@ -142,20 +144,24 @@ class PomodoroViewModel(
     private fun makeSprite(animalId: String): AnimalSprite {
         val spriteData = SpriteMap.map[animalId] ?: SpriteData(R.drawable.idle_catttt, 7, 1)
 
-
-        val rnd = Random(System.currentTimeMillis())
-        return AnimalSprite(
-            animalId = animalId,
-            sheetRes = spriteData.sheetRes,
-            frameCols = spriteData.cols,
-            frameRows = spriteData.rows,
-            frameDurationMs = 120L,
-            x = rnd.nextInt(0, 600).toFloat(),
-            y = rnd.nextInt(0, 1000).toFloat(),
-            vx = listOf(-70f, 70f).random(),
-            vy = listOf(-50f, 50f).random(),
-            sizeDp = 48f
-        )
+        return when (animalId) {
+            "cat" -> AnimalSprite(
+                id = UUID.randomUUID().toString(),
+                animalId = animalId,
+                idleSheetRes = spriteData.idleRes,
+                idleCols = spriteData.idleCols,
+                idleRows = spriteData.idleRows,
+                jumpSheetRes = spriteData.jumpRes,
+                jumpCols = spriteData.jumpCols,
+                jumpRows = spriteData.jumpRows,
+                x = Random.nextInt(0, 600).toFloat(),
+                y = Random.nextInt(0, 1000).toFloat(),
+                vx = listOf(-70f, 70f).random(),
+                vy = listOf(-50f, 50f).random(),
+                sizeDp = 48f
+            )
+            else -> TODO()
+        }
     }
 
 
@@ -171,11 +177,30 @@ class PomodoroViewModel(
                 if (ny < margin) { ny = margin; vy = -vy }
                 if (nx > widthPx - margin) { nx = widthPx - margin; vx = -vx }
                 if (ny > heightPx - margin) { ny = heightPx - margin; vy = -vy }
-                sp.copy(x = nx, y = ny, vx = vx, vy = vy)
+
+                // Idle 상태일 때 확률적으로 Jump 발동
+                val nextState = if (sp.spriteState == SpriteState.IDLE && Random.nextFloat() < 0.003f) {
+                    SpriteState.JUMP
+                } else {
+                    sp.spriteState
+                }
+
+                sp.copy(x = nx, y = ny, vx = vx, vy = vy, spriteState = nextState)
             }
             s.copy(activeSprites = updated)
         }
     }
+
+    fun onJumpFinished(spriteId: String) {
+        _uiState.update { s ->
+            val updated = s.activeSprites.map { sp ->
+                if (sp.id == spriteId) sp.copy(spriteState = SpriteState.IDLE) else sp
+            }
+            s.copy(activeSprites = updated)
+        }
+    }
+
+
 
     // —— 랜덤 동물 뽑기 (등장 확률은 고정 분포) ——
     private fun getRandomAnimal(): Animal {

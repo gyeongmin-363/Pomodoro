@@ -29,15 +29,20 @@ enum class Rarity {
     LEGENDARY
 }
 
+enum class SpriteState { IDLE, JUMP }
 
 // 스프라이트 1개 (세션 생명주기: 앱 재시작 시 사라짐)
 data class AnimalSprite(
-    val animalId: String,
-    val sheetRes: Int,
-    val frameCols: Int,
-    val frameRows: Int,
-    val frameDurationMs: Long = 120L, // 프레임 전환 간격
-    var currentFrame: Int = 0,
+    val id: String,                  // 고유 ID (중복 생성 방지 위해 UUID 등)
+    val animalId: String,            // 동물 종류
+    val idleSheetRes: Int,
+    val idleCols: Int,
+    val idleRows: Int,
+    val jumpSheetRes: Int,
+    val jumpCols: Int,
+    val jumpRows: Int,
+    val spriteState: SpriteState = SpriteState.IDLE,
+    val frameDurationMs: Long = 120L,
     val x: Float,
     val y: Float,
     val vx: Float,
