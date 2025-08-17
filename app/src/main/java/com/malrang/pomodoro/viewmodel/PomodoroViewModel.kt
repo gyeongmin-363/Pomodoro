@@ -13,6 +13,7 @@ import com.malrang.pomodoro.data.PomodoroRepository
 import com.malrang.pomodoro.data.PomodoroUiState
 import com.malrang.pomodoro.data.Rarity
 import com.malrang.pomodoro.data.Screen
+import com.malrang.pomodoro.data.Settings
 import com.malrang.pomodoro.data.SpriteData
 import com.malrang.pomodoro.data.SpriteMap
 import com.malrang.pomodoro.data.SpriteState
@@ -42,10 +43,11 @@ class PomodoroViewModel(
         viewModelScope.launch {
             val seenIds = repo.loadSeenIds()
             val daily = repo.loadDailyStats()
+            val loaded = repo.loadSettings()
 
             // 도감 채우기: id만 있으니 이름/희귀도는 테이블에서 채움
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
-            _uiState.update { it.copy(collectedAnimals = seenAnimals, dailyStats = daily) }
+            _uiState.update { it.copy(collectedAnimals = seenAnimals, dailyStats = daily, settings = loaded) }
         }
     }
 
@@ -78,41 +80,31 @@ class PomodoroViewModel(
     private fun completeSession() {
         val s = _uiState.value
         if (s.currentMode == Mode.STUDY) {
-            // 공부 세션 완료 → 일별 통계 +1, 브레이크 시작 + 스프라이트 추가 + 도감 저장
-            viewModelScope.launch { incTodayStat() }
+            // 공부 세션 끝 → 브레이크 시작
             val animal = getRandomAnimal()
-
-            // 도감 업데이트(영구)
-            viewModelScope.launch {
-                val curr = repo.loadSeenIds().toMutableSet()
-                if (!curr.contains(animal.id)) {
-                    curr.add(animal.id)
-                    repo.saveSeenIds(curr)
-                }
-                // 메모리 도감 동기화
-                val merged = (curr.mapNotNull { AnimalsTable.byId(it) }).distinctBy { it.id }
-                _uiState.update { it.copy(collectedAnimals = merged) }
-            }
-
-            // 스프라이트 추가(세션 메모리 전용)
             val sprite = makeSprite(animal.id)
+
             _uiState.update {
                 it.copy(
                     currentMode = Mode.BREAK,
                     timeLeft = it.settings.breakTime * 60,
-                    currentScreen = Screen.Animal,      // 동물 화면
+                    currentScreen = Screen.Animal,
                     activeSprites = it.activeSprites + sprite,
-                    totalSessions = it.totalSessions + 1
+                    totalSessions = it.totalSessions + 1,
+                    isRunning = it.settings.autoStart,  // ✅ 자동 시작 여부 반영
+                    isPaused = false
                 )
             }
         } else {
-            // 브레이크 끝 → 다음 공부
+            // 브레이크 끝 → 다음 공부 시작
             _uiState.update {
                 it.copy(
                     cycleCount = it.cycleCount + 1,
                     currentMode = Mode.STUDY,
                     timeLeft = it.settings.studyTime * 60,
-                    currentScreen = Screen.Main
+                    currentScreen = Screen.Main,
+                    isRunning = it.settings.autoStart,  // ✅ 자동 시작 여부 반영
+                    isPaused = false
                 )
             }
         }
@@ -120,13 +112,40 @@ class PomodoroViewModel(
 
     // —— 설정 변경 ——
     fun updateStudyTime(v: Int) {
-        _uiState.update { it.copy(settings = it.settings.copy(studyTime = v), timeLeft = if (it.currentMode == Mode.STUDY) v * 60 else it.timeLeft) }
+        //설정 영속성 변경
+        updateSettings {
+            copy(studyTime = v)
+        }
+        
+        //시간 ui 변경
+        _uiState.update { state ->
+            state.copy(
+                timeLeft = if (state.currentMode == Mode.STUDY) v * 60 else state.timeLeft
+            )
+        }
     }
     fun updateBreakTime(v: Int) {
-        _uiState.update { it.copy(settings = it.settings.copy(breakTime = v), timeLeft = if (it.currentMode == Mode.BREAK) v * 60 else it.timeLeft) }
+        //설정 영속성 변경
+        updateSettings {
+            copy(breakTime = v)
+        }
+
+        _uiState.update { it.copy(timeLeft = if (it.currentMode == Mode.BREAK) v * 60 else it.timeLeft) }
     }
-    fun toggleSound(b: Boolean) { _uiState.update { it.copy(settings = it.settings.copy(soundEnabled = b)) } }
-    fun toggleVibration(b: Boolean) { _uiState.update { it.copy(settings = it.settings.copy(vibrationEnabled = b)) } }
+    fun toggleSound(b: Boolean) = updateSettings{copy(soundEnabled = b)}
+    fun toggleVibration(b: Boolean) = updateSettings{ copy(vibrationEnabled = b) }
+    fun toggleAutoStart(b: Boolean) = updateSettings{ copy(autoStart = b) }
+
+    /** ✅ Settings 업데이트 함수 */
+    fun updateSettings(transform: Settings.() -> Settings) {
+        _uiState.update { state ->
+            val updated = state.settings.transform()
+            viewModelScope.launch {
+                repo.saveSettings(updated)
+            }
+            state.copy(settings = updated)
+        }
+    }
 
     fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
 

@@ -12,5 +12,7 @@ data class Settings(
     val studyTime: Int = 30,
     val breakTime: Int = 5,
     val soundEnabled: Boolean = true,
-    val vibrationEnabled: Boolean = true
+    val vibrationEnabled: Boolean = true,
+    val autoStart: Boolean = true   // ✅ 기본값은 자동 시작
+
 )

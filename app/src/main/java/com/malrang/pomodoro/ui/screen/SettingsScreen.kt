@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen
 
+import android.R.attr.checked
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -33,6 +35,7 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 @Composable
 fun SettingsScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
+    val settings = state.settings
 
     Column(
         modifier = Modifier
@@ -50,16 +53,16 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
 
-        Text("공부 시간: ${state.settings.studyTime}분")
+        Text("공부 시간: ${settings.studyTime}분")
         Slider(
-            value = state.settings.studyTime.toFloat(),
+            value = settings.studyTime.toFloat(),
             onValueChange = { viewModel.updateStudyTime(it.toInt()) },
             valueRange = 1f..60f
         )
 
-        Text("휴식 시간: ${state.settings.breakTime}분")
+        Text("휴식 시간: ${settings.breakTime}분")
         Slider(
-            value = state.settings.breakTime.toFloat(),
+            value = settings.breakTime.toFloat(),
             onValueChange = { viewModel.updateBreakTime(it.toInt()) },
             valueRange = 1f..15f
         )
@@ -70,13 +73,18 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Spacer(Modifier.height(8.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = state.settings.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) })
+            Checkbox(checked = settings.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) })
             Text("알림음 사용")
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = state.settings.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) })
+            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) })
             Text("진동 사용")
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = settings.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) })
+            Text("자동 시작")
         }
     }
 }
