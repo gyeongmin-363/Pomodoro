@@ -49,7 +49,7 @@ enum class Screen {
     Collection,
     /** 설정 화면 */
     Settings,
-    /** 얜 뭐임? */
+    /** 통계 */
     Stats
 }
 
