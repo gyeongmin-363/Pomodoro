@@ -2,8 +2,10 @@ package com.malrang.pomodoro.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.malrang.pomodoro.data.Animal
 import com.malrang.pomodoro.data.Mode
 import com.malrang.pomodoro.data.PomodoroUiState
+import com.malrang.pomodoro.data.Rarity
 import com.malrang.pomodoro.data.Screen
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -11,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 /**
  * Pomodoro 앱의 UI 상태를 관리하고 비즈니스 로직을 처리하는 ViewModel입니다.
@@ -62,15 +65,21 @@ class PomodoroViewModel : ViewModel() {
     private fun completeSession() {
         val s = _uiState.value
         if (s.currentMode == Mode.STUDY) {
+            // 공부 끝나면 → 무조건 동물 화면
+            val newAnimal = getRandomAnimal()
             _uiState.update {
                 it.copy(
                     totalSessions = s.totalSessions + 1,
                     currentMode = Mode.BREAK,
                     timeLeft = s.settings.breakTime * 60,
-                    currentScreen = Screen.Animal
+                    currentScreen = Screen.Animal,
+                    collectedAnimals = if (newAnimal != null && it.collectedAnimals.none { a -> a.id == newAnimal.id }) {
+                        it.collectedAnimals + newAnimal
+                    } else it.collectedAnimals
                 )
             }
         } else {
+            // 휴식 끝나면 → 다음 공부 시작
             _uiState.update {
                 it.copy(
                     cycleCount = s.cycleCount + 1,
@@ -81,6 +90,47 @@ class PomodoroViewModel : ViewModel() {
             }
         }
     }
+
+    private fun getRandomAnimal(): Animal {
+        val rarityRoll = Random.nextInt(100)
+        val rarity = when {
+            rarityRoll < 60 -> Rarity.COMMON
+            rarityRoll < 85 -> Rarity.RARE
+            rarityRoll < 97 -> Rarity.EPIC
+            else -> Rarity.LEGENDARY
+        }
+
+        val pool = when (rarity) {
+            Rarity.COMMON -> listOf(
+                Animal("cat", "고양이", "🐱", rarity),
+                Animal("dog", "강아지", "🐶", rarity),
+                Animal("rabbit", "토끼", "🐰", rarity),
+                Animal("hamster", "햄스터", "🐹", rarity)
+            )
+            Rarity.RARE -> listOf(
+                Animal("panda", "팬더", "🐼", rarity),
+                Animal("koala", "코알라", "🐨", rarity),
+                Animal("penguin", "펭귄", "🐧", rarity),
+                Animal("fox", "여우", "🦊", rarity)
+            )
+            Rarity.EPIC -> listOf(
+                Animal("lion", "사자", "🦁", rarity),
+                Animal("tiger", "호랑이", "🐅", rarity),
+                Animal("wolf", "늑대", "🐺", rarity),
+                Animal("eagle", "독수리", "🦅", rarity)
+            )
+            Rarity.LEGENDARY -> listOf(
+                Animal("unicorn", "유니콘", "🦄", rarity),
+                Animal("dragon", "드래곤", "🐉", rarity),
+                Animal("phoenix", "피닉스", "🔥🐦", rarity),
+                Animal("griffin", "그리핀", "🦅🦁", rarity)
+            )
+        }
+
+        return pool.random()
+    }
+
+
 
     /**
      * 지정된 화면으로 UI를 전환합니다.

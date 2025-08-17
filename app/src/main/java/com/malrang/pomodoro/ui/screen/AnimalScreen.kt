@@ -30,6 +30,7 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 @Composable
 fun AnimalScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
+    val animal = state.collectedAnimals.lastOrNull()
 
     Column(
         modifier = Modifier
@@ -38,20 +39,19 @@ fun AnimalScreen(viewModel: PomodoroViewModel) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val animal = state.collectedAnimals.lastOrNull()
-
-        if (animal == null) {
-            Text("곧 동물들이 등장할 것 같아요!", fontSize = 20.sp, fontWeight = FontWeight.Medium)
-        } else {
+        if (animal != null) {
             Text("새로운 친구를 만났어요! 🎉", fontSize = 20.sp, fontWeight = FontWeight.Medium)
             Text(animal.emoji, fontSize = 64.sp, modifier = Modifier.padding(8.dp))
             Text(animal.name, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(animal.rarity.name, color = when (animal.rarity) {
-                Rarity.COMMON -> Color.Green
-                Rarity.RARE -> Color.Blue
-                Rarity.EPIC -> Color.Magenta
-                Rarity.LEGENDARY -> Color.Yellow
-            })
+            Text(
+                animal.rarity.name,
+                color = when (animal.rarity) {
+                    Rarity.COMMON -> Color.Green
+                    Rarity.RARE -> Color.Blue
+                    Rarity.EPIC -> Color.Magenta
+                    Rarity.LEGENDARY -> Color.Yellow
+                }
+            )
         }
 
         Spacer(Modifier.height(24.dp))
