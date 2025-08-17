@@ -41,9 +41,9 @@ class PomodoroViewModel(
     // 초기 로드
     init {
         viewModelScope.launch {
-            val seenIds = repo.loadSeenIds()
-            val daily = repo.loadDailyStats()
-            val loaded = repo.loadSettings()
+            val seenIds = repo.loadSeenIds() //발견한 동물
+            val daily = repo.loadDailyStats() //통계
+            val loaded = repo.loadSettings() //설정 정보
 
             // 도감 채우기: id만 있으니 이름/희귀도는 테이블에서 채움
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
