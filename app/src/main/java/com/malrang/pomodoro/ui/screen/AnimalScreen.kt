@@ -21,10 +21,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -128,7 +131,7 @@ fun SpriteSheetImage(
             frameIndex++
             if (frameIndex >= cols * rows) {
                 if (sprite.spriteState == SpriteState.JUMP) {
-                    // Jump 끝 → Idle로 되돌리기
+                    // Jump 끝 → Idle 복귀
                     onJumpFinished(sprite.id)
                 }
                 frameIndex = 0
@@ -140,12 +143,31 @@ fun SpriteSheetImage(
     val row = frameIndex / cols
 
     Canvas(modifier = modifier) {
-        drawImage(
-            image = image,
-            srcOffset = IntOffset(col * frameWidth, row * frameHeight),
-            srcSize = IntSize(frameWidth, frameHeight),
-            dstSize = IntSize(size.width.toInt(), size.height.toInt())
-        )
+        val dstWidth = size.width.toInt()
+        val dstHeight = size.height.toInt()
+
+        if (sprite.vx <= 0) {
+            // 왼쪽 이동 → 좌우 반전
+            withTransform({
+                scale(-1f, 1f, pivot = Offset(size.width / 2f, size.height / 2f))
+            }) {
+                drawImage(
+                    image = image,
+                    srcOffset = IntOffset(col * frameWidth, row * frameHeight),
+                    srcSize = IntSize(frameWidth, frameHeight),
+                    dstSize = IntSize(dstWidth, dstHeight),
+                    dstOffset = IntOffset(0, 0)
+                )
+            }
+        } else {
+            // 오른 이동 → 기본
+            drawImage(
+                image = image,
+                srcOffset = IntOffset(col * frameWidth, row * frameHeight),
+                srcSize = IntSize(frameWidth, frameHeight),
+                dstSize = IntSize(dstWidth, dstHeight),
+                dstOffset = IntOffset(0, 0)
+            )
+        }
     }
 }
-
