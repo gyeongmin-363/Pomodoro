@@ -1,15 +1,8 @@
-package com.malrang.pomodoro.data
+package com.malrang.pomodoro.dataclass.sprite
 
 import com.malrang.pomodoro.R
+import com.malrang.pomodoro.dataclass.animalInfo.Animal
 
-data class SpriteData(
-    val idleRes: Int,
-    val idleCols: Int = 7,
-    val idleRows: Int = 1,
-    val jumpRes: Int,
-    val jumpCols: Int = 13,
-    val jumpRows: Int = 1,
-)
 object SpriteMap {
     val map: Map<Animal, SpriteData> = mapOf(
         Animal.CLASSICAL_CAT to SpriteData(idleRes = R.drawable.classical_idle, jumpRes = R.drawable.classical_jump),

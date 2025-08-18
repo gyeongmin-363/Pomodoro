@@ -8,7 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.malrang.pomodoro.data.PomodoroRepository
+import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel

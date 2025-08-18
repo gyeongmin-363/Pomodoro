@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.malrang.pomodoro.data.Screen
+import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.CollectionScreen
 import com.malrang.pomodoro.ui.screen.MainScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen

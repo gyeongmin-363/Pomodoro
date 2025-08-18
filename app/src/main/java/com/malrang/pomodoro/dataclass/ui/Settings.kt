@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.data
+package com.malrang.pomodoro.dataclass.ui
 
 /**
  * 앱의 설정을 나타내는 데이터 클래스입니다.

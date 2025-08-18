@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.data
+package com.malrang.pomodoro.localRepo
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.malrang.pomodoro.dataclass.ui.DailyStat
+import com.malrang.pomodoro.dataclass.ui.Settings
 import kotlinx.coroutines.flow.first
 
 // DataStore.kt

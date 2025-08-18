@@ -1,6 +1,5 @@
 package com.malrang.pomodoro.ui.screen
 
-import android.R.attr.checked
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -45,7 +44,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("⚙️ 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Button(onClick = { viewModel.showScreen(com.malrang.pomodoro.data.Screen.Main) }) { Text("← 돌아가기") }
+            Button(onClick = { viewModel.showScreen(Screen.Main) }) { Text("← 돌아가기") }
         }
 
         Spacer(Modifier.height(24.dp))

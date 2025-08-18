@@ -29,12 +29,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.malrang.pomodoro.data.Animal
-import com.malrang.pomodoro.data.AnimalSprite
-import com.malrang.pomodoro.data.Rarity
-import com.malrang.pomodoro.data.Screen
-import com.malrang.pomodoro.data.SpriteMap
-import com.malrang.pomodoro.data.SpriteState
+import com.malrang.pomodoro.dataclass.animalInfo.Animal
+import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
+import com.malrang.pomodoro.dataclass.animalInfo.Rarity
+import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.dataclass.sprite.SpriteMap
+import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**

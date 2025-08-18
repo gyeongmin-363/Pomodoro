@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.imageResource
@@ -42,10 +41,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.malrang.pomodoro.data.AnimalSprite
-import com.malrang.pomodoro.data.Mode
-import com.malrang.pomodoro.data.Screen
-import com.malrang.pomodoro.data.SpriteState
+import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
+import com.malrang.pomodoro.dataclass.ui.Mode
+import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.delay
 
