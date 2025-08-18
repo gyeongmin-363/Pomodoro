@@ -154,7 +154,11 @@ class PomodoroViewModel(
     }
 
     private fun playSound() {
-        MediaPlayer.create(app, R.raw.notification_sound).start()
+        val mediaPlayer = MediaPlayer.create(app, R.raw.notification_sound)
+        mediaPlayer.start()
+        mediaPlayer.setOnCompletionListener { mp ->
+            mp.release()
+        }
     }
 
     @RequiresPermission(Manifest.permission.VIBRATE)
