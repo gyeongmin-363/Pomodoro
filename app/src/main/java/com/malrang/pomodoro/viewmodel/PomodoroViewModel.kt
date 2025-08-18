@@ -41,13 +41,20 @@ class PomodoroViewModel(
     // 초기 로드
     init {
         viewModelScope.launch {
-            val seenIds = repo.loadSeenIds() //발견한 동물
-            val daily = repo.loadDailyStats() //통계
-            val loaded = repo.loadSettings() //설정 정보
+            val seenIds = repo.loadSeenIds() // 발견한 동물 ID들을 불러옵니다.
+            val daily = repo.loadDailyStats() // 통계 로드
+            val loaded = repo.loadSettings() // 설정 정보 로드
 
-            // 도감 채우기: id만 있으니 이름/희귀도는 테이블에서 채움
+            // 도감 채우기: id를 기반으로 AnimalsTable에서 Animal 객체로 변환
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
-            _uiState.update { it.copy(collectedAnimals = seenAnimals, dailyStats = daily, settings = loaded) }
+
+            _uiState.update {
+                it.copy(
+                    collectedAnimals = seenAnimals, // 불러온 동물 목록으로 UI 상태를 업데이트
+                    dailyStats = daily,
+                    settings = loaded
+                )
+            }
         }
     }
 
@@ -80,23 +87,32 @@ class PomodoroViewModel(
     private fun completeSession() {
         val s = _uiState.value
         if (s.currentMode == Mode.STUDY) {
-            // 공부 세션 끝 → 브레이크 시작
             val animal = getRandomAnimal()
-            val sprite = makeSprite(animal.id)
+            val sprite = makeSprite(animal)
 
+            // **새로운 동물 저장 로직 추가**
+            val updatedCollectedAnimals = s.collectedAnimals + animal
+            val updatedSeenIds = updatedCollectedAnimals.map { it.id }.toSet()
+
+            viewModelScope.launch {
+                repo.saveSeenIds(updatedSeenIds) // DataStore에 저장
+            }
+
+            // UI 상태 업데이트
             _uiState.update {
                 it.copy(
                     currentMode = Mode.BREAK,
                     timeLeft = it.settings.breakTime * 60,
-                    currentScreen = Screen.Main, // AnimalScreen으로 전환하는 대신 MainScreen 유지
+                    currentScreen = Screen.Main,
                     activeSprites = it.activeSprites + sprite,
                     totalSessions = it.totalSessions + 1,
                     isRunning = it.settings.autoStart,
-                    isPaused = false
+                    isPaused = false,
+                    collectedAnimals = updatedCollectedAnimals // UI 상태에 추가
                 )
             }
         } else {
-            // 브레이크 끝 → 다음 공부 시작
+            // ... 기존 브레이크 세션 종료 로직
             _uiState.update {
                 it.copy(
                     cycleCount = it.cycleCount + 1,
@@ -159,28 +175,32 @@ class PomodoroViewModel(
         _uiState.update { it.copy(dailyStats = current) }
     }
 
-    // —— 스프라이트 유틸 ——
-    private fun makeSprite(animalId: String): AnimalSprite {
-        val spriteData = SpriteMap.map[animalId] ?: SpriteData(R.drawable.classical_idle, 7, 1)
 
-        return when (animalId) {
-            "cat" -> AnimalSprite(
-                id = UUID.randomUUID().toString(),
-                animalId = animalId,
-                idleSheetRes = spriteData.idleRes,
-                idleCols = spriteData.idleCols,
-                idleRows = spriteData.idleRows,
-                jumpSheetRes = spriteData.jumpRes,
-                jumpCols = spriteData.jumpCols,
-                jumpRows = spriteData.jumpRows,
-                x = Random.nextInt(0, 600).toFloat(),
-                y = Random.nextInt(0, 1000).toFloat(),
-                vx = listOf(-70f, 70f).random(),
-                vy = listOf(-50f, 50f).random(),
-                sizeDp = 48f
+
+    private fun makeSprite(animal: Animal): AnimalSprite {
+        // SpriteMap에서 animal에 해당하는 SpriteData를 찾습니다.
+        val spriteData = SpriteMap.map[animal]
+        // 만약 해당 동물의 스프라이트 정보가 없으면 기본값으로 대체합니다.
+            ?: SpriteData(
+                idleRes = R.drawable.classical_idle,
+                jumpRes = R.drawable.classical_jump,
             )
-            else -> TODO()
-        }
+
+        return AnimalSprite(
+            id = UUID.randomUUID().toString(),
+            animalId = animal.id, // 이제 Animal enum의 id 속성을 사용합니다.
+            idleSheetRes = spriteData.idleRes,
+            idleCols = spriteData.idleCols,
+            idleRows = spriteData.idleRows,
+            jumpSheetRes = spriteData.jumpRes,
+            jumpCols = spriteData.jumpCols,
+            jumpRows = spriteData.jumpRows,
+            x = Random.nextInt(0, 600).toFloat(),
+            y = Random.nextInt(0, 1000).toFloat(),
+            vx = listOf(-70f, 70f).random(),
+            vy = listOf(-50f, 50f).random(),
+            sizeDp = 48f
+        )
     }
 
 

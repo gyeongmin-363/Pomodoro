@@ -74,7 +74,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
                             SpriteItem(animal = animal)
-                            Text(animal.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(animal.displayName, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Text(
                                 when (animal.rarity) {
                                     Rarity.COMMON -> "일반"
@@ -95,7 +95,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
 
 @Composable
 fun SpriteItem(animal: Animal) {
-    val spriteData = SpriteMap.map[animal.id]
+    val spriteData = SpriteMap.map[animal]
     if(spriteData == null) return
     val tempSprite = remember(animal.id) {
         AnimalSprite(
