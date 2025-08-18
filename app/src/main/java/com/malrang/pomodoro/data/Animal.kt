@@ -11,7 +11,7 @@ package com.malrang.pomodoro.data
 data class Animal(
     val id: String,
     val name: String,
-    val emoji: String,     // 이건 도감/텍스트용. 실제 스프라이트는 drawable 매핑 사용
+//    val emoji: String,     // 이건 도감/텍스트용. 실제 스프라이트는 drawable 매핑 사용
     val rarity: Rarity
 )
 
@@ -54,13 +54,13 @@ data class AnimalSprite(
 
 object AnimalsTable {
     private val common = listOf(
-        Animal("cat", "고양이", "🐱", Rarity.COMMON),
+        Animal("cat", "고양이", Rarity.COMMON),
 //        Animal("dog", "강아지", "🐶", Rarity.COMMON),
 //        Animal("rabbit", "토끼", "🐰", Rarity.COMMON),
 //        Animal("hamster", "햄스터", "🐹", Rarity.COMMON)
     )
     private val rare = listOf(
-        Animal("cat", "고양이", "🐱", Rarity.COMMON),
+        Animal("cat", "고양이", Rarity.COMMON),
 
 //        Animal("panda", "팬더", "🐼", Rarity.RARE),
 //        Animal("koala", "코알라", "🐨", Rarity.RARE),
@@ -68,7 +68,7 @@ object AnimalsTable {
 //        Animal("fox", "여우", "🦊", Rarity.RARE)
     )
     private val epic = listOf(
-        Animal("cat", "고양이", "🐱", Rarity.COMMON),
+        Animal("cat", "고양이",  Rarity.COMMON),
 
 //        Animal("lion", "사자", "🦁", Rarity.EPIC),
 //        Animal("tiger", "호랑이", "🐅", Rarity.EPIC),
@@ -76,7 +76,7 @@ object AnimalsTable {
 //        Animal("eagle", "독수리", "🦅", Rarity.EPIC)
     )
     private val legendary = listOf(
-        Animal("cat", "고양이", "🐱", Rarity.COMMON),
+        Animal("cat", "고양이",  Rarity.COMMON),
 
 //        Animal("unicorn", "유니콘", "🦄", Rarity.LEGENDARY),
 //        Animal("dragon", "드래곤", "🐉", Rarity.LEGENDARY),

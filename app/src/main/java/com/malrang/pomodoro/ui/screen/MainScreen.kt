@@ -215,7 +215,8 @@ fun SpriteSheetImage(
                     srcOffset = IntOffset(col * frameWidth, row * frameHeight),
                     srcSize = IntSize(frameWidth, frameHeight),
                     dstSize = IntSize(dstWidth, dstHeight),
-                    dstOffset = IntOffset(0, 0)
+                    dstOffset = IntOffset(0, 0),
+                    filterQuality = FilterQuality.None
                 )
             }
         } else {
@@ -225,6 +226,7 @@ fun SpriteSheetImage(
                 srcOffset = IntOffset(col * frameWidth, row * frameHeight),
                 srcSize = IntSize(frameWidth, frameHeight),
                 dstSize = IntSize(dstWidth, dstHeight),
+                filterQuality = FilterQuality.None
             )
         }
     }
