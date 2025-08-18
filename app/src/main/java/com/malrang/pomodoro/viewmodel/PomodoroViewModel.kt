@@ -1,6 +1,14 @@
 package com.malrang.pomodoro.viewmodel
 
+import android.Manifest
 import android.app.Application
+import android.content.Context
+import android.media.MediaPlayer
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.R
@@ -88,6 +96,12 @@ class PomodoroViewModel(
 
     private fun completeSession() {
         val s = _uiState.value
+        if (s.settings.soundEnabled) {
+            playSound()
+        }
+        if (s.settings.vibrationEnabled) {
+            vibrate()
+        }
         if (s.currentMode == Mode.STUDY) {
             val animal = getRandomAnimal()
             val sprite = makeSprite(animal)
@@ -127,6 +141,31 @@ class PomodoroViewModel(
             }
         }
     }
+
+    private fun playSound() {
+        MediaPlayer.create(app, R.raw.notification_sound).start()
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    private fun vibrate() {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12(API 31) 이상 → VibratorManager 사용
+            val vibratorManager = app.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            // 하위 버전 호환
+            @Suppress("DEPRECATION")
+            app.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        vibrator.vibrate(
+            VibrationEffect.createOneShot(
+                500,
+                VibrationEffect.DEFAULT_AMPLITUDE
+            )
+        )
+    }
+
 
     // —— 설정 변경 ——
     fun updateStudyTime(v: Int) {
