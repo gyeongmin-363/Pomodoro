@@ -58,7 +58,7 @@ class PomodoroViewModel(
 
             _uiState.update {
                 it.copy(
-                    collectedAnimals = seenAnimals, // 불러온 동물 목록으로 UI 상태를 업데이트
+                    collectedAnimals = seenAnimals.toSet(), // 불러온 동물 목록으로 UI 상태를 업데이트
                     dailyStats = daily,
                     settings = loaded,
                 )

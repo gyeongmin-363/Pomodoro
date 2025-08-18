@@ -25,7 +25,7 @@ data class PomodoroUiState(
     val cycleCount: Int = 1,
 
     // 도감(영구) + 이번 세션 스프라이트(비영구)
-    val collectedAnimals: List<Animal> = emptyList(), // 도감(영구 저장분 + 이번에 새로 만난 것 반영된 메모리 상태)
+    val collectedAnimals: Set<Animal> = emptySet(), // 도감(영구 저장분 + 이번에 새로 만난 것 반영된 메모리 상태)
     val activeSprites: List<AnimalSprite> = emptyList(), // 브레이크마다 추가, 앱 종료 시 초기화
 
     // 통계

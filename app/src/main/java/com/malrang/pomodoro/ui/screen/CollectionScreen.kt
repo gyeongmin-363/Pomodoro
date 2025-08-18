@@ -65,7 +65,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
             }
         } else {
             LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.fillMaxSize()) {
-                items(state.collectedAnimals) { animal ->
+                items(state.collectedAnimals.toList()) { animal ->
                     Card(
                         modifier = Modifier
                             .padding(4.dp)
