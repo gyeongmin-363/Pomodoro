@@ -1,5 +1,7 @@
 package com.malrang.pomodoro.ui.screen
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -13,17 +15,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun StatsScreen(vm: PomodoroViewModel) {
@@ -35,7 +45,10 @@ fun StatsScreen(vm: PomodoroViewModel) {
             state.dailyStats[key]?.studySessions ?: 0
         }
     }
-    val labels = (0..6).map { LocalDate.now().minusDays((6 - it).toLong()) }.map { it.dayOfWeek.name.take(3) }
+    // 요일 레이블을 한국어로 변경
+    val labels = (0..6).map { LocalDate.now().minusDays((6 - it).toLong()) }.map {
+        it.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.KOREAN)
+    }
 
     Column(
         modifier = Modifier
@@ -48,6 +61,7 @@ fun StatsScreen(vm: PomodoroViewModel) {
             Button(onClick = { vm.showScreen(Screen.Main) }) { Text("← 돌아가기") }
         }
         Spacer(Modifier.height(16.dp))
+        // BarChart에 labels와 last7 값을 전달
         BarChart(values = last7, labels = labels)
     }
 }
@@ -55,8 +69,15 @@ fun StatsScreen(vm: PomodoroViewModel) {
 @Composable
 fun BarChart(values: List<Int>, labels: List<String>, modifier: Modifier = Modifier) {
     val maxV = (values.maxOrNull() ?: 1).coerceAtLeast(1)
-    val barW = 28.dp
-    val spacing = 16.dp
+    var animationPlayed by remember { mutableStateOf(false) }
+    val animatedValues by animateFloatAsState(
+        targetValue = if (animationPlayed) 1f else 0f,
+        animationSpec = tween(durationMillis = 1000)
+    )
+
+    // 화면 진입 시 애니메이션 실행
+    LaunchedEffect(Unit) { animationPlayed = true }
+
     Column(modifier) {
         Canvas(
             Modifier
@@ -66,26 +87,43 @@ fun BarChart(values: List<Int>, labels: List<String>, modifier: Modifier = Modif
         ) {
             val w = size.width
             val h = size.height
-            val barWidthPx = barW.toPx()
-            val spacingPx = spacing.toPx()
-            val totalW = values.size * barWidthPx + (values.size - 1) * spacingPx
-            var x = (w - totalW) / 2f
-            values.forEach { v ->
-                val barH = (v.toFloat() / maxV) * (h * 0.9f)
-//                drawRect(
-//                    topLeft = Offset(x, h - barH),
-//                    size = Size(barWidthPx, barH),
-//                    brush = TODO(),
-//                )
-                x += barWidthPx + spacingPx
+            val barCount = values.size
+            val barW = 28.dp.toPx()
+            val spacingPx = (w - (barCount * barW)) / (barCount - 1)
+
+            values.forEachIndexed { i, v ->
+                val barHeight = (v.toFloat() / maxV) * (h * 0.9f) * animatedValues
+                val x = (i * (barW + spacingPx))
+                val barColor = when {
+                    v >= 5 -> Color.Green
+                    v >= 3 -> Color.Yellow
+                    else -> Color.Red
+                }
+
+                drawRect(
+                    color = barColor,
+                    topLeft = Offset(x, h - barHeight),
+                    size = Size(barW, barHeight)
+                )
             }
         }
         Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            labels.forEach { Text(it, color = Color(0xFFBDB5FF)) }
+        // Layout 컴포저블을 사용하여 막대그래프와 레이블을 정확하게 정렬
+        Layout(
+            content = { labels.forEach { Text(it, color = Color(0xFFBDB5FF)) } },
+            modifier = Modifier.fillMaxWidth()
+        ) { measurables, constraints ->
+            val placeables = measurables.map { it.measure(constraints) }
+            layout(constraints.maxWidth, placeables.maxOfOrNull { it.height } ?: 0) {
+                val barCount = values.size
+                val barW = 28.dp.toPx()
+                val spacingPx = (constraints.maxWidth - (barCount * barW)) / (barCount - 1)
+
+                placeables.forEachIndexed { i, placeable ->
+                    val x = (i * (barW + spacingPx) + barW / 2 - placeable.width / 2).toInt()
+                    placeable.placeRelative(x = x, y = 0)
+                }
+            }
         }
     }
 }
