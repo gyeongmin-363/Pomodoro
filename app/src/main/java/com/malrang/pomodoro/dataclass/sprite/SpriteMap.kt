@@ -7,7 +7,7 @@ object SpriteMap {
     val map: Map<Animal, SpriteData> = mapOf(
         Animal.CLASSICAL_CAT to SpriteData(idleRes = R.drawable.classical_idle, jumpRes = R.drawable.classical_jump),
         Animal.WHITE_CAT to SpriteData(idleRes = R.drawable.white_idle, jumpRes = R.drawable.white_jump),
-        Animal.XMAS_CAT to SpriteData(idleRes = R.drawable.xmas_idle, jumpRes = R.drawable.xmas_jump),
+        Animal.XMAS_CAT to SpriteData(idleRes = R.drawable.xmas_idle, idleCols = 14,jumpRes = R.drawable.xmas_jump),
         Animal.TIGER_CAT to SpriteData(idleRes = R.drawable.tiger_cat_idle, jumpRes = R.drawable.tiger_cat_jump),
         Animal.THREE_CAT to SpriteData(idleRes = R.drawable.three_color_idle, jumpRes = R.drawable.three_color_jump),
         Animal.SIAMESE_CAT to SpriteData(idleRes = R.drawable.siamese_idle, jumpRes = R.drawable.siamese_jump),
