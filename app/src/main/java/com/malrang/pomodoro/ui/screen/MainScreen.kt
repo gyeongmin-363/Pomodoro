@@ -1,7 +1,7 @@
 package com.malrang.pomodoro.ui.screen
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,22 +29,24 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
+import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.delay
 
@@ -63,16 +65,17 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF312E81), Color(0xFF6D28D9), Color(0xFFDB2777))
-                )
-            )
             .onSizeChanged { sz ->
                 widthPx = sz.width
                 heightPx = sz.height
             }
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.grass_background),
+            contentDescription = "grass background",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
         // 동물 스프라이트
         if (state.currentMode == Mode.BREAK || state.isPaused) {
             state.activeSprites.forEach { sp ->
