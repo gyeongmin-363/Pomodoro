@@ -55,34 +55,19 @@ data class AnimalSprite(
 object AnimalsTable {
     private val common = listOf(
         Animal("cat", "고양이", Rarity.COMMON),
-//        Animal("dog", "강아지", "🐶", Rarity.COMMON),
-//        Animal("rabbit", "토끼", "🐰", Rarity.COMMON),
-//        Animal("hamster", "햄스터", "🐹", Rarity.COMMON)
+
     )
     private val rare = listOf(
         Animal("cat", "고양이", Rarity.COMMON),
 
-//        Animal("panda", "팬더", "🐼", Rarity.RARE),
-//        Animal("koala", "코알라", "🐨", Rarity.RARE),
-//        Animal("penguin", "펭귄", "🐧", Rarity.RARE),
-//        Animal("fox", "여우", "🦊", Rarity.RARE)
     )
     private val epic = listOf(
         Animal("cat", "고양이",  Rarity.COMMON),
 
-//        Animal("lion", "사자", "🦁", Rarity.EPIC),
-//        Animal("tiger", "호랑이", "🐅", Rarity.EPIC),
-//        Animal("wolf", "늑대", "🐺", Rarity.EPIC),
-//        Animal("eagle", "독수리", "🦅", Rarity.EPIC)
     )
     private val legendary = listOf(
         Animal("cat", "고양이",  Rarity.COMMON),
-
-//        Animal("unicorn", "유니콘", "🦄", Rarity.LEGENDARY),
-//        Animal("dragon", "드래곤", "🐉", Rarity.LEGENDARY),
-//        Animal("phoenix", "피닉스", "🔥🐦", Rarity.LEGENDARY),
-//        Animal("griffin", "그리핀", "🦅🦁", Rarity.LEGENDARY)
-    )
+        )
 
     fun byId(id: String): Animal? = (common + rare + epic + legendary).find { it.id == id }
 
@@ -92,4 +77,25 @@ object AnimalsTable {
         Rarity.EPIC -> epic.random()
         Rarity.LEGENDARY -> legendary.random()
     }
+}
+
+
+enum class AnimalId(val id: String) {
+    WHITE_CAT("white_cat"),
+    XMAS_CAT("xmas_cat"),
+    TIGER_CAT("tiger_cat"),
+    THREE_CAT("three_cat"),
+    SIAMESE_CAT("siamese_cat"),
+    EGYPT_CAT("egypt_cat"),
+    DEMONIC_CAT("demonic_cat"),
+    CLASSICAL_CAT("classical_cat"),
+    BROWN_CAT("brown_cat"),
+    BLACK_CAT("black_cat"),
+    BATMAN_CAT("batman_cat");
+
+    companion object {
+        private val map = entries.associateBy(AnimalId::id)
+        fun from(id: String): AnimalId? = map[id]
+    }
+
 }

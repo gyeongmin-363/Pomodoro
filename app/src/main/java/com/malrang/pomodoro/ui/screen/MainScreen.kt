@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -116,10 +117,12 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 val progress = 1f - state.timeLeft.toFloat() / totalTime
 
                 CircularProgressIndicator(
-                    progress = progress,
-                    strokeWidth = 12.dp,
+                    progress = { progress },
                     modifier = Modifier.size(200.dp),
-                    color = if (state.currentMode == Mode.STUDY) Color(0xFF10B981) else Color(0xFFF59E0B)
+                    color = if (state.currentMode == Mode.STUDY) Color(0xFF10B981) else Color(0xFFF59E0B),
+                    strokeWidth = 12.dp,
+                    trackColor = ProgressIndicatorDefaults.circularIndeterminateTrackColor,
+                    strokeCap = ProgressIndicatorDefaults.CircularDeterminateStrokeCap,
                 )
                 Text(
                     text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),

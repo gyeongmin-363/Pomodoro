@@ -161,7 +161,7 @@ class PomodoroViewModel(
 
     // —— 스프라이트 유틸 ——
     private fun makeSprite(animalId: String): AnimalSprite {
-        val spriteData = SpriteMap.map[animalId] ?: SpriteData(R.drawable.idle_catttt, 7, 1)
+        val spriteData = SpriteMap.map[animalId] ?: SpriteData(R.drawable.classical_idle, 7, 1)
 
         return when (animalId) {
             "cat" -> AnimalSprite(
