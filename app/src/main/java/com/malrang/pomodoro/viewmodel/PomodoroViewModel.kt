@@ -69,17 +69,22 @@ class PomodoroViewModel(
     }
 
     // —— 타이머 제어 ——
-    fun startTimer() {
-        if (_uiState.value.isRunning) return
-        _uiState.update { it.copy(isRunning = true, isPaused = false) }
-
+    private fun runTimerLoop() {
         timerJob = viewModelScope.launch {
             while (_uiState.value.timeLeft > 0 && _uiState.value.isRunning) {
                 delay(1000)
                 _uiState.update { s -> s.copy(timeLeft = s.timeLeft - 1) }
             }
-            if (_uiState.value.timeLeft <= 0) completeSession()
+            if (_uiState.value.timeLeft <= 0) {
+                completeSession()
+            }
         }
+    }
+
+    fun startTimer() {
+        if (_uiState.value.isRunning) return
+        _uiState.update { it.copy(isRunning = true, isPaused = false) }
+        runTimerLoop()
     }
 
     fun pauseTimer() {
@@ -96,6 +101,8 @@ class PomodoroViewModel(
 
     private fun completeSession() {
         val s = _uiState.value
+        val autoStart = s.settings.autoStart
+
         if (s.settings.soundEnabled) {
             playSound()
         }
@@ -122,7 +129,7 @@ class PomodoroViewModel(
                     currentScreen = Screen.Main,
                     activeSprites = it.activeSprites + sprite,
                     totalSessions = it.totalSessions + 1,
-                    isRunning = it.settings.autoStart,
+                    isRunning = autoStart,
                     isPaused = false,
                     collectedAnimals = updatedCollectedAnimals // UI 상태에 추가
                 )
@@ -135,10 +142,14 @@ class PomodoroViewModel(
                     currentMode = Mode.STUDY,
                     timeLeft = it.settings.studyTime * 60,
                     currentScreen = Screen.Main,
-                    isRunning = it.settings.autoStart,
+                    isRunning = autoStart,
                     isPaused = false
                 )
             }
+        }
+
+        if (autoStart) {
+            runTimerLoop()
         }
     }
 
