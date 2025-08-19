@@ -10,6 +10,7 @@ import com.malrang.pomodoro.ui.screen.MainScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen
 import com.malrang.pomodoro.ui.screen.StatsScreen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.withpet.BackPressMove
 
 /**
  * 앱의 메인 컴포저블 함수입니다.
@@ -20,6 +21,13 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 @Composable
 fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
     val s by vm.uiState.collectAsState()
+
+    if (s.currentScreen != Screen.Main) {
+        BackPressMove {
+            vm.showScreen(Screen.Main)
+        }
+    }
+
     when (s.currentScreen) {
         Screen.Main -> MainScreen(vm)
         Screen.Collection -> CollectionScreen(vm)

@@ -14,9 +14,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,11 +33,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.animalInfo.Rarity
-import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
+import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -45,6 +48,7 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 @Composable
 fun CollectionScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
+    val totalAnimals = Animal.entries.size
 
     Column(
         modifier = Modifier
@@ -52,10 +56,30 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
             .background(Color(0xFF1E1B4B))
             .padding(16.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("🐾 움직이는 동물 도감", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Button(onClick = { viewModel.showScreen(Screen.Main) }) { Text("← 돌아가기") }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("🐾 움직이는 동물 도감", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            IconButton(onClick = { viewModel.showScreen(Screen.Main) }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "돌아가기",
+                    tint = Color.White
+                )
+            }
         }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "${state.collectedAnimals.size}/${totalAnimals}",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            modifier = Modifier.align(Alignment.End)
+        )
 
         Spacer(Modifier.height(16.dp))
 
@@ -72,9 +96,17 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
                             .fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = Color(0x33FFFFFF))
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(8.dp)
+                        ) {
                             SpriteItem(animal = animal)
-                            Text(animal.displayName, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                animal.displayName,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White
+                            )
                             Text(
                                 when (animal.rarity) {
                                     Rarity.COMMON -> "일반"
@@ -96,7 +128,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
 @Composable
 fun SpriteItem(animal: Animal) {
     val spriteData = SpriteMap.map[animal]
-    if(spriteData == null) return
+    if (spriteData == null) return
     val tempSprite = remember(animal.id) {
         AnimalSprite(
             id = animal.id + "-collection",

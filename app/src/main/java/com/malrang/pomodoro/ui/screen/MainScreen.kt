@@ -14,9 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -108,27 +107,15 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("🐾 포모도로 동물원", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("공부하고 동물 친구들을 만나보세요!", color = Color(0xFFDDD6FE))
+            Text("픽모도로", fontSize = 28.sp, fontWeight = FontWeight.Bold)
 
             Spacer(Modifier.height(16.dp))
 
             // 원형 타이머
             Box(contentAlignment = Alignment.Center) {
-                val totalTime = if (state.currentMode == Mode.STUDY) state.settings.studyTime * 60 else state.settings.breakTime * 60
-                val progress = 1f - state.timeLeft.toFloat() / totalTime
-
-                CircularProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.size(200.dp),
-                    color = if (state.currentMode == Mode.STUDY) Color(0xFF10B981) else Color(0xFFF59E0B),
-                    strokeWidth = 12.dp,
-                    trackColor = ProgressIndicatorDefaults.circularIndeterminateTrackColor,
-                    strokeCap = ProgressIndicatorDefaults.CircularDeterminateStrokeCap,
-                )
                 Text(
                     text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
-                    fontSize = 32.sp,
+                    fontSize = 60.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -137,22 +124,24 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
             Row {
                 if (!state.isRunning) {
-                    Button(onClick = { viewModel.startTimer() }) { Text("시작") }
+                    IconButton(onClick = { viewModel.startTimer() }) {
+                        Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작")
+                    }
                 } else {
-                    Button(onClick = { viewModel.pauseTimer() }) { Text("일시정지") }
+                    IconButton(onClick = { viewModel.pauseTimer() }) {
+                        Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지")
+                    }
                 }
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { viewModel.resetTimer() }) { Text("리셋") }
+                IconButton(onClick = { viewModel.resetTimer() }) {
+                    Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋")
+                }
             }
 
             Spacer(Modifier.height(24.dp))
 
             // 통계
             Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${state.collectedAnimals.size}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Green)
-                    Text("수집한 동물", color = Color.LightGray)
-                }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${state.totalSessions}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
                     Text("완료한 세션", color = Color.LightGray)
@@ -163,9 +152,15 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
             // 네비게이션
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Button(onClick = { viewModel.showScreen(Screen.Collection) }) { Text("📚 동물 도감") }
-                Button(onClick = { viewModel.showScreen(Screen.Settings) }) { Text("⚙️ 설정") }
-                Button(onClick = { viewModel.showScreen(Screen.Stats) }) { Text("📊 통계") }
+                IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
+                    Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감")
+                }
+                IconButton(onClick = { viewModel.showScreen(Screen.Settings) }) {
+                    Icon(painterResource(id = R.drawable.ic_settings), contentDescription = "설정")
+                }
+                IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
+                    Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계")
+                }
             }
         }
     }

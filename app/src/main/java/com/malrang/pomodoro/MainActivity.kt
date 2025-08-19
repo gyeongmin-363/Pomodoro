@@ -12,6 +12,7 @@ import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.withpet.BackPressExit
 
 /**
  * 앱의 메인 액티비티입니다.
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
             PomodoroTheme {
                 val vm: PomodoroViewModel = viewModel(factory = PomodoroVMFactory(application))
                 PomodoroApp(vm)
+                BackPressExit() //뒤로가기 연속 두번 -> 앱 종료
             }
         }
     }

@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -32,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
@@ -56,9 +59,19 @@ fun StatsScreen(vm: PomodoroViewModel) {
             .background(Color(0xFF1E1B4B))
             .padding(16.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("📊 통계", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Button(onClick = { vm.showScreen(Screen.Main) }) { Text("← 돌아가기") }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("📊 통계", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            IconButton(onClick = { vm.showScreen(Screen.Main) }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "돌아가기",
+                    tint = Color.White
+                )
+            }
         }
         Spacer(Modifier.height(16.dp))
         // BarChart에 labels와 last7 값을 전달
