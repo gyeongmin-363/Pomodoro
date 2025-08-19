@@ -126,6 +126,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             // ==================================
             CycleIndicator(
                 modifier = Modifier.fillMaxWidth(),
+                currentMode = state.currentMode,
                 totalSessions = state.totalSessions,
                 longBreakInterval = state.settings.longBreakInterval
             )
@@ -183,39 +184,61 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 @Composable
 fun CycleIndicator(
     modifier: Modifier = Modifier,
+    currentMode: Mode,
     totalSessions: Int,
     longBreakInterval: Int
 ) {
+    if (longBreakInterval <= 0) return
+
+    // 1. 전체 사이클 시퀀스 생성
+    val cycleSequence = remember(longBreakInterval) {
+        buildList {
+            for (i in 1 until longBreakInterval) {
+                add(Mode.STUDY)
+                add(Mode.SHORT_BREAK)
+            }
+            add(Mode.STUDY)
+            add(Mode.LONG_BREAK)
+        }
+    }
+
+    // 2. 현재 세션 인덱스 계산
+    val currentIndex = remember(currentMode, totalSessions, longBreakInterval) {
+        val cyclePosition = (totalSessions - 1).coerceAtLeast(0) % longBreakInterval
+        when (currentMode) {
+            Mode.STUDY -> (totalSessions % longBreakInterval) * 2
+            else -> cyclePosition * 2 + 1
+        }
+    }
+
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (longBreakInterval <= 0) return@Row
+        // 3. 시퀀스를 기반으로 원들을 그림
+        cycleSequence.forEachIndexed { index, mode ->
+            val color = when (mode) {
+                Mode.STUDY -> Color.Red
+                Mode.SHORT_BREAK -> Color.Green
+                Mode.LONG_BREAK -> Color.Blue
+            }
 
-        val completedInCycle = totalSessions % longBreakInterval
-
-        // 현재 사이클에서 완료된 세션 수. 긴 휴식 직전에는 모든 원이 채워짐.
-        val sessionsToShow = if (totalSessions > 0 && completedInCycle == 0) {
-            longBreakInterval
-        } else {
-            completedInCycle
-        }
-
-        for (i in 1..longBreakInterval) {
-            val isCompleted = i <= sessionsToShow
             Box(
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
                     .size(16.dp)
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    if (isCompleted) {
+                    when {
                         // 완료된 세션: 채워진 원
-                        drawCircle(color = Color.Cyan)
-                    } else {
-                        // 남은 세션: 테두리 원
-                        drawCircle(color = Color.LightGray, style = Stroke(width = 2.dp.toPx()))
+                        index < currentIndex -> {
+                            drawCircle(color = color)
+                        }
+                        // 현재 또는 미래 세션: 테두리 원
+                        else -> {
+                            drawCircle(color = color, style = Stroke(width = 2.dp.toPx()))
+                        }
                     }
                 }
             }
