@@ -31,6 +31,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -76,7 +77,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             modifier = Modifier.fillMaxSize()
         )
         // 동물 스프라이트
-        if (state.currentMode == Mode.SHORT_BREAK || state.isPaused) {
+        if (state.currentMode != Mode.STUDY || state.isPaused) {
             state.activeSprites.forEach { sp ->
                 SpriteSheetImage(
                     sprite = sp,
@@ -117,6 +118,18 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 fontSize = 60.sp,
                 fontWeight = FontWeight.Bold
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            // ==================================
+            //      새로운 사이클 표시기
+            // ==================================
+            CycleIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                totalSessions = state.totalSessions,
+                longBreakInterval = state.settings.longBreakInterval
+            )
+            // ==================================
 
             Spacer(Modifier.height(16.dp))
 
@@ -164,6 +177,53 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     }
 }
 
+/**
+ * 현재 뽀모도로 사이클 진행도를 원으로 표시하는 컴포저블
+ */
+@Composable
+fun CycleIndicator(
+    modifier: Modifier = Modifier,
+    totalSessions: Int,
+    longBreakInterval: Int
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (longBreakInterval <= 0) return@Row
+
+        val completedInCycle = totalSessions % longBreakInterval
+
+        // 현재 사이클에서 완료된 세션 수. 긴 휴식 직전에는 모든 원이 채워짐.
+        val sessionsToShow = if (totalSessions > 0 && completedInCycle == 0) {
+            longBreakInterval
+        } else {
+            completedInCycle
+        }
+
+        for (i in 1..longBreakInterval) {
+            val isCompleted = i <= sessionsToShow
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .size(16.dp)
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    if (isCompleted) {
+                        // 완료된 세션: 채워진 원
+                        drawCircle(color = Color.Cyan)
+                    } else {
+                        // 남은 세션: 테두리 원
+                        drawCircle(color = Color.LightGray, style = Stroke(width = 2.dp.toPx()))
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 @Composable
 fun SpriteSheetImage(
     sprite: AnimalSprite,
@@ -188,7 +248,6 @@ fun SpriteSheetImage(
             frameIndex++
             if (frameIndex >= cols * rows) {
                 if (sprite.spriteState == SpriteState.JUMP) {
-                    // Jump 끝 → Idle 복귀
                     onJumpFinished(sprite.id)
                 }
                 frameIndex = 0
@@ -204,7 +263,6 @@ fun SpriteSheetImage(
         val dstHeight = size.height.toInt()
 
         if (sprite.vx <= 0) {
-            // 왼쪽 이동 → 좌우 반전
             withTransform({
                 scale(-1f, 1f, pivot = Offset(size.width / 2f, size.height / 2f))
             }) {
@@ -218,7 +276,6 @@ fun SpriteSheetImage(
                 )
             }
         } else {
-            // 오른 이동 → 기본
             drawImage(
                 image = image,
                 srcOffset = IntOffset(col * frameWidth, row * frameHeight),

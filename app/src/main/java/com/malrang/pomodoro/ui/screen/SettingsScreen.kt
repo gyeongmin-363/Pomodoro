@@ -72,13 +72,27 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             valueRange = 1f..60f
         )
 
-        Text("휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
+        Text("짧은 휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
         Slider(
             value = settings.shortBreakTime.toFloat(),
-            onValueChange = { viewModel.updateBreakTime(it.toInt()) },
-            valueRange = 1f..15f
+            onValueChange = { viewModel.updateShortBreakTime(it.toInt()) },
+            valueRange = 0f..60f
         )
 
+        Text("긴 휴식 시간: ${settings.longBreakTime}분", color = Color.White)
+        Slider(
+            value = settings.longBreakTime.toFloat(),
+            onValueChange = { viewModel.updateLongBreakTime(it.toInt()) },
+            valueRange = 0f..60f
+        )
+
+        Text("긴 휴식 간격: ${settings.longBreakInterval}회 마다", color = Color.White)
+        Slider(
+            value = settings.longBreakInterval.toFloat(),
+            onValueChange = { viewModel.updateLongBreakInterval(it.toInt()) },
+            valueRange = 1f..15f,
+            steps = 13 // 1부터 15까지 설정 가능
+        )
         Spacer(Modifier.height(24.dp))
 
         Text("알림 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)

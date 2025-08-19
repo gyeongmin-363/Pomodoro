@@ -1,5 +1,15 @@
 package com.malrang.pomodoro.viewmodel
 
+import android.Manifest
+import android.app.Application
+import android.content.Context
+import android.media.MediaPlayer
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.annotation.RequiresPermission
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.R
@@ -89,8 +99,12 @@ class PomodoroViewModel(
     fun resetTimer() {
         timerJob?.cancel()
         val s = _uiState.value
-        val base = if (s.currentMode == Mode.STUDY) s.settings.studyTime else s.settings.shortBreakTime
-        _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = base * 60) }
+        val newTimeLeft = when (s.currentMode) {
+            Mode.STUDY -> s.settings.studyTime
+            Mode.SHORT_BREAK -> s.settings.shortBreakTime
+            Mode.LONG_BREAK -> s.settings.longBreakTime
+        }
+        _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = newTimeLeft * 60) }
     }
 
     private fun completeSession() {
@@ -103,33 +117,37 @@ class PomodoroViewModel(
         if (s.settings.vibrationEnabled) {
             vibratorHelper.vibrate()
         }
+
         if (s.currentMode == Mode.STUDY) {
+            val newTotalSessions = s.totalSessions + 1
+            val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % s.settings.longBreakInterval == 0
+
+            val nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
+            val nextTime = if (isLongBreakTime) s.settings.longBreakTime else s.settings.shortBreakTime
+
             val animal = getRandomAnimal()
             val sprite = makeSprite(animal)
 
-            // **새로운 동물 저장 로직 추가**
             val updatedCollectedAnimals = s.collectedAnimals + animal
             val updatedSeenIds = updatedCollectedAnimals.map { it.id }.toSet()
 
             viewModelScope.launch {
-                repo.saveSeenIds(updatedSeenIds) // DataStore에 저장
+                repo.saveSeenIds(updatedSeenIds)
             }
 
-            // UI 상태 업데이트
             _uiState.update {
                 it.copy(
-                    currentMode = Mode.SHORT_BREAK,
-                    timeLeft = it.settings.shortBreakTime * 60,
+                    currentMode = nextMode,
+                    timeLeft = nextTime * 60,
                     currentScreen = Screen.Main,
                     activeSprites = it.activeSprites + sprite,
-                    totalSessions = it.totalSessions + 1,
+                    totalSessions = newTotalSessions,
                     isRunning = autoStart,
                     isPaused = false,
-                    collectedAnimals = updatedCollectedAnimals // UI 상태에 추가
+                    collectedAnimals = updatedCollectedAnimals
                 )
             }
-        } else {
-            // ... 기존 브레이크 세션 종료 로직
+        } else { // SHORT_BREAK or LONG_BREAK
             _uiState.update {
                 it.copy(
                     cycleCount = it.cycleCount + 1,
@@ -150,32 +168,47 @@ class PomodoroViewModel(
 
     // —— 설정 변경 ——
     fun updateStudyTime(v: Int) {
-        //설정 영속성 변경
-        updateSettings {
-            copy(studyTime = v)
-        }
-
-        //시간 ui 변경
+        updateSettings { copy(studyTime = v) }
         _uiState.update { state ->
-            state.copy(
-                timeLeft = if (state.currentMode == Mode.STUDY) v * 60 else state.timeLeft
-            )
+            if (state.currentMode == Mode.STUDY) {
+                state.copy(timeLeft = v * 60)
+            } else {
+                state
+            }
         }
     }
-    fun updateBreakTime(v: Int) {
-        //설정 영속성 변경
-        updateSettings {
-            copy(shortBreakTime = v)
+    fun updateShortBreakTime(v: Int) {
+        updateSettings { copy(shortBreakTime = v) }
+        _uiState.update { state ->
+            if (state.currentMode == Mode.SHORT_BREAK) {
+                state.copy(timeLeft = v * 60)
+            } else {
+                state
+            }
         }
+    }
 
-        _uiState.update { it.copy(timeLeft = if (it.currentMode == Mode.SHORT_BREAK) v * 60 else it.timeLeft) }
+    fun updateLongBreakTime(v: Int) {
+        updateSettings { copy(longBreakTime = v) }
+        _uiState.update { state ->
+            if (state.currentMode == Mode.LONG_BREAK) {
+                state.copy(timeLeft = v * 60)
+            } else {
+                state
+            }
+        }
     }
+
+    fun updateLongBreakInterval(v: Int) {
+        updateSettings { copy(longBreakInterval = v) }
+    }
+
     fun toggleSound(b: Boolean) = updateSettings{copy(soundEnabled = b)}
     fun toggleVibration(b: Boolean) = updateSettings{ copy(vibrationEnabled = b) }
     fun toggleAutoStart(b: Boolean) = updateSettings{ copy(autoStart = b) }
 
     /** ✅ Settings 업데이트 함수 */
-    fun updateSettings(transform: Settings.() -> Settings) {
+    private fun updateSettings(transform: Settings.() -> Settings) {
         _uiState.update { state ->
             val updated = state.settings.transform()
             viewModelScope.launch {
@@ -200,9 +233,7 @@ class PomodoroViewModel(
 
 
     private fun makeSprite(animal: Animal): AnimalSprite {
-        // SpriteMap에서 animal에 해당하는 SpriteData를 찾습니다.
         val spriteData = SpriteMap.map[animal]
-        // 만약 해당 동물의 스프라이트 정보가 없으면 기본값으로 대체합니다.
             ?: SpriteData(
                 idleRes = R.drawable.classical_idle,
                 jumpRes = R.drawable.classical_jump,
@@ -210,7 +241,7 @@ class PomodoroViewModel(
 
         return AnimalSprite(
             id = UUID.randomUUID().toString(),
-            animalId = animal.id, // 이제 Animal enum의 id 속성을 사용합니다.
+            animalId = animal.id,
             idleSheetRes = spriteData.idleRes,
             idleCols = spriteData.idleCols,
             idleRows = spriteData.idleRows,
@@ -239,7 +270,6 @@ class PomodoroViewModel(
                 if (nx > widthPx - margin) { nx = widthPx - margin; vx = -vx }
                 if (ny > heightPx - margin) { ny = heightPx - margin; vy = -vy }
 
-                // Idle 상태일 때 확률적으로 Jump 발동
                 val nextState = if (sp.spriteState == SpriteState.IDLE && Random.nextFloat() < 0.003f) {
                     SpriteState.JUMP
                 } else {
@@ -261,9 +291,6 @@ class PomodoroViewModel(
         }
     }
 
-
-
-    // —— 랜덤 동물 뽑기 (등장 확률은 고정 분포) ——
     private fun getRandomAnimal(): Animal {
         val roll = Random.nextInt(100)
         val rarity = when {
