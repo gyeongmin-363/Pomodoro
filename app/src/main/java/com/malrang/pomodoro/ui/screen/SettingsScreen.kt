@@ -72,9 +72,9 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             valueRange = 1f..60f
         )
 
-        Text("휴식 시간: ${settings.breakTime}분", color = Color.White)
+        Text("휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
         Slider(
-            value = settings.breakTime.toFloat(),
+            value = settings.shortBreakTime.toFloat(),
             onValueChange = { viewModel.updateBreakTime(it.toInt()) },
             valueRange = 1f..15f
         )

@@ -1,15 +1,5 @@
 package com.malrang.pomodoro.viewmodel
 
-import android.Manifest
-import android.app.Application
-import android.content.Context
-import android.media.MediaPlayer
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
-import androidx.annotation.RequiresPermission
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.R
@@ -99,7 +89,7 @@ class PomodoroViewModel(
     fun resetTimer() {
         timerJob?.cancel()
         val s = _uiState.value
-        val base = if (s.currentMode == Mode.STUDY) s.settings.studyTime else s.settings.breakTime
+        val base = if (s.currentMode == Mode.STUDY) s.settings.studyTime else s.settings.shortBreakTime
         _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = base * 60) }
     }
 
@@ -129,7 +119,7 @@ class PomodoroViewModel(
             _uiState.update {
                 it.copy(
                     currentMode = Mode.SHORT_BREAK,
-                    timeLeft = it.settings.breakTime * 60,
+                    timeLeft = it.settings.shortBreakTime * 60,
                     currentScreen = Screen.Main,
                     activeSprites = it.activeSprites + sprite,
                     totalSessions = it.totalSessions + 1,
@@ -175,7 +165,7 @@ class PomodoroViewModel(
     fun updateBreakTime(v: Int) {
         //설정 영속성 변경
         updateSettings {
-            copy(breakTime = v)
+            copy(shortBreakTime = v)
         }
 
         _uiState.update { it.copy(timeLeft = if (it.currentMode == Mode.SHORT_BREAK) v * 60 else it.timeLeft) }
