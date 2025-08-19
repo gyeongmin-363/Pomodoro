@@ -1,14 +1,15 @@
-package com.malrang.pomodoro
+package com.malrang.pomodoro.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.malrang.pomodoro.MainActivity
+import com.malrang.pomodoro.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -64,7 +65,7 @@ class TimerService : Service() {
         notificationManager.notify(2022, createNotification())
     }
 
-    private fun createNotification(): android.app.Notification {
+    private fun createNotification(): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 

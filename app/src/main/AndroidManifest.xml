@@ -30,7 +30,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".TimerService"
+            android:name=".service.TimerService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"/>

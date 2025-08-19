@@ -2,7 +2,6 @@ package com.malrang.pomodoro.service
 
 import android.content.Context
 import android.content.Intent
-import com.malrang.pomodoro.TimerService
 
 class TimerServiceProvider(private val context: Context) {
     fun start(timeLeft: Int) {
