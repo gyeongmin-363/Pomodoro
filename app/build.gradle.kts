@@ -53,6 +53,7 @@ dependencies {
    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("com.google.code.gson:gson:2.13.1")
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
 
 
     testImplementation(libs.junit)

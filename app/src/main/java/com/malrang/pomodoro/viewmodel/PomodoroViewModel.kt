@@ -10,6 +10,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.annotation.RequiresPermission
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
@@ -25,6 +26,8 @@ import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.sprite.SpriteData
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
+import com.malrang.pomodoro.localRepo.SoundPlayer
+import com.malrang.pomodoro.localRepo.VibratorHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,8 +41,9 @@ import kotlin.random.Random
 
 class PomodoroViewModel(
     private val repo: PomodoroRepository,
-    private val app: Application
-) : AndroidViewModel(app) {
+    private val soundPlayer: SoundPlayer,
+    private val vibratorHelper: VibratorHelper,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PomodoroUiState())
     val uiState: StateFlow<PomodoroUiState> = _uiState.asStateFlow()
@@ -104,10 +108,10 @@ class PomodoroViewModel(
         val autoStart = s.settings.autoStart
 
         if (s.settings.soundEnabled) {
-            playSound()
+            soundPlayer.playSound()
         }
         if (s.settings.vibrationEnabled) {
-            vibrate()
+            vibratorHelper.vibrate()
         }
         if (s.currentMode == Mode.STUDY) {
             val animal = getRandomAnimal()
@@ -151,34 +155,6 @@ class PomodoroViewModel(
         if (autoStart) {
             runTimerLoop()
         }
-    }
-
-    private fun playSound() {
-        val mediaPlayer = MediaPlayer.create(app, R.raw.notification_sound)
-        mediaPlayer.start()
-        mediaPlayer.setOnCompletionListener { mp ->
-            mp.release()
-        }
-    }
-
-    @RequiresPermission(Manifest.permission.VIBRATE)
-    private fun vibrate() {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12(API 31) 이상 → VibratorManager 사용
-            val vibratorManager = app.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator
-        } else {
-            // 하위 버전 호환
-            @Suppress("DEPRECATION")
-            app.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-
-        vibrator.vibrate(
-            VibrationEffect.createOneShot(
-                500,
-                VibrationEffect.DEFAULT_AMPLITUDE
-            )
-        )
     }
 
 

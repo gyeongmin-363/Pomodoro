@@ -9,6 +9,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.malrang.pomodoro.localRepo.PomodoroRepository
+import com.malrang.pomodoro.localRepo.SoundPlayer
+import com.malrang.pomodoro.localRepo.VibratorHelper
 import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
@@ -38,8 +40,10 @@ class MainActivity : ComponentActivity() {
 
 class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val repo = PomodoroRepository(app)
+        val localDatastoreRepo = PomodoroRepository(app)
+        val soundPlayer = SoundPlayer(app)
+        val vibratorHelper = VibratorHelper(app)
         @Suppress("UNCHECKED_CAST")
-        return PomodoroViewModel(repo, app) as T
+        return PomodoroViewModel(localDatastoreRepo, soundPlayer, vibratorHelper) as T
     }
 }
