@@ -76,7 +76,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             modifier = Modifier.fillMaxSize()
         )
         // 동물 스프라이트
-        if (state.currentMode == Mode.BREAK || state.isPaused) {
+        if (state.currentMode == Mode.SHORT_BREAK || state.isPaused) {
             state.activeSprites.forEach { sp ->
                 SpriteSheetImage(
                     sprite = sp,
@@ -112,13 +112,11 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             Spacer(Modifier.height(16.dp))
 
             // 원형 타이머
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
-                    fontSize = 60.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Text(
+                text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
+                fontSize = 60.sp,
+                fontWeight = FontWeight.Bold
+            )
 
             Spacer(Modifier.height(16.dp))
 

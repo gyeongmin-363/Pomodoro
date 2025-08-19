@@ -124,7 +124,7 @@ class PomodoroViewModel(
             // UI 상태 업데이트
             _uiState.update {
                 it.copy(
-                    currentMode = Mode.BREAK,
+                    currentMode = Mode.SHORT_BREAK,
                     timeLeft = it.settings.breakTime * 60,
                     currentScreen = Screen.Main,
                     activeSprites = it.activeSprites + sprite,
@@ -202,7 +202,7 @@ class PomodoroViewModel(
             copy(breakTime = v)
         }
 
-        _uiState.update { it.copy(timeLeft = if (it.currentMode == Mode.BREAK) v * 60 else it.timeLeft) }
+        _uiState.update { it.copy(timeLeft = if (it.currentMode == Mode.SHORT_BREAK) v * 60 else it.timeLeft) }
     }
     fun toggleSound(b: Boolean) = updateSettings{copy(soundEnabled = b)}
     fun toggleVibration(b: Boolean) = updateSettings{ copy(vibrationEnabled = b) }
@@ -299,7 +299,7 @@ class PomodoroViewModel(
 
     // —— 랜덤 동물 뽑기 (등장 확률은 고정 분포) ——
     private fun getRandomAnimal(): Animal {
-        val roll = kotlin.random.Random.nextInt(100)
+        val roll = Random.nextInt(100)
         val rarity = when {
             roll < 60 -> Rarity.COMMON
             roll < 85 -> Rarity.RARE
