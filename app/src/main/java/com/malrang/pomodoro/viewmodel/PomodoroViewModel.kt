@@ -19,8 +19,6 @@ import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
 import com.malrang.pomodoro.service.TimerServiceProvider
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,8 +37,6 @@ class PomodoroViewModel(
 
     private val _uiState = MutableStateFlow(PomodoroUiState())
     val uiState: StateFlow<PomodoroUiState> = _uiState.asStateFlow()
-
-    private var timerJob: Job? = null
 
     // 초기 로드
     init {
@@ -64,37 +60,36 @@ class PomodoroViewModel(
         }
     }
 
-    // —— 타이머 제어 ——
-    private fun runTimerLoop() {
-        timerJob = viewModelScope.launch {
-            while (_uiState.value.timeLeft > 0 && _uiState.value.isRunning) {
-                delay(1000)
-                _uiState.update { s -> s.copy(timeLeft = s.timeLeft - 1) }
-            }
-            if (_uiState.value.timeLeft <= 0) {
-                completeSession()
-            }
+    // —— 서비스로부터 타이머 상태 업데이트 ——
+    fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean) {
+        _uiState.update {
+            it.copy(
+                timeLeft = timeLeft,
+                isRunning = isRunning,
+                isPaused = !isRunning && timeLeft > 0
+            )
         }
     }
 
+    fun onTimerFinishedFromService() {
+        completeSession()
+    }
+
+    // —— 타이머 제어 ——
     fun startTimer() {
         if (_uiState.value.isRunning) return
         _uiState.update { it.copy(isRunning = true, isPaused = false) }
-        runTimerLoop()
-
         // 서비스 시작
         timerService.start(_uiState.value.timeLeft)
     }
 
     fun pauseTimer() {
-        timerJob?.cancel()
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
         // 서비스 일시정지
         timerService.pause()
     }
 
     fun resetTimer() {
-        timerJob?.cancel()
         val s = _uiState.value
         val newTimeLeft = when (s.currentMode) {
             Mode.STUDY -> s.settings.studyTime
