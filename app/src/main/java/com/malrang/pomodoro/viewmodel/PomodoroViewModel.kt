@@ -60,25 +60,37 @@ class PomodoroViewModel(
         }
     }
 
-    fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean) {
+    /**
+     * --- 변경: 서비스로부터 모든 세션 상태를 받아 UI를 업데이트합니다. ---
+     * @param currentMode 서비스의 현재 모드
+     * @param totalSessions 서비스가 계산한 총 완료 세션 수
+     */
+    fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
         _uiState.update {
             it.copy(
                 timeLeft = timeLeft,
                 isRunning = isRunning,
-                isPaused = !isRunning && timeLeft > 0
+                isPaused = !isRunning && timeLeft > 0,
+                currentMode = currentMode,
+                totalSessions = totalSessions
             )
         }
     }
 
+    /**
+     * 서비스로부터 세션 종료 신호를 받으면 호출됩니다.
+     */
     fun onTimerFinishedFromService() {
-        completeSession()
+        // --- 변경: '공부' 세션이 끝났을 때만 동물 획득 로직을 처리합니다. ---
+        if (_uiState.value.currentMode == Mode.STUDY) {
+            handleStudySessionCompletion()
+        }
     }
 
     fun startTimer() {
         if (_uiState.value.isRunning) return
         val s = _uiState.value
         _uiState.update { it.copy(isRunning = true, isPaused = false) }
-        // --- 변경: 서비스 시작 시 현재 상태(설정, 모드, 세션 수) 전달 ---
         timerService.start(s.timeLeft, s.settings, s.currentMode, s.totalSessions)
     }
 
@@ -99,58 +111,34 @@ class PomodoroViewModel(
     }
 
     /**
-     * 세션이 완료되었을 때 호출 (앱이 활성 상태일 때)
-     * 이제 이 함수는 UI 업데이트와 데이터 저장만 담당합니다.
-     * 소리, 진동, 자동 시작은 서비스가 처리합니다.
+     * --- 변경: 함수 이름 및 역할 변경 ---
+     * '공부' 세션 완료 시 보상(동물 획득, 저장)만 처리합니다.
+     * UI의 세션 상태(모드, 시간 등)는 변경하지 않습니다. (서비스가 보내주는 정보로만 업데이트)
      */
-    private fun completeSession() {
-        val s = _uiState.value
+    private fun handleStudySessionCompletion() {
+        val animal = getRandomAnimal()
+        val sprite = makeSprite(animal)
+        val updatedCollectedAnimals = _uiState.value.collectedAnimals + animal
+        val updatedSeenIds = updatedCollectedAnimals.map { it.id }.toSet()
 
-        // --- 변경: 소리, 진동 로직은 서비스에서 처리하므로 ViewModel에서는 제거 ---
-
-        if (s.currentMode == Mode.STUDY) {
-            val newTotalSessions = s.totalSessions + 1
-            val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % s.settings.longBreakInterval == 0
-            val nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
-            val nextTime = if (isLongBreakTime) s.settings.longBreakTime else s.settings.shortBreakTime
-            val animal = getRandomAnimal()
-            val sprite = makeSprite(animal)
-            val updatedCollectedAnimals = s.collectedAnimals + animal
-            val updatedSeenIds = updatedCollectedAnimals.map { it.id }.toSet()
-            viewModelScope.launch {
-                repo.saveSeenIds(updatedSeenIds)
-            }
-            _uiState.update {
-                it.copy(
-                    currentMode = nextMode,
-                    timeLeft = nextTime * 60,
-                    currentScreen = Screen.Main,
-                    activeSprites = it.activeSprites + sprite,
-                    totalSessions = newTotalSessions,
-                    isPaused = false, // isRunning 상태는 서비스의 브로드캐스트를 통해 업데이트됨
-                    collectedAnimals = updatedCollectedAnimals
-                )
-            }
-        } else {
-            _uiState.update {
-                it.copy(
-                    cycleCount = it.cycleCount + 1,
-                    currentMode = Mode.STUDY,
-                    timeLeft = it.settings.studyTime * 60,
-                    currentScreen = Screen.Main,
-                    isPaused = false
-                )
-            }
+        viewModelScope.launch {
+            repo.saveSeenIds(updatedSeenIds)
         }
-
-        // --- 변경: 타이머 재시작 로직은 서비스가 담당하므로 ViewModel에서는 제거 ---
+        _uiState.update {
+            it.copy(
+                // 동물 관련 UI만 업데이트
+                activeSprites = it.activeSprites + sprite,
+                collectedAnimals = updatedCollectedAnimals
+            )
+        }
     }
 
+    // ... 나머지 코드는 동일 ...
 
     fun updateStudyTime(v: Int) {
         updateSettings { copy(studyTime = v) }
         _uiState.update { state ->
-            if (state.currentMode == Mode.STUDY) {
+            if (state.currentMode == Mode.STUDY && !state.isRunning && !state.isPaused) {
                 state.copy(timeLeft = v * 60)
             } else {
                 state
@@ -160,7 +148,7 @@ class PomodoroViewModel(
     fun updateShortBreakTime(v: Int) {
         updateSettings { copy(shortBreakTime = v) }
         _uiState.update { state ->
-            if (state.currentMode == Mode.SHORT_BREAK) {
+            if (state.currentMode == Mode.SHORT_BREAK && !state.isRunning && !state.isPaused) {
                 state.copy(timeLeft = v * 60)
             } else {
                 state
@@ -171,7 +159,7 @@ class PomodoroViewModel(
     fun updateLongBreakTime(v: Int) {
         updateSettings { copy(longBreakTime = v) }
         _uiState.update { state ->
-            if (state.currentMode == Mode.LONG_BREAK) {
+            if (state.currentMode == Mode.LONG_BREAK && !state.isRunning && !state.isPaused) {
                 state.copy(timeLeft = v * 60)
             } else {
                 state

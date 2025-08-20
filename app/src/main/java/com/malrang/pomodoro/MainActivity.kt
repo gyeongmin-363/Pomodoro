@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.malrang.pomodoro.dataclass.ui.Mode // Mode 클래스 임포트 추가
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
@@ -35,14 +36,28 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var vm: PomodoroViewModel
 
+    /**
+     * --- 수정된 BroadcastReceiver ---
+     * 서비스로부터 모든 세션 상태를 받아 ViewModel을 업데이트합니다.
+     */
     private val timerUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 TimerService.TIMER_TICK -> {
                     val timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                     val isRunning = intent.getBooleanExtra("IS_RUNNING", false)
+                    // --- 추가: 확장된 세션 정보(모드, 세션 수) 추출 ---
+                    val currentMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getSerializableExtra("CURRENT_MODE", Mode::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getSerializableExtra("CURRENT_MODE") as? Mode
+                    } ?: Mode.STUDY // null일 경우 기본값으로 STUDY 설정
+                    val totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
+
                     if (::vm.isInitialized) {
-                        vm.updateTimerStateFromService(timeLeft, isRunning)
+                        // --- 변경: 모든 세션 정보를 ViewModel으로 전달 ---
+                        vm.updateTimerStateFromService(timeLeft, isRunning, currentMode, totalSessions)
                     }
                 }
                 TimerService.TIMER_FINISHED -> {

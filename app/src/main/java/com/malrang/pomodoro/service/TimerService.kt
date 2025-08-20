@@ -77,12 +77,16 @@ class TimerService : Service() {
                 sendBroadcast(Intent(TIMER_TICK).apply {
                     putExtra("TIME_LEFT", timeLeft)
                     putExtra("IS_RUNNING", isRunning)
+                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
+                    putExtra("TOTAL_SESSIONS", totalSessions)
                 })
             }
             "REQUEST_STATUS" -> {
                 sendBroadcast(Intent(TIMER_TICK).apply {
                     putExtra("TIME_LEFT", timeLeft)
                     putExtra("IS_RUNNING", isRunning)
+                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
+                    putExtra("TOTAL_SESSIONS", totalSessions)
                 })
             }
         }
@@ -99,7 +103,10 @@ class TimerService : Service() {
                 sendBroadcast(Intent(TIMER_TICK).apply {
                     putExtra("TIME_LEFT", timeLeft)
                     putExtra("IS_RUNNING", true)
+                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
+                    putExtra("TOTAL_SESSIONS", totalSessions)
                 })
+
             }
 
             val currentSettings = settings ?: return@launch
@@ -147,6 +154,8 @@ class TimerService : Service() {
         sendBroadcast(Intent(TIMER_TICK).apply {
             putExtra("TIME_LEFT", timeLeft)
             putExtra("IS_RUNNING", false)
+            putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
+            putExtra("TOTAL_SESSIONS", totalSessions)
         })
     }
 
