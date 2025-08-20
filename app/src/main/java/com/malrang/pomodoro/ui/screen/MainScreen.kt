@@ -39,7 +39,10 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext // LocalContext 임포트 추가
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -156,13 +159,28 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
             Spacer(Modifier.height(24.dp))
 
-            // 통계
-            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${state.totalSessions}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
-                    Text("완료한 세션", color = Color.LightGray)
+            //연속 완료한 세션
+            Text(
+                buildAnnotatedString {
+                    withStyle(
+                        style = SpanStyle(
+                            color = Color.LightGray
+                        )
+                    ) {
+                        append("연속 완료 세션 : ")
+                    }
+                    withStyle(
+                        style = SpanStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Cyan
+                        )
+                    ) {
+                        append("${state.totalSessions} ")
+                    }
                 }
-            }
+            )
+
 
             Spacer(Modifier.height(24.dp))
 
