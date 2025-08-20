@@ -18,7 +18,7 @@ import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
-import com.malrang.pomodoro.service.TimerService // TimerService 임포트
+import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,43 +33,33 @@ class PomodoroViewModel(
     private val repo: PomodoroRepository,
     private val soundPlayer: SoundPlayer,
     private val vibratorHelper: VibratorHelper,
-    private val timerService: TimerServiceProvider // app 대신 TimerServiceProvider 주입
+    private val timerService: TimerServiceProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PomodoroUiState())
     val uiState: StateFlow<PomodoroUiState> = _uiState.asStateFlow()
 
-    // 초기 로드
     init {
         viewModelScope.launch {
-            val seenIds = repo.loadSeenIds() // 발견한 동물 ID들을 불러옵니다.
-            val daily = repo.loadDailyStats() // 통계 로드
-            val loaded = repo.loadSettings() // 설정 정보 로드
-
-            // 도감 채우기: id를 기반으로 AnimalsTable에서 Animal 객체로 변환
+            val seenIds = repo.loadSeenIds()
+            val daily = repo.loadDailyStats()
+            val loaded = repo.loadSettings()
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
-
             _uiState.update {
                 it.copy(
-                    collectedAnimals = seenAnimals.toSet(), // 불러온 동물 목록으로 UI 상태를 업데이트
+                    collectedAnimals = seenAnimals.toSet(),
                     dailyStats = daily,
                     settings = loaded,
                 )
             }
-
-            // --- 로직 수정 ---
-            // 서비스가 활성화 상태인지 확인
             if (TimerService.isServiceActive()) {
-                // 서비스가 실행 중이면, 현재 상태를 요청하여 동기화
                 timerService.requestStatus()
             } else {
-                // 서비스가 실행 중이 아니면, 타이머를 초기화
                 resetTimer()
             }
         }
     }
 
-    // —— 서비스로부터 타이머 상태 업데이트 ——
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean) {
         _uiState.update {
             it.copy(
@@ -84,17 +74,16 @@ class PomodoroViewModel(
         completeSession()
     }
 
-    // —— 타이머 제어 ——
     fun startTimer() {
         if (_uiState.value.isRunning) return
+        val s = _uiState.value
         _uiState.update { it.copy(isRunning = true, isPaused = false) }
-        // 서비스 시작
-        timerService.start(_uiState.value.timeLeft)
+        // --- 변경: 서비스 시작 시 현재 상태(설정, 모드, 세션 수) 전달 ---
+        timerService.start(s.timeLeft, s.settings, s.currentMode, s.totalSessions)
     }
 
     fun pauseTimer() {
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
-        // 서비스 일시정지
         timerService.pause()
     }
 
@@ -106,39 +95,31 @@ class PomodoroViewModel(
             Mode.LONG_BREAK -> s.settings.longBreakTime
         }
         _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = newTimeLeft * 60) }
-
-        // 서비스 리셋
         timerService.reset(newTimeLeft * 60)
     }
 
+    /**
+     * 세션이 완료되었을 때 호출 (앱이 활성 상태일 때)
+     * 이제 이 함수는 UI 업데이트와 데이터 저장만 담당합니다.
+     * 소리, 진동, 자동 시작은 서비스가 처리합니다.
+     */
     private fun completeSession() {
         val s = _uiState.value
-        val autoStart = s.settings.autoStart
 
-        if (s.settings.soundEnabled) {
-            soundPlayer.playSound()
-        }
-        if (s.settings.vibrationEnabled) {
-            vibratorHelper.vibrate()
-        }
+        // --- 변경: 소리, 진동 로직은 서비스에서 처리하므로 ViewModel에서는 제거 ---
 
         if (s.currentMode == Mode.STUDY) {
             val newTotalSessions = s.totalSessions + 1
             val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % s.settings.longBreakInterval == 0
-
             val nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
             val nextTime = if (isLongBreakTime) s.settings.longBreakTime else s.settings.shortBreakTime
-
             val animal = getRandomAnimal()
             val sprite = makeSprite(animal)
-
             val updatedCollectedAnimals = s.collectedAnimals + animal
             val updatedSeenIds = updatedCollectedAnimals.map { it.id }.toSet()
-
             viewModelScope.launch {
                 repo.saveSeenIds(updatedSeenIds)
             }
-
             _uiState.update {
                 it.copy(
                     currentMode = nextMode,
@@ -146,34 +127,26 @@ class PomodoroViewModel(
                     currentScreen = Screen.Main,
                     activeSprites = it.activeSprites + sprite,
                     totalSessions = newTotalSessions,
-                    isRunning = autoStart,
-                    isPaused = false,
+                    isPaused = false, // isRunning 상태는 서비스의 브로드캐스트를 통해 업데이트됨
                     collectedAnimals = updatedCollectedAnimals
                 )
             }
-        } else { // SHORT_BREAK or LONG_BREAK
+        } else {
             _uiState.update {
                 it.copy(
                     cycleCount = it.cycleCount + 1,
                     currentMode = Mode.STUDY,
                     timeLeft = it.settings.studyTime * 60,
                     currentScreen = Screen.Main,
-                    isRunning = autoStart,
                     isPaused = false
                 )
             }
         }
 
-        // 세션 완료 후 서비스 리셋
-        resetTimer()
-
-        if (autoStart) {
-            startTimer()
-        }
+        // --- 변경: 타이머 재시작 로직은 서비스가 담당하므로 ViewModel에서는 제거 ---
     }
 
 
-    // —— 설정 변경 ——
     fun updateStudyTime(v: Int) {
         updateSettings { copy(studyTime = v) }
         _uiState.update { state ->
@@ -214,7 +187,6 @@ class PomodoroViewModel(
     fun toggleVibration(b: Boolean) = updateSettings{ copy(vibrationEnabled = b) }
     fun toggleAutoStart(b: Boolean) = updateSettings{ copy(autoStart = b) }
 
-    /** ✅ Settings 업데이트 함수 */
     private fun updateSettings(transform: Settings.() -> Settings) {
         _uiState.update { state ->
             val updated = state.settings.transform()
@@ -227,7 +199,6 @@ class PomodoroViewModel(
 
     fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
 
-    // —— 통계 업데이트 ——
     private suspend fun incTodayStat() {
         val today = LocalDate.now().toString()
         val current = repo.loadDailyStats().toMutableMap()
@@ -237,15 +208,12 @@ class PomodoroViewModel(
         _uiState.update { it.copy(dailyStats = current) }
     }
 
-
-
     private fun makeSprite(animal: Animal): AnimalSprite {
         val spriteData = SpriteMap.map[animal]
             ?: SpriteData(
                 idleRes = R.drawable.classical_idle,
                 jumpRes = R.drawable.classical_jump,
             )
-
         return AnimalSprite(
             id = UUID.randomUUID().toString(),
             animalId = animal.id,
@@ -262,7 +230,6 @@ class PomodoroViewModel(
             sizeDp = 48f
         )
     }
-
 
     fun updateSprites(deltaSec: Float, widthPx: Int, heightPx: Int) {
         _uiState.update { s ->
@@ -282,7 +249,6 @@ class PomodoroViewModel(
                 } else {
                     sp.spriteState
                 }
-
                 sp.copy(x = nx, y = ny, vx = vx, vy = vy, spriteState = nextState)
             }
             s.copy(activeSprites = updated)
