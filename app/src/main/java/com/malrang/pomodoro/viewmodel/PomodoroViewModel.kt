@@ -1,33 +1,24 @@
 package com.malrang.pomodoro.viewmodel
 
-import android.Manifest
-import android.app.Application
-import android.content.Context
-import android.media.MediaPlayer
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
-import androidx.annotation.RequiresPermission
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
-import com.malrang.pomodoro.dataclass.ui.DailyStat
-import com.malrang.pomodoro.dataclass.ui.Mode
-import com.malrang.pomodoro.localRepo.PomodoroRepository
-import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
 import com.malrang.pomodoro.dataclass.animalInfo.Rarity
-import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.dataclass.ui.Settings
+import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteData
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
+import com.malrang.pomodoro.dataclass.ui.DailyStat
+import com.malrang.pomodoro.dataclass.ui.Mode
+import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
+import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.dataclass.ui.Settings
+import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
+import com.malrang.pomodoro.service.TimerServiceProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +34,7 @@ class PomodoroViewModel(
     private val repo: PomodoroRepository,
     private val soundPlayer: SoundPlayer,
     private val vibratorHelper: VibratorHelper,
+    private val timerService: TimerServiceProvider // app 대신 TimerServiceProvider 주입
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PomodoroUiState())
@@ -89,11 +81,16 @@ class PomodoroViewModel(
         if (_uiState.value.isRunning) return
         _uiState.update { it.copy(isRunning = true, isPaused = false) }
         runTimerLoop()
+
+        // 서비스 시작
+        timerService.start(_uiState.value.timeLeft)
     }
 
     fun pauseTimer() {
         timerJob?.cancel()
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
+        // 서비스 일시정지
+        timerService.pause()
     }
 
     fun resetTimer() {
@@ -105,6 +102,9 @@ class PomodoroViewModel(
             Mode.LONG_BREAK -> s.settings.longBreakTime
         }
         _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = newTimeLeft * 60) }
+
+        // 서비스 리셋
+        timerService.reset(newTimeLeft * 60)
     }
 
     private fun completeSession() {
@@ -160,8 +160,11 @@ class PomodoroViewModel(
             }
         }
 
+        // 세션 완료 후 서비스 리셋
+        resetTimer()
+
         if (autoStart) {
-            runTimerLoop()
+            startTimer()
         }
     }
 

@@ -90,8 +90,8 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Slider(
             value = settings.longBreakInterval.toFloat(),
             onValueChange = { viewModel.updateLongBreakInterval(it.toInt()) },
-            valueRange = 1f..15f,
-            steps = 13 // 1부터 15까지 설정 가능
+            valueRange = 1f..12f,
+            steps = 10 // 1부터 12까지 설정 가능
         )
         Spacer(Modifier.height(24.dp))
 
