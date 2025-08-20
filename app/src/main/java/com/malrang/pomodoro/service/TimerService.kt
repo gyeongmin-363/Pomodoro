@@ -24,6 +24,7 @@ class TimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isServiceActive = true // 서비스 생성 시 활성 상태로 설정
         createNotificationChannel()
     }
 
@@ -45,6 +46,14 @@ class TimerService : Service() {
                 isRunning = false
                 timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                 updateNotification()
+                sendBroadcast(Intent(TIMER_TICK).apply {
+                    putExtra("TIME_LEFT", timeLeft)
+                    putExtra("IS_RUNNING", isRunning)
+                })
+            }
+            // 상태 요청 액션 추가
+            "REQUEST_STATUS" -> {
+                // 현재 타이머 상태를 즉시 브로드캐스트
                 sendBroadcast(Intent(TIMER_TICK).apply {
                     putExtra("TIME_LEFT", timeLeft)
                     putExtra("IS_RUNNING", isRunning)
@@ -125,11 +134,16 @@ class TimerService : Service() {
         super.onDestroy()
         job?.cancel()
         isRunning = false
+        isServiceActive = false // 서비스 파괴 시 비활성 상태로 설정
     }
 
     companion object {
         private const val NOTIFICATION_ID = 2022
         const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
         const val TIMER_FINISHED = "com.malrang.pomodoro.TIMER_FINISHED"
+
+        // 서비스 활성 상태를 저장하는 static 변수
+        private var isServiceActive = false
+        fun isServiceActive(): Boolean = isServiceActive
     }
 }
