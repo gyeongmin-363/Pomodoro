@@ -27,7 +27,6 @@ class TimerService : Service() {
     private var timeLeft: Int = 0
     private var isRunning: Boolean = false
 
-    // --- 추가: 서비스가 직접 상태를 관리하기 위한 변수 ---
     private var settings: Settings? = null
     private var currentMode: Mode = Mode.STUDY
     private var totalSessions: Int = 0
@@ -39,7 +38,6 @@ class TimerService : Service() {
         super.onCreate()
         isServiceActive = true
         createNotificationChannel()
-        // --- 추가: 서비스 내에서 SoundPlayer와 VibratorHelper 인스턴스 생성 ---
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
     }
@@ -49,7 +47,6 @@ class TimerService : Service() {
             "START" -> {
                 if (!isRunning) {
                     timeLeft = intent.getIntExtra("TIME_LEFT", 0)
-                    // --- 추가: Intent로부터 전달받은 상태 정보 저장 ---
                     settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         intent.getSerializableExtra("SETTINGS", Settings::class.java)
                     } else {
@@ -92,11 +89,8 @@ class TimerService : Service() {
         return START_STICKY
     }
 
-    /**
-     * 타이머 시작 및 세션 완료 로직 전체를 담당하도록 수정
-     */
     private fun startTimer() {
-        job?.cancel() // 기존 코루틴이 있다면 취소
+        job?.cancel()
         job = CoroutineScope(Dispatchers.Main).launch {
             while (timeLeft > 0) {
                 delay(1000)
@@ -108,11 +102,8 @@ class TimerService : Service() {
                 })
             }
 
-            // --- 여기부터 세션 완료 처리 로직 ---
+            val currentSettings = settings ?: return@launch
 
-            val currentSettings = settings ?: return@launch // 설정값이 없으면 중단
-
-            // 1. 소리 및 진동 재생
             if (currentSettings.soundEnabled) {
                 soundPlayer.playSound()
             }
@@ -120,10 +111,8 @@ class TimerService : Service() {
                 vibratorHelper.vibrate()
             }
 
-            // 2. ViewModel에 세션 완료 알림 (UI 업데이트 및 동물 획득 처리용)
             sendBroadcast(Intent(TIMER_FINISHED))
 
-            // 3. 다음 세션 상태 계산
             var nextMode = Mode.STUDY
             var nextTime = 0
             var newTotalSessions = totalSessions
@@ -133,23 +122,18 @@ class TimerService : Service() {
                 val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % currentSettings.longBreakInterval == 0
                 nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
                 nextTime = if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime
-            } else { // 휴식 모드였을 경우
+            } else {
                 nextMode = Mode.STUDY
                 nextTime = currentSettings.studyTime
             }
 
-            // 4. 자동 시작 설정 확인
             if (currentSettings.autoStart) {
-                // 서비스의 상태를 다음 세션으로 업데이트
                 timeLeft = nextTime * 60
                 currentMode = nextMode
                 totalSessions = newTotalSessions
                 isRunning = true
-
-                // 새로운 타이머 시작 (재귀 호출 대신 새로운 코루틴 시작)
                 startTimer()
             } else {
-                // 자동 시작이 아닐 경우 서비스 종료
                 isRunning = false
                 stopSelf()
             }
@@ -185,22 +169,48 @@ class TimerService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
+    /**
+     * 알림 UI를 생성하는 함수 (수정됨)
+     */
     private fun createNotification(): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        val minutes = timeLeft / 60
-        val seconds = timeLeft % 60
-        val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+        // --- 1. 모드 텍스트 설정 ---
+        val modeText = when (currentMode) {
+            Mode.STUDY -> "공부 시간"
+            Mode.SHORT_BREAK -> "짧은 휴식"
+            Mode.LONG_BREAK -> "긴 휴식"
+        }
+
+        // --- 2. 시간 또는 상태 텍스트 설정 ---
+        val statusText = if (isRunning) {
+            val minutes = timeLeft / 60
+            val seconds = timeLeft % 60
+            String.format("남은 시간: %02d:%02d", minutes, seconds)
+        } else {
+            "일시정지됨"
+        }
+
+        // --- 3. 세션 텍스트 설정 (공부 중에만 표시) ---
+        val sessionText = if (currentMode == Mode.STUDY) {
+            " | 세션: ${totalSessions + 1}"
+        } else {
+            ""
+        }
+
+        // --- 4. 모든 정보를 조합하여 최종 텍스트 생성 ---
+        val contentText = "$statusText$sessionText"
 
         return NotificationCompat.Builder(this, "pomodoro_timer")
-            .setContentTitle("뽀모도로 타이머")
-            .setContentText("남은 시간: $timeFormatted")
+            .setContentTitle("뽀모도로 타이머: $modeText") // 제목에 현재 모드 표시
+            .setContentText(contentText) // 본문에 상태 및 세션 정보 표시
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(isRunning)
             .build()
     }
+
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
