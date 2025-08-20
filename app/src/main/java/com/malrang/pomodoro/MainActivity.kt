@@ -2,6 +2,10 @@ package com.malrang.pomodoro
 
 import android.Manifest
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -16,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
+import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
 import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
@@ -27,6 +32,27 @@ import com.malrang.withpet.BackPressExit
  * 앱의 진입점 역할을 하며, [PomodoroApp] 컴포저블을 표시합니다.
  */
 class MainActivity : ComponentActivity() {
+
+    private lateinit var vm: PomodoroViewModel
+
+    private val timerUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                TimerService.TIMER_TICK -> {
+                    val timeLeft = intent.getIntExtra("TIME_LEFT", 0)
+                    val isRunning = intent.getBooleanExtra("IS_RUNNING", false)
+                    if (::vm.isInitialized) {
+                        vm.updateTimerStateFromService(timeLeft, isRunning)
+                    }
+                }
+                TimerService.TIMER_FINISHED -> {
+                    if (::vm.isInitialized) {
+                        vm.onTimerFinishedFromService()
+                    }
+                }
+            }
+        }
+    }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -44,11 +70,25 @@ class MainActivity : ComponentActivity() {
         askNotificationPermission()
         setContent {
             PomodoroTheme {
-                val vm: PomodoroViewModel = viewModel(factory = PomodoroVMFactory(application))
+                vm = viewModel(factory = PomodoroVMFactory(application))
                 PomodoroApp(vm)
                 BackPressExit() //뒤로가기 연속 두번 -> 앱 종료
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val filter = IntentFilter().apply {
+            addAction(TimerService.TIMER_TICK)
+            addAction(TimerService.TIMER_FINISHED)
+        }
+        registerReceiver(timerUpdateReceiver, filter)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(timerUpdateReceiver)
     }
 
     private fun askNotificationPermission() {
