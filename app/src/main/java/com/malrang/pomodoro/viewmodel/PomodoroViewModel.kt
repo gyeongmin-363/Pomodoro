@@ -18,6 +18,7 @@ import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
+import com.malrang.pomodoro.service.TimerService // TimerService 임포트
 import com.malrang.pomodoro.service.TimerServiceProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,7 +57,15 @@ class PomodoroViewModel(
                 )
             }
 
-            resetTimer() //timeLeft를 계산하기 위함
+            // --- 로직 수정 ---
+            // 서비스가 활성화 상태인지 확인
+            if (TimerService.isServiceActive()) {
+                // 서비스가 실행 중이면, 현재 상태를 요청하여 동기화
+                timerService.requestStatus()
+            } else {
+                // 서비스가 실행 중이 아니면, 타이머를 초기화
+                resetTimer()
+            }
         }
     }
 
