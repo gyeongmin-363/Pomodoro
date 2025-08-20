@@ -127,11 +127,21 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
     }
 
     // 선택된 동물이 있으면 모달 창 표시
-    selectedAnimal?.let { animal ->
-        AnimalDetailModal(
-            animal = animal,
-            onDismissRequest = { selectedAnimal = null }
-        )
+    if (selectedAnimal != null) {
+        Dialog(onDismissRequest = { selectedAnimal = null }) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                AnimalDetailModal(animal = selectedAnimal!!, onDismissRequest = { selectedAnimal = null })
+                Text(
+                    text = "빈 공간을 터치하여 창 닫기",
+                    color = Color.LightGray,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+        }
     }
 }
 
