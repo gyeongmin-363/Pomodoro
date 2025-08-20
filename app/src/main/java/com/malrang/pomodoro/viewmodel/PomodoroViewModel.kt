@@ -81,10 +81,31 @@ class PomodoroViewModel(
      * 서비스로부터 세션 종료 신호를 받으면 호출됩니다.
      */
     fun onTimerFinishedFromService() {
-        // --- 변경: '공부' 세션이 끝났을 때만 동물 획득 로직을 처리합니다. ---
-        if (_uiState.value.currentMode == Mode.STUDY) {
+        val finishedMode = _uiState.value.currentMode
+        viewModelScope.launch {
+            updateTodayStats(finishedMode)
+        }
+
+        if (finishedMode == Mode.STUDY) {
             handleStudySessionCompletion()
         }
+    }
+
+    private suspend fun updateTodayStats(finishedMode: Mode) {
+        val today = LocalDate.now().toString()
+        val s = _uiState.value.settings
+        val currentStats = repo.loadDailyStats().toMutableMap()
+        val todayStat = currentStats[today] ?: DailyStat(today, 0, 0)
+
+        val updatedStat = when (finishedMode) {
+            Mode.STUDY -> todayStat.copy(studyTimeInMinutes = todayStat.studyTimeInMinutes + s.studyTime)
+            Mode.SHORT_BREAK -> todayStat.copy(breakTimeInMinutes = todayStat.breakTimeInMinutes + s.shortBreakTime)
+            Mode.LONG_BREAK -> todayStat.copy(breakTimeInMinutes = todayStat.breakTimeInMinutes + s.longBreakTime)
+        }
+
+        currentStats[today] = updatedStat
+        repo.saveDailyStats(currentStats)
+        _uiState.update { it.copy(dailyStats = currentStats) }
     }
 
     // PomodoroViewModel.kt 파일에서 아래 두 함수를 수정하세요.
@@ -190,15 +211,7 @@ class PomodoroViewModel(
     }
 
     fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
-
-    private suspend fun incTodayStat() {
-        val today = LocalDate.now().toString()
-        val current = repo.loadDailyStats().toMutableMap()
-        val prev = current[today]?.studySessions ?: 0
-        current[today] = DailyStat(today, prev + 1)
-        repo.saveDailyStats(current)
-        _uiState.update { it.copy(dailyStats = current) }
-    }
+    
 
     private fun makeSprite(animal: Animal): AnimalSprite {
         val spriteData = SpriteMap.map[animal]
