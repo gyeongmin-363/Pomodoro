@@ -21,6 +21,11 @@ class TimerService : Service() {
     private var job: Job? = null
     private var timeLeft: Int = 0
 
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             "START" -> {
@@ -49,7 +54,7 @@ class TimerService : Service() {
             // 시간이 다 되면 서비스 종료
             stopSelf()
         }
-        startForeground(1, createNotification())
+        startForeground(NOTIFICATION_ID, createNotification())
     }
 
     private fun pauseTimer() {
@@ -62,19 +67,23 @@ class TimerService : Service() {
 
     private fun updateNotification() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(2022, createNotification())
+        notificationManager.notify(NOTIFICATION_ID, createNotification())
+    }
+
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            "pomodoro_timer",
+            "Pomodoro Timer",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            setShowBadge(false)
+        }
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
     private fun createNotification(): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
-
-        val channel = NotificationChannel(
-            "pomodoro_timer",
-            "Pomodoro Timer",
-            NotificationManager.IMPORTANCE_LOW // 중요도를 LOW로 설정
-        )
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
         val minutes = timeLeft / 60
         val seconds = timeLeft % 60
@@ -95,5 +104,9 @@ class TimerService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         job?.cancel()
+    }
+
+    companion object {
+        private const val NOTIFICATION_ID = 2022
     }
 }
