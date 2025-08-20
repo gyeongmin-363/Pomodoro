@@ -87,16 +87,14 @@ class PomodoroViewModel(
         }
     }
 
+    // PomodoroViewModel.kt 파일에서 아래 두 함수를 수정하세요.
+
     fun startTimer() {
         if (_uiState.value.isRunning) return
         val s = _uiState.value
-        _uiState.update { it.copy(isRunning = true, isPaused = false) }
+        // --- 추가: 타이머가 시작되었음을 상태에 기록 ---
+        _uiState.update { it.copy(isRunning = true, isPaused = false, isTimerStartedOnce = true) }
         timerService.start(s.timeLeft, s.settings, s.currentMode, s.totalSessions)
-    }
-
-    fun pauseTimer() {
-        _uiState.update { it.copy(isRunning = false, isPaused = true) }
-        timerService.pause()
     }
 
     fun resetTimer() {
@@ -106,9 +104,15 @@ class PomodoroViewModel(
             Mode.SHORT_BREAK -> s.settings.shortBreakTime
             Mode.LONG_BREAK -> s.settings.longBreakTime
         }
-        _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = newTimeLeft * 60) }
+        // --- 추가: 타이머가 리셋되었으므로 isTimerStartedOnce를 false로 변경 ---
+        _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = newTimeLeft * 60, isTimerStartedOnce = false) }
         timerService.reset(newTimeLeft * 60)
     }
+    fun pauseTimer() {
+        _uiState.update { it.copy(isRunning = false, isPaused = true) }
+        timerService.pause()
+    }
+
 
     /**
      * --- 변경: 함수 이름 및 역할 변경 ---

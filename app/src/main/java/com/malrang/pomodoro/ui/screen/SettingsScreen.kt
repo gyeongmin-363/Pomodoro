@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen
 
+import android.widget.Toast // Toast 임포트 추가
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext // LocalContext 임포트 추가
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +40,8 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 fun SettingsScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
     val settings = state.settings
+    // --- 추가: Toast 메시지를 위해 Context 가져오기 ---
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -51,7 +55,13 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("⚙️ 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            IconButton(onClick = { viewModel.showScreen(Screen.Main) }) {
+            // --- 핵심 수정 사항: 뒤로가기 버튼 클릭 로직 변경 ---
+            IconButton(onClick = {
+                if (state.isTimerStartedOnce) {
+                    Toast.makeText(context, "변경사항은 리셋 이후 적용됩니다", Toast.LENGTH_SHORT).show()
+                }
+                viewModel.showScreen(Screen.Main)
+            }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "돌아가기",
