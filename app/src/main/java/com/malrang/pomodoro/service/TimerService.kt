@@ -61,17 +61,18 @@ class TimerService : Service() {
                     }
                     totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
 
-                    startTimer()
                     isRunning = true
+                    startTimer()
                 }
             }
             "PAUSE" -> {
-                pauseTimer()
-                isRunning = false
+                // --- 핵심 수정 사항: 상태를 먼저 변경하고 UI 업데이트 함수를 호출 ---
+                isRunning = false // 1. 서비스의 상태를 '일시정지'로 먼저 변경
+                pauseTimer()    // 2. 그 다음에 UI(알림) 업데이트 및 브로드캐스트 실행
             }
             "RESET" -> {
-                resetTimer()
                 isRunning = false
+                resetTimer()
                 timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                 updateNotification()
                 sendBroadcast(Intent(TIMER_TICK).apply {
@@ -106,7 +107,6 @@ class TimerService : Service() {
                     putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
                     putExtra("TOTAL_SESSIONS", totalSessions)
                 })
-
             }
 
             val currentSettings = settings ?: return@launch
@@ -150,7 +150,7 @@ class TimerService : Service() {
 
     private fun pauseTimer() {
         job?.cancel()
-        updateNotification()
+        updateNotification() // isRunning이 false로 바뀐 후에 호출되므로, 정확한 알림이 생성됨
         sendBroadcast(Intent(TIMER_TICK).apply {
             putExtra("TIME_LEFT", timeLeft)
             putExtra("IS_RUNNING", false)
@@ -178,42 +178,41 @@ class TimerService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    /**
-     * 알림 UI를 생성하는 함수 (수정됨)
-     */
     private fun createNotification(): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        // --- 1. 모드 텍스트 설정 ---
         val modeText = when (currentMode) {
             Mode.STUDY -> "공부 시간"
             Mode.SHORT_BREAK -> "짧은 휴식"
             Mode.LONG_BREAK -> "긴 휴식"
         }
 
-        // --- 2. 시간 또는 상태 텍스트 설정 ---
         val statusText = if (isRunning) {
             val minutes = timeLeft / 60
             val seconds = timeLeft % 60
             String.format("남은 시간: %02d:%02d", minutes, seconds)
         } else {
-            "일시정지됨"
+            if (timeLeft > 0) {
+                val minutes = timeLeft / 60
+                val seconds = timeLeft % 60
+                String.format("남은 시간: %02d:%02d (일시정지)", minutes, seconds)
+            } else {
+                "시간 종료"
+            }
         }
 
-        // --- 3. 세션 텍스트 설정 (공부 중에만 표시) ---
         val sessionText = if (currentMode == Mode.STUDY) {
             " | 세션: ${totalSessions + 1}"
         } else {
             ""
         }
 
-        // --- 4. 모든 정보를 조합하여 최종 텍스트 생성 ---
         val contentText = "$statusText$sessionText"
 
         return NotificationCompat.Builder(this, "pomodoro_timer")
-            .setContentTitle("뽀모도로 타이머: $modeText") // 제목에 현재 모드 표시
-            .setContentText(contentText) // 본문에 상태 및 세션 정보 표시
+            .setContentTitle("뽀모도로 타이머: $modeText")
+            .setContentText(contentText)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(isRunning)
