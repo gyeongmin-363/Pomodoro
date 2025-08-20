@@ -91,6 +91,32 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(timerUpdateReceiver)
     }
 
+    /**
+     * 액티비티가 소멸될 때 호출됩니다. (예: 사용자가 앱을 완전히 종료할 때)
+     */
+    override fun onDestroy() {
+        super.onDestroy()
+
+        // 1. 서비스가 현재 실행 중인지 확인합니다.
+        if (TimerService.isServiceActive()) {
+            var hasNotificationPermission = true
+
+            // 2. Android 13 이상에서만 알림 권한을 확인합니다.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // 권한이 부여되었는지 체크
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    hasNotificationPermission = false
+                }
+            }
+
+            // 3. 알림 권한이 없다면, 백그라운드 서비스를 중지시킵니다.
+            if (!hasNotificationPermission) {
+                val stopIntent = Intent(this, TimerService::class.java)
+                stopService(stopIntent)
+            }
+        }
+    }
+
     private fun askNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
