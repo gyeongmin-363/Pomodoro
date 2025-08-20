@@ -99,26 +99,35 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
                     Card(
                         modifier = Modifier
                             .padding(4.dp)
+                            .height(160.dp) // 1. 카드의 높이를 고정값으로 설정
                             .fillMaxWidth()
-                            .clickable { selectedAnimal = animal }, // Card 클릭 시 상태 변경
+                            .clickable { selectedAnimal = animal },
                         colors = CardDefaults.cardColors(containerColor = Color(0x33FFFFFF))
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(8.dp)
+                            verticalArrangement = Arrangement.SpaceAround, // 2. Column의 내용물을 수직으로 중앙 정렬
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .fillMaxSize() // 3. Column이 Card의 전체 공간을 채우도록 설정
                         ) {
                             SpriteItem(animal = animal, size = 64f)
-                            Text(
-                                animal.displayName,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
-                            )
-                            Text(
-                                getRarityString(animal.rarity),
-                                fontSize = 12.sp,
-                                color = getRarityColor(animal.rarity)
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ){
+                                Text(
+                                    text = animal.displayName,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center // 4. 텍스트가 두 줄 이상일 경우 중앙 정렬
+                                )
+                                Text(
+                                    text = getRarityString(animal.rarity),
+                                    fontSize = 10.sp,
+                                    color = getRarityColor(animal.rarity)
+                                )
+                            }
                         }
                     }
                 }
