@@ -211,33 +211,41 @@ fun CycleIndicator(
         }
     }
 
-    Row(
+    // 3. 시퀀스를 8개씩 묶어 여러 행으로 그림
+    Column(
         modifier = modifier,
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        // 3. 시퀀스를 기반으로 원들을 그림
-        cycleSequence.forEachIndexed { index, mode ->
-            val color = when (mode) {
-                Mode.STUDY -> Color.Red
-                Mode.SHORT_BREAK -> Color.Green
-                Mode.LONG_BREAK -> Color.Blue
-            }
-
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .size(16.dp)
+        cycleSequence.withIndex().chunked(8).forEach { rowItems ->
+            Row(
+                modifier = Modifier.padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    when {
-                        // 완료된 세션: 채워진 원
-                        index < currentIndex -> {
-                            drawCircle(color = color)
-                        }
-                        // 현재 또는 미래 세션: 테두리 원
-                        else -> {
-                            drawCircle(color = color, style = Stroke(width = 2.dp.toPx()))
+                rowItems.forEach { (index, mode) ->
+                    val color = when (mode) {
+                        Mode.STUDY -> Color.Red
+                        Mode.SHORT_BREAK -> Color.Green
+                        Mode.LONG_BREAK -> Color.Blue
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .size(16.dp)
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            when {
+                                // 완료된 세션: 채워진 원
+                                index < currentIndex -> {
+                                    drawCircle(color = color)
+                                }
+                                // 현재 또는 미래 세션: 테두리 원
+                                else -> {
+                                    drawCircle(color = color, style = Stroke(width = 2.dp.toPx()))
+                                }
+                            }
                         }
                     }
                 }
