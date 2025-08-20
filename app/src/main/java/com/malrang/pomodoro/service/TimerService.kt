@@ -20,6 +20,7 @@ class TimerService : Service() {
 
     private var job: Job? = null
     private var timeLeft: Int = 0
+    private var isRunning: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -29,16 +30,25 @@ class TimerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             "START" -> {
-                timeLeft = intent.getIntExtra("TIME_LEFT", 0)
-                startTimer()
+                if (!isRunning) {
+                    timeLeft = intent.getIntExtra("TIME_LEFT", 0)
+                    startTimer()
+                    isRunning = true
+                }
             }
             "PAUSE" -> {
                 pauseTimer()
+                isRunning = false
             }
             "RESET" -> {
                 resetTimer()
+                isRunning = false
                 timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                 updateNotification()
+                sendBroadcast(Intent(TIMER_TICK).apply {
+                    putExtra("TIME_LEFT", timeLeft)
+                    putExtra("IS_RUNNING", isRunning)
+                })
             }
         }
         return START_STICKY
@@ -50,8 +60,13 @@ class TimerService : Service() {
                 delay(1000)
                 timeLeft--
                 updateNotification()
+                sendBroadcast(Intent(TIMER_TICK).apply {
+                    putExtra("TIME_LEFT", timeLeft)
+                    putExtra("IS_RUNNING", true)
+                })
             }
             // 시간이 다 되면 서비스 종료
+            sendBroadcast(Intent(TIMER_FINISHED))
             stopSelf()
         }
         startForeground(NOTIFICATION_ID, createNotification())
@@ -59,6 +74,11 @@ class TimerService : Service() {
 
     private fun pauseTimer() {
         job?.cancel()
+        updateNotification()
+        sendBroadcast(Intent(TIMER_TICK).apply {
+            putExtra("TIME_LEFT", timeLeft)
+            putExtra("IS_RUNNING", false)
+        })
     }
 
     private fun resetTimer() {
@@ -75,9 +95,8 @@ class TimerService : Service() {
             "pomodoro_timer",
             "Pomodoro Timer",
             NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            setShowBadge(false)
-        }
+        )
+        channel.setShowBadge(false)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
@@ -94,6 +113,7 @@ class TimerService : Service() {
             .setContentText("남은 시간: $timeFormatted")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
+            .setOngoing(isRunning)
             .build()
     }
 
@@ -104,9 +124,12 @@ class TimerService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         job?.cancel()
+        isRunning = false
     }
 
     companion object {
         private const val NOTIFICATION_ID = 2022
+        const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
+        const val TIMER_FINISHED = "com.malrang.pomodoro.TIMER_FINISHED"
     }
 }
