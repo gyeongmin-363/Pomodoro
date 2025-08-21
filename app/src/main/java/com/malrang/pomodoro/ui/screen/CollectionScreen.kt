@@ -1,6 +1,7 @@
 package com.malrang.pomodoro.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -24,7 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.dataclass.animalInfo.Rarity
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
@@ -49,6 +54,7 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 fun CollectionScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
     val totalAnimals = Animal.entries.size
+    var selectedAnimal by remember { mutableStateOf<Animal?>(null) }
 
     Column(
         modifier = Modifier
@@ -93,40 +99,110 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
                     Card(
                         modifier = Modifier
                             .padding(4.dp)
-                            .fillMaxWidth(),
+                            .height(160.dp) // 1. 카드의 높이를 고정값으로 설정
+                            .fillMaxWidth()
+                            .clickable { selectedAnimal = animal },
                         colors = CardDefaults.cardColors(containerColor = Color(0x33FFFFFF))
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(8.dp)
+                            verticalArrangement = Arrangement.SpaceAround, // 2. Column의 내용물을 수직으로 중앙 정렬
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .fillMaxSize() // 3. Column이 Card의 전체 공간을 채우도록 설정
                         ) {
-                            SpriteItem(animal = animal)
-                            Text(
-                                animal.displayName,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
-                            )
-                            Text(
-                                when (animal.rarity) {
-                                    Rarity.COMMON -> "일반"
-                                    Rarity.RARE -> "레어"
-                                    Rarity.EPIC -> "에픽"
-                                    Rarity.LEGENDARY -> "전설"
-                                },
-                                fontSize = 12.sp,
-                                color = Color.LightGray
-                            )
+                            SpriteItem(animal = animal, size = 64f)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ){
+                                Text(
+                                    text = animal.displayName,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center // 4. 텍스트가 두 줄 이상일 경우 중앙 정렬
+                                )
+                                Text(
+                                    text = getRarityString(animal.rarity),
+                                    fontSize = 10.sp,
+                                    color = getRarityColor(animal.rarity)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    // 선택된 동물이 있으면 모달 창 표시
+    if (selectedAnimal != null) {
+        Dialog(onDismissRequest = { selectedAnimal = null }) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                AnimalDetailModal(animal = selectedAnimal!!, onDismissRequest = { selectedAnimal = null })
+                Text(
+                    text = "빈 공간을 터치하여 창 닫기",
+                    color = Color.LightGray,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+        }
+    }
 }
 
+/**
+ * 동물의 상세 정보를 보여주는 모달 창입니다.
+ */
 @Composable
-fun SpriteItem(animal: Animal) {
+fun AnimalDetailModal(animal: Animal, onDismissRequest: () -> Unit) {
+    Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2A5C))
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // 더 큰 스프라이트 이미지
+                SpriteItem(animal = animal, size = 128f)
+                Spacer(modifier = Modifier.height(16.dp))
+                // 동물 이름
+                Text(
+                    text = animal.displayName,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                // 등급
+                Text(
+                    text = getRarityString(animal.rarity),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = getRarityColor(animal.rarity)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                // 동물 설명
+                Text(
+                    text = animal.description,
+                    fontSize = 14.sp,
+                    color = Color.LightGray,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun SpriteItem(animal: Animal, size: Float) {
     val spriteData = SpriteMap.map[animal]
     if (spriteData == null) return
     val tempSprite = remember(animal.id) {
@@ -144,13 +220,35 @@ fun SpriteItem(animal: Animal) {
             y = 0f,
             vx = 0f,
             vy = 0f,
-            sizeDp = 64f
+            sizeDp = size
         )
     }
 
     SpriteSheetImage(
         sprite = tempSprite,
         onJumpFinished = {},
-        modifier = Modifier.size(64.dp)
+        modifier = Modifier.size(size.dp)
     )
+}
+
+// 희귀도에 따른 문자열 반환
+@Composable
+private fun getRarityString(rarity: Rarity): String {
+    return when (rarity) {
+        Rarity.COMMON -> "일반"
+        Rarity.RARE -> "레어"
+        Rarity.EPIC -> "에픽"
+        Rarity.LEGENDARY -> "전설"
+    }
+}
+
+// 희귀도에 따른 색상 반환
+@Composable
+private fun getRarityColor(rarity: Rarity): Color {
+    return when (rarity) {
+        Rarity.COMMON -> Color.LightGray
+        Rarity.RARE -> Color(0xFF67A5FF) // 파란색
+        Rarity.EPIC -> Color(0xFFC56DFF) // 보라색
+        Rarity.LEGENDARY -> Color(0xFFFFD700) // 금색
+    }
 }

@@ -2,38 +2,52 @@ package com.malrang.pomodoro.service
 
 import android.content.Context
 import android.content.Intent
+import com.malrang.pomodoro.dataclass.ui.Mode
+import com.malrang.pomodoro.dataclass.ui.Settings
+import java.io.Serializable
 
+/**
+ * ViewModel과 TimerService 간의 통신을 담당하는 클래스.
+ * Service에 명령을 보내는 Intent 생성을 캡슐화합니다.
+ */
 class TimerServiceProvider(private val context: Context) {
-    fun start(timeLeft: Int) {
-        Intent(context, TimerService::class.java).also { intent ->
-            intent.action = "START"
-            intent.putExtra("TIME_LEFT", timeLeft)
-            context.startService(intent)
+
+    /**
+     * 타이머 서비스를 시작합니다.
+     * @param timeLeft 초기 시간 (초)
+     * @param settings 현재 설정 객체
+     * @param currentMode 현재 타이머 모드 (STUDY, BREAK)
+     * @param totalSessions 완료한 총 세션 수
+     */
+    fun start(timeLeft: Int, settings: Settings, currentMode: Mode, totalSessions: Int) {
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = "START"
+            putExtra("TIME_LEFT", timeLeft)
+            // --- 변경: 서비스에 필요한 모든 정보를 전달 ---
+            putExtra("SETTINGS", settings as Serializable)
+            putExtra("CURRENT_MODE", currentMode as Serializable)
+            putExtra("TOTAL_SESSIONS", totalSessions)
         }
+        context.startService(intent)
     }
 
     fun pause() {
-        Intent(context, TimerService::class.java).also { intent ->
-            intent.action = "PAUSE"
-            context.startService(intent)
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = "PAUSE"
         }
+        context.startService(intent)
     }
 
     fun reset(timeLeft: Int) {
-        Intent(context, TimerService::class.java).also { intent ->
-            intent.action = "RESET"
-            intent.putExtra("TIME_LEFT", timeLeft)
-            context.startService(intent)
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = "RESET"
+            putExtra("TIME_LEFT", timeLeft)
         }
+        context.startService(intent)
     }
 
-    /**
-     * 실행 중인 TimerService에 현재 상태(남은 시간, 실행 여부)를 요청합니다.
-     * 서비스는 이 요청을 받으면 즉시 현재 상태를 브로드캐스트합니다.
-     */
     fun requestStatus() {
         val intent = Intent(context, TimerService::class.java).apply {
-            // TimerService에 정의된 상수 Action을 사용합니다.
             action = "REQUEST_STATUS"
         }
         context.startService(intent)

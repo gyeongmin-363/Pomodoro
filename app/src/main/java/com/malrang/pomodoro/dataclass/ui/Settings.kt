@@ -1,4 +1,5 @@
 package com.malrang.pomodoro.dataclass.ui
+import java.io.Serializable
 
 /**
  * 앱의 설정을 나타내는 데이터 클래스입니다.
@@ -16,4 +17,4 @@ data class Settings(
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val autoStart: Boolean = true   // ✅ 기본값은 자동 시작
-)
+) : Serializable

@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.malrang.pomodoro.dataclass.ui.Mode // Mode 클래스 임포트 추가
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
@@ -35,14 +36,28 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var vm: PomodoroViewModel
 
+    /**
+     * --- 수정된 BroadcastReceiver ---
+     * 서비스로부터 모든 세션 상태를 받아 ViewModel을 업데이트합니다.
+     */
     private val timerUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 TimerService.TIMER_TICK -> {
                     val timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                     val isRunning = intent.getBooleanExtra("IS_RUNNING", false)
+                    // --- 추가: 확장된 세션 정보(모드, 세션 수) 추출 ---
+                    val currentMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getSerializableExtra("CURRENT_MODE", Mode::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getSerializableExtra("CURRENT_MODE") as? Mode
+                    } ?: Mode.STUDY // null일 경우 기본값으로 STUDY 설정
+                    val totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
+
                     if (::vm.isInitialized) {
-                        vm.updateTimerStateFromService(timeLeft, isRunning)
+                        // --- 변경: 모든 세션 정보를 ViewModel으로 전달 ---
+                        vm.updateTimerStateFromService(timeLeft, isRunning, currentMode, totalSessions)
                     }
                 }
                 TimerService.TIMER_FINISHED -> {
@@ -89,6 +104,32 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         unregisterReceiver(timerUpdateReceiver)
+    }
+
+    /**
+     * 액티비티가 소멸될 때 호출됩니다. (예: 사용자가 앱을 완전히 종료할 때)
+     */
+    override fun onDestroy() {
+        super.onDestroy()
+
+        // 1. 서비스가 현재 실행 중인지 확인합니다.
+        if (TimerService.isServiceActive()) {
+            var hasNotificationPermission = true
+
+            // 2. Android 13 이상에서만 알림 권한을 확인합니다.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // 권한이 부여되었는지 체크
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    hasNotificationPermission = false
+                }
+            }
+
+            // 3. 알림 권한이 없다면, 백그라운드 서비스를 중지시킵니다.
+            if (!hasNotificationPermission) {
+                val stopIntent = Intent(this, TimerService::class.java)
+                stopService(stopIntent)
+            }
+        }
     }
 
     private fun askNotificationPermission() {
