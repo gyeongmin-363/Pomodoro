@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen
 
+import android.widget.Toast // Toast 임포트 추가
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -35,9 +36,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext // LocalContext 임포트 추가
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -61,6 +66,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
     var widthPx by remember { mutableStateOf(0) }
     var heightPx by remember { mutableStateOf(0) }
+    // --- 추가: Toast 메시지를 위해 Context 가져오기 ---
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier
@@ -152,13 +159,28 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
             Spacer(Modifier.height(24.dp))
 
-            // 통계
-            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${state.totalSessions}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)
-                    Text("완료한 세션", color = Color.LightGray)
+            //연속 완료한 세션
+            Text(
+                buildAnnotatedString {
+                    withStyle(
+                        style = SpanStyle(
+                            color = Color.LightGray
+                        )
+                    ) {
+                        append("연속 완료 세션 : ")
+                    }
+                    withStyle(
+                        style = SpanStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Cyan
+                        )
+                    ) {
+                        append("${state.totalSessions} ")
+                    }
                 }
-            }
+            )
+
 
             Spacer(Modifier.height(24.dp))
 
@@ -167,7 +189,14 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
                     Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감")
                 }
-                IconButton(onClick = { viewModel.showScreen(Screen.Settings) }) {
+                // --- 핵심 수정 사항: 설정 버튼 클릭 로직 변경 ---
+                IconButton(onClick = {
+                    if (state.isTimerStartedOnce) {
+                        Toast.makeText(context, "변경사항은 리셋 이후 적용됩니다", Toast.LENGTH_SHORT).show()
+                    }
+                    viewModel.showScreen(Screen.Settings)
+
+                }) {
                     Icon(painterResource(id = R.drawable.ic_settings), contentDescription = "설정")
                 }
                 IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {

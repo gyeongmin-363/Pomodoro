@@ -31,6 +31,8 @@ data class PomodoroUiState(
     // 통계
     val totalSessions: Int = 0, // 총합(메모리용)
     val dailyStats: Map<String, DailyStat> = emptyMap(), // 일별(영구)
-    val settings: Settings = Settings()
+    val settings: Settings = Settings(),
+
+    val isTimerStartedOnce: Boolean = false
 )
 
