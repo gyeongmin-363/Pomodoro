@@ -29,6 +29,8 @@ import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import ir.ehsannarmani.compose_charts.LineChart
+import ir.ehsannarmani.compose_charts.components.LabelHelper
+import ir.ehsannarmani.compose_charts.extensions.format
 import ir.ehsannarmani.compose_charts.models.AnimationMode
 import ir.ehsannarmani.compose_charts.models.DividerProperties
 import ir.ehsannarmani.compose_charts.models.DotProperties
@@ -36,13 +38,17 @@ import ir.ehsannarmani.compose_charts.models.DrawStyle
 import ir.ehsannarmani.compose_charts.models.GridProperties
 import ir.ehsannarmani.compose_charts.models.HorizontalIndicatorProperties
 import ir.ehsannarmani.compose_charts.models.IndicatorCount
+import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
 import ir.ehsannarmani.compose_charts.models.LabelProperties
 import ir.ehsannarmani.compose_charts.models.Line
 import ir.ehsannarmani.compose_charts.models.LineProperties
+import ir.ehsannarmani.compose_charts.models.PopupProperties
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 @Composable
 fun StatsScreen(vm: PomodoroViewModel) {
@@ -110,6 +116,7 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>) {
     val studyData = weeklyData.map { it.studyTimeInMinutes.toDouble() }
     val breakData = weeklyData.map { it.breakTimeInMinutes.toDouble() }
 
+    val max = max(studyData.max(), breakData.max())
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -124,39 +131,44 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>) {
             )
             Spacer(Modifier.height(16.dp))
 
-            LineChart(
+            LineChart( //선 그래프
                 modifier = Modifier.fillMaxWidth().height(200.dp),
-                indicatorProperties = HorizontalIndicatorProperties(
-                    contentBuilder = { minute -> minute.toInt().toString() + "분" },
-                    count = IndicatorCount.StepBased(stepBy = 10.0)
+                indicatorProperties = HorizontalIndicatorProperties( //x축과 평행한 선을 그리기 위한 속성 (y축 레이블과 관련)
+                    contentBuilder = { minute -> minute.toInt().toString() + "분" }, //레이블 텍스트
+                    count = IndicatorCount.StepBased(stepBy = 30.0) //평행선 갯수(countbase : 고정갯수 / StepBased : 일정 간격마다)
                 ),
-                gridProperties = GridProperties(
-                    xAxisProperties = GridProperties.AxisProperties(
-                        lineCount = 1
+                popupProperties = PopupProperties( //그래프 터치시 나오는 작은 팝업
+                    contentBuilder = {_, _, value -> value.roundToInt().toString() + "분"}, //팝업 텍스트
+                    //팝업 표현 조건(Normal : 터치한 무조건 터치한 선의 Double 좌표 / PointMode : x축 레이블이 존재하는 곳만 팝업)
+                    mode = PopupProperties.Mode.PointMode(10.dp)
+                ),
+                gridProperties = GridProperties( //격자선
+                    xAxisProperties = GridProperties.AxisProperties( //x축과 평행한 수평선
+                        lineCount = (max/30.0).toInt() +1 //갯수
                     )
                 ),
-                labelProperties = LabelProperties(
+                labelProperties = LabelProperties( //x축 레이블
                     enabled = true,
-                    labels = weekLabels
+                    labels = weekLabels //x축의 레이블 이름
                 ),
-                data = remember {
+                data = remember { //사용 데이터
                     listOf(
                         Line(
-                            label = "공부 시간",
-                            values = studyData,
-                            color = SolidColor(Color.Green),
-                            firstGradientFillColor = Color.Green.copy(alpha = .5f),
-                            secondGradientFillColor = Color.Transparent,
-                            curvedEdges = true,
-                            strokeAnimationSpec = tween(2000, easing = EaseInOutCubic),
-                            gradientAnimationDelay = 1000,
-                            drawStyle = DrawStyle.Stroke(width = 2.dp),
-                            dotProperties = DotProperties(
+                            label = "공부 시간", //이름
+                            values = studyData, //값
+                            color = SolidColor(Color.Green), //선 색상
+                            firstGradientFillColor = Color.Green.copy(alpha = .5f), //채우기의 시작 색상(그라데이션)
+                            secondGradientFillColor = Color.Transparent, //채우기의 마지막 색상(그라데이션)
+                            curvedEdges = true, //부드러운 곡선
+                            strokeAnimationSpec = tween(2000, easing = EaseInOutCubic), //선이 그려지는 애니메이션
+                            gradientAnimationDelay = 1000, //선이 그려지기 시작하고, 채우기가 진행될 딜레이
+                            drawStyle = DrawStyle.Stroke(width = 2.dp), //선의 스타일
+                            dotProperties = DotProperties( // 각 x레이블마다 나타나는 점의 속성
                                 enabled = true,
-                                color = SolidColor(Color.White),
-                                strokeWidth = 2.dp,
-                                radius = 2.dp,
-                                strokeColor = SolidColor(Color.Green),
+                                color = SolidColor(Color.White), //점 윤곽선
+                                strokeWidth = 2.dp, //윤곽선 두께
+                                radius = 2.dp, //점 반지름
+                                strokeColor = SolidColor(Color.Green), //윤곽선 색상
                             )
                         ),
                         Line(
@@ -180,38 +192,8 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>) {
 
                     )
                 },
-                animationMode = AnimationMode.Together(),
+                animationMode = AnimationMode.Together(), //애니메이션 모드(Together : 한꺼번에, 딜레이조절 가능 / OneByOne : 하나씩)
             )
-//            MultiLineChart(
-//                 data = { listOf(studyLineData, breakLineData) },
-//                 modifier = Modifier
-//                     .fillMaxWidth()
-//                     .height(200.dp),
-//                smoothLineCurve = true, // 부드러운 선
-//                showFilledArea = true, // 채워진 영역 표시
-//                showLineStroke = true, // 선 두께 표시
-//                labelConfig = LabelConfig.default().copy(
-//                    showXLabel = true, // X축 레이블 표시
-//                    showYLabel = true, // Y축 레이블 표시
-//                    textColor = ChartColor.Solid(Color.Gray) // 레이블 텍스트 색상
-//                ),
-//                chartConfig = LineChartConfig(
-//                    lineConfig = LineConfig(drawPointerCircle = true), // 포인터 원 표시
-//                )
-//             )
-//            // X축 레이블
-//            Spacer(Modifier.height(10.dp))
-//            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-//                weekLabels.forEach {
-//                    Text(
-//                        it,
-//                        color = Color.White.copy(alpha = 0.8f),
-//                        fontSize = 12.sp,
-//                        textAlign = TextAlign.Center,
-//                        modifier = Modifier.weight(1f)
-//                    )
-//                }
-//            }
         }
     }
 }
