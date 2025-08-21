@@ -106,7 +106,6 @@ class PomodoroViewModel(
         _uiState.update { it.copy(dailyStats = currentStats) }
     }
 
-    // PomodoroViewModel.kt 파일에서 아래 두 함수를 수정하세요.
 
     fun startTimer() {
         if (_uiState.value.isRunning) return
