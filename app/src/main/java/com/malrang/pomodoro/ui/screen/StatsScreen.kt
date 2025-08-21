@@ -53,18 +53,6 @@ import kotlin.math.roundToInt
 @Composable
 fun StatsScreen(vm: PomodoroViewModel) {
     val state by vm.uiState.collectAsState()
-    val last7Sessions = remember(state.dailyStats) {
-        val today = LocalDate.now()
-        (0..6).map { i -> today.minusDays((6 - i).toLong()) }.map { d ->
-            val key = d.toString()
-            // 세션 수는 이제 studyTime / studyDuration으로 계산하거나, 다르게 추적해야 합니다.
-            // 여기서는 간단하게 studyTimeInMinutes 값으로 대체합니다.
-            state.dailyStats[key]?.studyTimeInMinutes ?: 0
-        }
-    }
-    val labels = (0..6).map { LocalDate.now().minusDays((6 - it).toLong()) }.map {
-        it.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.KOREAN)
-    }
 
     Column(
         modifier = Modifier

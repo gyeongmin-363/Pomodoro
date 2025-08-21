@@ -147,16 +147,12 @@ class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factor
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PomodoroViewModel::class.java)) {
             val localDatastoreRepo = PomodoroRepository(app)
-            val soundPlayer = SoundPlayer(app)
-            val vibratorHelper = VibratorHelper(app)
             val timerServiceProvider = TimerServiceProvider(app) // TimerServiceProvider 인스턴스 생성
 
             @Suppress("UNCHECKED_CAST")
             // ViewModel 생성자에 모든 의존성을 전달합니다.
             return PomodoroViewModel(
                 repo = localDatastoreRepo,
-                soundPlayer = soundPlayer,
-                vibratorHelper = vibratorHelper,
                 timerService = timerServiceProvider // 생성한 인스턴스 전달
             ) as T
         }

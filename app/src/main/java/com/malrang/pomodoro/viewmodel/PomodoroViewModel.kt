@@ -31,8 +31,6 @@ import kotlin.random.Random
 
 class PomodoroViewModel(
     private val repo: PomodoroRepository,
-    private val soundPlayer: SoundPlayer,
-    private val vibratorHelper: VibratorHelper,
     private val timerService: TimerServiceProvider
 ) : ViewModel() {
 
