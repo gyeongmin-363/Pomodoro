@@ -135,19 +135,43 @@ class PomodoroViewModel(
 
     private suspend fun updateTodayStats(finishedMode: Mode) {
         val today = LocalDate.now().toString()
-        val s = _uiState.value.settings
-        val currentStats = repo.loadDailyStats().toMutableMap()
-        val todayStat = currentStats[today] ?: DailyStat(today, 0, 0)
+        val s = _uiState.value
+        val currentStatsMap = repo.loadDailyStats().toMutableMap()
+        val todayStat = currentStatsMap[today] ?: DailyStat(today)
 
+        // --- ▼▼▼ 수정된 통계 기록 로직 ▼▼▼ ---
+
+        // 1. 현재 Work의 이름을 찾습니다.
+        val currentWorkName = s.workPresets.find { it.id == s.currentWorkId }?.name ?: "알 수 없는 Work"
+
+        // 2. 끝난 모드(공부/휴식)에 따라 해당 Work의 시간을 업데이트합니다.
         val updatedStat = when (finishedMode) {
-            Mode.STUDY -> todayStat.copy(studyTimeInMinutes = todayStat.studyTimeInMinutes + s.studyTime)
-            Mode.SHORT_BREAK -> todayStat.copy(breakTimeInMinutes = todayStat.breakTimeInMinutes + s.shortBreakTime)
-            Mode.LONG_BREAK -> todayStat.copy(breakTimeInMinutes = todayStat.breakTimeInMinutes + s.longBreakTime)
+            Mode.STUDY -> {
+                // studyTimeByWork가 null이면 emptyMap()을 사용한 후 toMutableMap() 호출
+                val newStudyTimeMap = (todayStat.studyTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newStudyTimeMap.getOrDefault(currentWorkName, 0)
+                newStudyTimeMap[currentWorkName] = currentWorkTime + s.settings.studyTime
+                todayStat.copy(studyTimeByWork = newStudyTimeMap)
+            }
+            Mode.SHORT_BREAK -> {
+                // breakTimeByWork가 null이면 emptyMap()을 사용한 후 toMutableMap() 호출
+                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
+                newBreakTimeMap[currentWorkName] = currentWorkTime + s.settings.shortBreakTime
+                todayStat.copy(breakTimeByWork = newBreakTimeMap)
+            }
+            Mode.LONG_BREAK -> {
+                // breakTimeByWork가 null이면 emptyMap()을 사용한 후 toMutableMap() 호출
+                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
+                newBreakTimeMap[currentWorkName] = currentWorkTime + s.settings.longBreakTime
+                todayStat.copy(breakTimeByWork = newBreakTimeMap)
+            }
         }
 
-        currentStats[today] = updatedStat
-        repo.saveDailyStats(currentStats)
-        _uiState.update { it.copy(dailyStats = currentStats) }
+        currentStatsMap[today] = updatedStat
+        repo.saveDailyStats(currentStatsMap)
+        _uiState.update { it.copy(dailyStats = currentStatsMap) }
     }
 
 

@@ -74,7 +74,6 @@ import kotlin.math.roundToInt
 fun StatsScreen(vm: PomodoroViewModel) {
     val state by vm.uiState.collectAsState()
 
-    // 캘린더 확장 및 날짜 상태를 StatsScreen에서 관리 (State Hoisting)
     var isCalendarExpanded by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
@@ -105,14 +104,13 @@ fun StatsScreen(vm: PomodoroViewModel) {
             dailyStats = state.dailyStats,
             isExpanded = isCalendarExpanded,
             onToggle = { isCalendarExpanded = !isCalendarExpanded },
-            selectedDate = selectedDate, // 상태 전달
-            onDateSelected = { newDate -> selectedDate = newDate } // 상태 변경 콜백
+            selectedDate = selectedDate,
+            onDateSelected = { newDate -> selectedDate = newDate }
         )
 
         AnimatedVisibility(visible = !isCalendarExpanded) {
             Column {
                 Spacer(Modifier.height(24.dp))
-                // <<-- 선택된 날짜(selectedDate)를 WeeklyTimeChart에 전달
                 WeeklyTimeChart(
                     dailyStats = state.dailyStats,
                     displayDate = selectedDate
@@ -122,9 +120,6 @@ fun StatsScreen(vm: PomodoroViewModel) {
     }
 }
 
-/**
- * State Hoisting을 위해 확장 상태, 날짜 상태와 콜백들을 파라미터로 받음.
- */
 @Composable
 fun ExpandableCalendarView(
     dailyStats: Map<String, DailyStat>,
@@ -133,10 +128,8 @@ fun ExpandableCalendarView(
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit
 ) {
-    // 사용자가 터치한 날짜를 기억하는 상태. null이면 선택 안 된 상태.
     var tappedDate by remember { mutableStateOf<LocalDate?>(null) }
 
-    // 캘린더가 접힐 때 선택된 날짜를 초기화
     LaunchedEffect(isExpanded) {
         if (!isExpanded) {
             tappedDate = null
@@ -155,7 +148,6 @@ fun ExpandableCalendarView(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2A64))
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            // 헤더 (네비게이션 버튼, 현재 날짜 텍스트)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -182,11 +174,7 @@ fun ExpandableCalendarView(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            val daysOfWeek = if (isExpanded) {
-                listOf("일", "월", "화", "수", "목", "금", "토")
-            } else {
-                listOf("월", "화", "수", "목", "금", "토", "일")
-            }
+            val daysOfWeek = listOf("일", "월", "화", "수", "목", "금", "토")
             Row(Modifier.fillMaxWidth()) {
                 daysOfWeek.forEach { day ->
                     val color = when (day) {
@@ -209,18 +197,19 @@ fun ExpandableCalendarView(
                 MonthlyCalendarGrid(
                     selectedDate = selectedDate,
                     dailyStats = dailyStats,
-                    tappedDate = tappedDate, // 선택된 날짜 전달
-                    onDateTap = { date -> tappedDate = date } // 날짜 선택 시 콜백
+                    tappedDate = tappedDate,
+                    onDateTap = { date -> tappedDate = date }
                 )
             } else {
                 WeeklyCalendarGrid(selectedDate = selectedDate, dailyStats = dailyStats)
             }
 
-            // <<-- 선택된 날짜의 학습/휴식 시간 표시 UI ---
+            // --- ▼▼▼ 수정된 부분: Work별 기록 표시 UI ▼▼▼ ---
             AnimatedVisibility(visible = isExpanded && tappedDate != null) {
                 val stats = tappedDate?.let { dailyStats[it.toString()] }
-                val studyMinutes = stats?.studyTimeInMinutes ?: 0
-                val breakMinutes = stats?.breakTimeInMinutes ?: 0
+
+                val allWorkNames = (stats?.studyTimeByWork?.keys ?: emptySet()) +
+                        (stats?.breakTimeByWork?.keys ?: emptySet())
 
                 Column(
                     modifier = Modifier
@@ -234,20 +223,53 @@ fun ExpandableCalendarView(
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "📚 공부 시간: ${studyMinutes}분",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 14.sp
-                    )
-                    Text(
-                        text = "☕ 휴식 시간: ${breakMinutes}분",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 14.sp
-                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (allWorkNames.isEmpty()) {
+                        Text(
+                            text = "이날의 기록이 없습니다.",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp
+                        )
+                    } else {
+                        allWorkNames.forEach { workName ->
+                            val studyMinutes = stats?.studyTimeByWork?.getOrDefault(workName, 0) ?: 0
+                            val breakMinutes = stats?.breakTimeByWork?.getOrDefault(workName, 0) ?: 0
+
+                            if (studyMinutes > 0 || breakMinutes > 0) {
+                                Text(
+                                    text = "📌 $workName",
+                                    color = Color(0xFFFBBF24),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                )
+                                Text(
+                                    text = "  - 📚 공부: ${studyMinutes}분, ☕ 휴식: ${breakMinutes}분",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(start = 8.dp, top = 2.dp, bottom = 6.dp)
+                                )
+                            }
+                        }
+
+                        Divider(color = Color.White.copy(alpha = 0.2f), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+
+                        Text(
+                            text = "총 공부: ${stats?.totalStudyTimeInMinutes ?: 0}분",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "총 휴식: ${stats?.totalBreakTimeInMinutes ?: 0}분",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
-            // --- 여기까지 ---
+            // --- ▲▲▲ 수정된 부분 ---
 
             Divider(color = Color.White.copy(alpha = 0.2f), thickness = 1.dp, modifier = Modifier.padding(top = 8.dp))
             Box(
@@ -267,34 +289,30 @@ fun ExpandableCalendarView(
     }
 }
 
-/**
- * 주간 캘린더 그리드 (월요일 시작) - 클릭 기능 비활성화
- */
 @Composable
 private fun WeeklyCalendarGrid(selectedDate: LocalDate, dailyStats: Map<String, DailyStat>) {
     val today = LocalDate.now()
-    val firstDayOfWeek = selectedDate.with(DayOfWeek.MONDAY)
+    // 주의 시작을 일요일로 변경
+    val firstDayOfWeek = selectedDate.with(DayOfWeek.SUNDAY)
 
     Row(modifier = Modifier.fillMaxWidth()) {
         (0..6).forEach { i ->
             val date = firstDayOfWeek.plusDays(i.toLong())
-            val hasRecord = (dailyStats[date.toString()]?.studyTimeInMinutes ?: 0) > 0
+            // DailyStat 구조 변경에 따라 totalStudyTimeInMinutes 사용
+            val hasRecord = (dailyStats[date.toString()]?.totalStudyTimeInMinutes ?: 0) > 0
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 DayCell(
                     date = date,
                     hasRecord = hasRecord,
                     isToday = date == today,
-                    isSelected = false, // 접힌 뷰에서는 항상 false
-                    onClick = { }       // 접힌 뷰에서는 클릭해도 아무것도 안 함
+                    isSelected = false,
+                    onClick = { }
                 )
             }
         }
     }
 }
 
-/**
- * 월간 캘린더 그리드 (일요일 시작) - 클릭 기능 활성화
- */
 @Composable
 private fun MonthlyCalendarGrid(
     selectedDate: LocalDate,
@@ -318,13 +336,14 @@ private fun MonthlyCalendarGrid(
         items(calendarDays.size) { index ->
             val date = calendarDays[index]
             if (date != null) {
-                val hasRecord = (dailyStats[date.toString()]?.studyTimeInMinutes ?: 0) > 0
+                // DailyStat 구조 변경에 따라 totalStudyTimeInMinutes 사용
+                val hasRecord = (dailyStats[date.toString()]?.totalStudyTimeInMinutes ?: 0) > 0
                 DayCell(
                     date = date,
                     hasRecord = hasRecord,
                     isToday = date == today,
-                    isSelected = date == tappedDate, // 현재 날짜가 선택된 날짜인지 확인
-                    onClick = { onDateTap(date) }      // 날짜 클릭 시 콜백 호출
+                    isSelected = date == tappedDate,
+                    onClick = { onDateTap(date) }
                 )
             } else {
                 Spacer(modifier = Modifier.size(40.dp))
@@ -333,10 +352,6 @@ private fun MonthlyCalendarGrid(
     }
 }
 
-
-/**
- * 캘린더의 각 날짜를 표시하는 셀 Composable (선택 상태 및 클릭 이벤트 처리)
- */
 @Composable
 fun DayCell(
     date: LocalDate,
@@ -355,22 +370,21 @@ fun DayCell(
         modifier = Modifier
             .size(40.dp)
             .padding(4.dp)
-            .clip(CircleShape) // 클릭 시 물결 효과를 원형으로 만듦
+            .clip(CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // 선택된 날짜 배경이 '오늘' 배경보다 우선순위가 높도록 함
         if (isSelected) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.3f))
+                    .background(Color.White.copy(alpha = 0.3f), CircleShape)
             )
         } else if (isToday) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.15f)) // 기존보다 살짝 연하게 변경
+                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
             )
         }
 
@@ -389,41 +403,34 @@ fun DayCell(
     }
 }
 
-
-/**
- * 표시할 날짜(displayDate)를 기준으로 주간 차트를 그리는 Composable
- */
 @Composable
 fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) {
-    val weekLabels = listOf("월", "화", "수", "목", "금", "토", "일")
-    val firstDayOfWeek = displayDate.with(DayOfWeek.MONDAY)
+    val weekLabels = listOf("일", "월", "화", "수", "목", "금", "토")
+    // 주의 시작을 일요일로 변경
+    val firstDayOfWeek = displayDate.with(DayOfWeek.SUNDAY)
 
     val weeklyData = (0..6).map { i ->
         val date = firstDayOfWeek.plusDays(i.toLong())
-        dailyStats[date.toString()] ?: DailyStat(date.toString(), 0, 0)
+        dailyStats[date.toString()] ?: DailyStat(date.toString())
     }
 
-    val studyData = weeklyData.map { it.studyTimeInMinutes.toDouble() }
-    val breakData = weeklyData.map { it.breakTimeInMinutes.toDouble() }
+    // DailyStat 구조 변경에 따라 total... 속성 사용
+    val studyData = weeklyData.map { it.totalStudyTimeInMinutes.toDouble() }
+    val breakData = weeklyData.map { it.totalBreakTimeInMinutes.toDouble() }
 
     val max = max(studyData.maxOrNull() ?: 0.0, breakData.maxOrNull() ?: 0.0)
 
-    // <<-- 여기부터 수정 ---
-    // 데이터의 최댓값(max)에 따라 y축 눈금 속성을 동적으로 설정
     val indicatorProperties = if (max > 0) {
-        // 데이터가 있을 경우: 30분 간격으로 눈금 표시
         HorizontalIndicatorProperties(
             contentBuilder = { minute -> minute.toInt().toString() + "분" },
             count = IndicatorCount.StepBased(stepBy = 30.0)
         )
     } else {
-        // 데이터가 모두 0일 경우: 고정된 눈금 2개(e.g., 0분)만 표시하여 오류 방지
         HorizontalIndicatorProperties(
             contentBuilder = { minute -> minute.toInt().toString() + "분" },
             count = IndicatorCount.CountBased(count = 2)
         )
     }
-    // -->> 여기까지 수정 ---
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -444,7 +451,6 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
-                // <<-- 수정된 indicatorProperties 적용
                 indicatorProperties = indicatorProperties,
                 popupProperties = PopupProperties(
                     contentBuilder = { _, _, value -> value.roundToInt().toString() + "분" },
