@@ -25,14 +25,16 @@ data class PomodoroUiState(
     val cycleCount: Int = 1,
 
     // 도감(영구) + 이번 세션 스프라이트(비영구)
-    val collectedAnimals: Set<Animal> = emptySet(), // 도감(영구 저장분 + 이번에 새로 만난 것 반영된 메모리 상태)
-    val activeSprites: List<AnimalSprite> = emptyList(), // 브레이크마다 추가, 앱 종료 시 초기화
+    val collectedAnimals: Set<Animal> = emptySet(),
+    val activeSprites: List<AnimalSprite> = emptyList(),
 
     // 통계
-    val totalSessions: Int = 0, // 총합(메모리용)
-    val dailyStats: Map<String, DailyStat> = emptyMap(), // 일별(영구)
+    val totalSessions: Int = 0,
+    val dailyStats: Map<String, DailyStat> = emptyMap(),
+
     val settings: Settings = Settings(),
+    val workPresets: List<WorkPreset> = emptyList(), // 모든 Work 프리셋 목록
+    val currentWorkId: String? = null,               // 현재 선택된 Work의 ID
 
     val isTimerStartedOnce: Boolean = false
 )
-

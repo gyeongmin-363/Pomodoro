@@ -1,33 +1,28 @@
 package com.malrang.pomodoro.ui.screen
 
-import android.widget.Toast // Toast 임포트 추가
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.absoluteOffset
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
@@ -36,7 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext // LocalContext 임포트 추가
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -47,27 +42,41 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.dataclass.ui.WorkPreset // --- import 추가 ---
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.delay
 
 /**
  * 앱의 메인 화면을 표시하는 컴포저블 함수입니다.
- * 타이머, 통계, 네비게이션 버튼을 포함합니다.
- *
- * @param viewModel [PomodoroViewModel]의 인스턴스입니다.
  */
 @Composable
 fun MainScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
     var widthPx by remember { mutableStateOf(0) }
     var heightPx by remember { mutableStateOf(0) }
-    // --- 추가: Toast 메시지를 위해 Context 가져오기 ---
     val context = LocalContext.current
+
+    // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
+    var showWorkSelectionModal by remember { mutableStateOf(false) }
+
+    if (showWorkSelectionModal) {
+        WorkSelectionModal(
+            presets = state.workPresets,
+            currentPresetId = state.currentWorkId,
+            onPresetSelected = { presetId ->
+                viewModel.selectWorkPreset(presetId)
+                showWorkSelectionModal = false
+            },
+            onDismiss = { showWorkSelectionModal = false }
+        )
+    }
+    // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
     Box(
         modifier = Modifier
@@ -77,13 +86,13 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 heightPx = sz.height
             }
     ) {
+        // ... (배경 이미지, 동물 스프라이트, 이동 루프는 기존과 동일)
         Image(
             painter = painterResource(id = R.drawable.grass_background),
             contentDescription = "grass background",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
-        // 동물 스프라이트
         if (state.currentMode != Mode.STUDY || state.isPaused) {
             state.activeSprites.forEach { sp ->
                 SpriteSheetImage(
@@ -95,8 +104,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 )
             }
         }
-
-        // 이동 루프
         LaunchedEffect(widthPx, heightPx, state.activeSprites.size) {
             if (widthPx == 0 || heightPx == 0) return@LaunchedEffect
             var last = System.nanoTime()
@@ -109,6 +116,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             }
         }
 
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,6 +127,15 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
             Spacer(Modifier.height(16.dp))
 
+            // --- ▼▼▼ 수정/추가된 부분 ▼▼▼ ---
+            val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
+
+            TextButton(onClick = { showWorkSelectionModal = true }) {
+                Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택")
+            }
+            // --- ▲▲▲ 수정/추가된 부분 ▲▲▲ ---
+
             // 원형 타이머
             Text(
                 text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
@@ -128,19 +145,14 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
             Spacer(Modifier.height(16.dp))
 
-            // ==================================
-            //      새로운 사이클 표시기
-            // ==================================
+            // ... (CycleIndicator, 버튼, 네비게이션 등 나머지 UI는 기존과 동일)
             CycleIndicator(
                 modifier = Modifier.fillMaxWidth(),
                 currentMode = state.currentMode,
                 totalSessions = state.totalSessions,
                 longBreakInterval = state.settings.longBreakInterval
             )
-            // ==================================
-
             Spacer(Modifier.height(16.dp))
-
             Row {
                 if (!state.isRunning) {
                     IconButton(onClick = { viewModel.startTimer() }) {
@@ -156,40 +168,18 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋")
                 }
             }
-
             Spacer(Modifier.height(24.dp))
-
-            //연속 완료한 세션
             Text(
                 buildAnnotatedString {
-                    withStyle(
-                        style = SpanStyle(
-                            color = Color.LightGray
-                        )
-                    ) {
-                        append("연속 완료 세션 : ")
-                    }
-                    withStyle(
-                        style = SpanStyle(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Cyan
-                        )
-                    ) {
-                        append("${state.totalSessions} ")
-                    }
+                    withStyle(style = SpanStyle(color = Color.LightGray)) { append("연속 완료 세션 : ") }
+                    withStyle(style = SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)) { append("${state.totalSessions} ") }
                 }
             )
-
-
             Spacer(Modifier.height(24.dp))
-
-            // 네비게이션
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
                     Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감")
                 }
-                // --- 핵심 수정 사항: 설정 버튼 클릭 로직 변경 ---
                 IconButton(onClick = {
                     if (state.isTimerStartedOnce) {
                         Toast.makeText(context, "변경사항은 리셋 이후 적용됩니다", Toast.LENGTH_SHORT).show()
@@ -207,9 +197,68 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     }
 }
 
+// --- ▼▼▼ 추가된 Composable ▼▼▼ ---
 /**
- * 현재 뽀모도로 사이클 진행도를 원으로 표시하는 컴포저블
+ * Work 프리셋을 선택하는 모달창 Composable
  */
+@Composable
+fun WorkSelectionModal(
+    presets: List<WorkPreset>,
+    currentPresetId: String?,
+    onPresetSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Work 선택",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                LazyColumn {
+                    items(presets) { preset ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onPresetSelected(preset.id) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (preset.id == currentPresetId),
+                                onClick = { onPresetSelected(preset.id) }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = preset.name, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("닫기")
+                    }
+                }
+            }
+        }
+    }
+}
+// --- ▲▲▲ 추가된 Composable ▲▲▲ ---
+
+// ... CycleIndicator, SpriteSheetImage 함수는 기존과 동일 ...
 @Composable
 fun CycleIndicator(
     modifier: Modifier = Modifier,
