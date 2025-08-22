@@ -15,9 +15,8 @@ import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.Settings
+import com.malrang.pomodoro.dataclass.ui.WorkPreset // --- import 추가 ---
 import com.malrang.pomodoro.localRepo.PomodoroRepository
-import com.malrang.pomodoro.localRepo.SoundPlayer
-import com.malrang.pomodoro.localRepo.VibratorHelper
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,8 +30,6 @@ import kotlin.random.Random
 
 class PomodoroViewModel(
     private val repo: PomodoroRepository,
-    private val soundPlayer: SoundPlayer,
-    private val vibratorHelper: VibratorHelper,
     private val timerService: TimerServiceProvider
 ) : ViewModel() {
 
@@ -41,17 +38,30 @@ class PomodoroViewModel(
 
     init {
         viewModelScope.launch {
+            // --- ▼▼▼ 수정된 초기화 로직 ▼▼▼ ---
             val seenIds = repo.loadSeenIds()
             val daily = repo.loadDailyStats()
-            val loaded = repo.loadSettings()
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
+
+            // Work 프리셋과 현재 Work ID 로드
+            val presets = repo.loadWorkPresets()
+            val currentWorkId = repo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
+
+            // 현재 Work에 맞는 설정 찾기
+            val currentWork = presets.find { it.id == currentWorkId }
+            val currentSettings = currentWork?.settings ?: Settings()
+
             _uiState.update {
                 it.copy(
                     collectedAnimals = seenAnimals.toSet(),
                     dailyStats = daily,
-                    settings = loaded,
+                    settings = currentSettings,
+                    workPresets = presets,
+                    currentWorkId = currentWorkId
                 )
             }
+            // --- ▲▲▲ 수정된 초기화 로직 ▲▲▲ ---
+
             if (TimerService.isServiceActive()) {
                 timerService.requestStatus()
             } else {
@@ -60,11 +70,46 @@ class PomodoroViewModel(
         }
     }
 
+    // --- ▼▼▼ 추가된 함수 ▼▼▼ ---
     /**
-     * --- 변경: 서비스로부터 모든 세션 상태를 받아 UI를 업데이트합니다. ---
-     * @param currentMode 서비스의 현재 모드
-     * @param totalSessions 서비스가 계산한 총 완료 세션 수
+     * 사용자가 선택한 Work 프리셋으로 설정을 변경합니다.
+     * @param presetId 선택된 WorkPreset의 고유 ID
      */
+    fun selectWorkPreset(presetId: String) {
+        viewModelScope.launch {
+            val selectedPreset = _uiState.value.workPresets.find { it.id == presetId } ?: return@launch
+
+            // 선택된 ID를 저장소에 저장
+            repo.saveCurrentWorkId(presetId)
+
+            // UI 상태 업데이트
+            _uiState.update {
+                it.copy(
+                    currentWorkId = presetId,
+                    settings = selectedPreset.settings
+                )
+            }
+            // 타이머를 리셋하여 새 설정을 즉시 반영
+            resetTimer()
+        }
+    }
+    // --- ▲▲▲ 추가된 함수 ▲▲▲ ---
+
+    // ... 기존 ViewModel 함수들 ...
+    // (startTimer, resetTimer, pauseTimer 등 모든 함수는 그대로 유지)
+
+    // updateSettings 함수는 이제 Work 프리셋을 직접 수정할 때 사용될 수 있습니다.
+    // (이 예제에서는 프리셋 수정 기능까지는 구현하지 않음)
+    private fun updateSettings(transform: Settings.() -> Settings) {
+        _uiState.update { state ->
+            val updated = state.settings.transform()
+            viewModelScope.launch {
+                repo.saveSettings(updated)
+            }
+            state.copy(settings = updated)
+        }
+    }
+
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
         _uiState.update {
             it.copy(
@@ -77,9 +122,6 @@ class PomodoroViewModel(
         }
     }
 
-    /**
-     * 서비스로부터 세션 종료 신호를 받으면 호출됩니다.
-     */
     fun onTimerFinishedFromService() {
         val finishedMode = _uiState.value.currentMode
         viewModelScope.launch {
@@ -108,12 +150,10 @@ class PomodoroViewModel(
         _uiState.update { it.copy(dailyStats = currentStats) }
     }
 
-    // PomodoroViewModel.kt 파일에서 아래 두 함수를 수정하세요.
 
     fun startTimer() {
         if (_uiState.value.isRunning) return
         val s = _uiState.value
-        // --- 추가: 타이머가 시작되었음을 상태에 기록 ---
         _uiState.update { it.copy(isRunning = true, isPaused = false, isTimerStartedOnce = true) }
         timerService.start(s.timeLeft, s.settings, s.currentMode, s.totalSessions)
     }
@@ -125,7 +165,6 @@ class PomodoroViewModel(
             Mode.SHORT_BREAK -> s.settings.shortBreakTime
             Mode.LONG_BREAK -> s.settings.longBreakTime
         }
-        // --- 추가: 타이머가 리셋되었으므로 isTimerStartedOnce를 false로 변경 ---
         _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = newTimeLeft * 60, isTimerStartedOnce = false) }
         timerService.reset(newTimeLeft * 60)
     }
@@ -134,12 +173,6 @@ class PomodoroViewModel(
         timerService.pause()
     }
 
-
-    /**
-     * --- 변경: 함수 이름 및 역할 변경 ---
-     * '공부' 세션 완료 시 보상(동물 획득, 저장)만 처리합니다.
-     * UI의 세션 상태(모드, 시간 등)는 변경하지 않습니다. (서비스가 보내주는 정보로만 업데이트)
-     */
     private fun handleStudySessionCompletion() {
         val animal = getRandomAnimal()
         val sprite = makeSprite(animal)
@@ -151,14 +184,11 @@ class PomodoroViewModel(
         }
         _uiState.update {
             it.copy(
-                // 동물 관련 UI만 업데이트
                 activeSprites = it.activeSprites + sprite,
                 collectedAnimals = updatedCollectedAnimals
             )
         }
     }
-
-    // ... 나머지 코드는 동일 ...
 
     fun updateStudyTime(v: Int) {
         updateSettings { copy(studyTime = v) }
@@ -200,18 +230,9 @@ class PomodoroViewModel(
     fun toggleVibration(b: Boolean) = updateSettings{ copy(vibrationEnabled = b) }
     fun toggleAutoStart(b: Boolean) = updateSettings{ copy(autoStart = b) }
 
-    private fun updateSettings(transform: Settings.() -> Settings) {
-        _uiState.update { state ->
-            val updated = state.settings.transform()
-            viewModelScope.launch {
-                repo.saveSettings(updated)
-            }
-            state.copy(settings = updated)
-        }
-    }
 
     fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
-    
+
 
     private fun makeSprite(animal: Animal): AnimalSprite {
         val spriteData = SpriteMap.map[animal]
