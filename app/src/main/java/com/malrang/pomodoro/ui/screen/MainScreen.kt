@@ -58,9 +58,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
     var showWorkManager by remember { mutableStateOf(false) }
     var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
-    // --- ▼▼▼ 추가된 상태: 삭제 확인을 위한 상태 ▼▼▼ ---
     var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
-    // --- ▲▲▲ 추가된 상태 ▲▲▲ ---
+    var showResetConfirm by remember { mutableStateOf(false) }
 
     // 이름 변경 다이얼로그
     if (presetToRename != null) {
@@ -95,6 +94,28 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 heightPx = sz.height
             }
     ) {
+        // ✅ 리셋 확인 다이얼로그
+        if (showResetConfirm) {
+            AlertDialog(
+                onDismissRequest = { showResetConfirm = false },
+                title = { Text("리셋 확인") },
+                text = { Text("정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.fullReset()   // ⬅️ 새 함수 호출
+                            showResetConfirm = false
+                        }
+                    ) { Text("확인") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showResetConfirm = false }) {
+                        Text("취소")
+                    }
+                }
+            )
+        }
+
         Image(
             painter = painterResource(id = R.drawable.grass_background),
             contentDescription = "grass background",
@@ -182,7 +203,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     }
                 }
                 Spacer(Modifier.width(8.dp))
-                IconButton(onClick = { viewModel.resetTimer() }) {
+                IconButton(onClick = { showResetConfirm = true }) {
                     Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋")
                 }
                 Spacer(Modifier.width(8.dp))

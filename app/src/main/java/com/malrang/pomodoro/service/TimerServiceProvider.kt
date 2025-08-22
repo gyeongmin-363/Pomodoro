@@ -65,4 +65,11 @@ class TimerServiceProvider(private val context: Context) {
         }
         context.startService(intent)
     }
+
+    fun resetCompletely() {
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = "RESET_FULL"
+        }
+        context.startService(intent)
+    }
 }

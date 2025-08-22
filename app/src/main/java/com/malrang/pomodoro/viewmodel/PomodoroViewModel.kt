@@ -264,6 +264,24 @@ class PomodoroViewModel(
         timerService.pause()
     }
 
+    fun fullReset() {
+        val defaultSettings = Settings()
+        _uiState.update {
+            it.copy(
+                timeLeft = defaultSettings.studyTime * 60,
+                totalSessions = 0,
+                isRunning = false,
+                isPaused = true,
+                isTimerStartedOnce = false,
+                currentMode = Mode.STUDY,
+                settings = defaultSettings
+            )
+        }
+
+        // ✅ 서비스 상태도 완전히 초기화
+        timerService.resetCompletely()
+    }
+
     fun skipSession() {
         val s = _uiState.value
         val finishedMode = s.currentMode

@@ -122,6 +122,23 @@ class TimerService : Service() {
                     putExtra("TOTAL_SESSIONS", totalSessions)
                 })
             }
+            "RESET_FULL" -> {
+                job?.cancel()
+                isRunning = false
+                currentMode = Mode.STUDY
+                totalSessions = 0
+                timeLeft = settings?.studyTime?.times(60) ?: 0
+
+                // ✅ UI와 동기화: 일시정지 상태로 전달
+                sendBroadcast(Intent(TIMER_TICK).apply {
+                    putExtra("TIME_LEFT", timeLeft)
+                    putExtra("IS_RUNNING", false)
+                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
+                    putExtra("TOTAL_SESSIONS", totalSessions)
+                })
+
+                updateNotification()
+            }
 
         }
         return START_STICKY
