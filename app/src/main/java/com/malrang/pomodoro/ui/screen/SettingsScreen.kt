@@ -33,13 +33,10 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 @Composable
 fun SettingsScreen(viewModel: PomodoroViewModel) {
-    // --- ▼▼▼ 수정된 부분 ▼▼▼ ---
-    // 편집 중인 프리셋이 있으면 그것을, 없으면 현재 활성화된 프리셋의 설정을 가져옴
     val editingPreset by viewModel.editingWorkPreset.collectAsState()
     val state by viewModel.uiState.collectAsState()
     val settings = editingPreset?.settings ?: state.settings
     val title = editingPreset?.name ?: "기본 설정"
-    // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 
     val context = LocalContext.current
 

@@ -52,6 +52,7 @@ import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import ir.ehsannarmani.compose_charts.LineChart
+import ir.ehsannarmani.compose_charts.extensions.format
 import ir.ehsannarmani.compose_charts.models.AnimationMode
 import ir.ehsannarmani.compose_charts.models.DotProperties
 import ir.ehsannarmani.compose_charts.models.DrawStyle
@@ -453,7 +454,7 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
                     .height(200.dp),
                 indicatorProperties = indicatorProperties,
                 popupProperties = PopupProperties(
-                    contentBuilder = { _, _, value -> value.roundToInt().toString() + "분" },
+                    contentBuilder = { _, _, value -> if(value >= 0.0) value.roundToInt().toString() + "분" else value.format(1)},
                     mode = PopupProperties.Mode.PointMode(10.dp)
                 ),
                 gridProperties = GridProperties(
