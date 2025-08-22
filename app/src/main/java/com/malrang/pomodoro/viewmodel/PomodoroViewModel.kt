@@ -15,7 +15,7 @@ import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.Settings
-import com.malrang.pomodoro.dataclass.ui.WorkPreset // --- import 추가 ---
+import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
@@ -36,18 +36,19 @@ class PomodoroViewModel(
     private val _uiState = MutableStateFlow(PomodoroUiState())
     val uiState: StateFlow<PomodoroUiState> = _uiState.asStateFlow()
 
+    // --- ▼▼▼ 추가된 상태 ▼▼▼ ---
+    // 현재 어떤 WorkPreset을 '편집'하고 있는지 ID로 추적. null이면 편집 중이 아님.
+    private val _editingWorkPreset = MutableStateFlow<WorkPreset?>(null)
+    val editingWorkPreset: StateFlow<WorkPreset?> = _editingWorkPreset.asStateFlow()
+    // --- ▲▲▲ 추가된 상태 ▲▲▲ ---
+
     init {
         viewModelScope.launch {
-            // --- ▼▼▼ 수정된 초기화 로직 ▼▼▼ ---
             val seenIds = repo.loadSeenIds()
             val daily = repo.loadDailyStats()
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
-
-            // Work 프리셋과 현재 Work ID 로드
             val presets = repo.loadWorkPresets()
             val currentWorkId = repo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
-
-            // 현재 Work에 맞는 설정 찾기
             val currentWork = presets.find { it.id == currentWorkId }
             val currentSettings = currentWork?.settings ?: Settings()
 
@@ -60,8 +61,6 @@ class PomodoroViewModel(
                     currentWorkId = currentWorkId
                 )
             }
-            // --- ▲▲▲ 수정된 초기화 로직 ▲▲▲ ---
-
             if (TimerService.isServiceActive()) {
                 timerService.requestStatus()
             } else {
@@ -70,68 +69,144 @@ class PomodoroViewModel(
         }
     }
 
-    // --- ▼▼▼ 추가된 함수 ▼▼▼ ---
     /**
      * 사용자가 선택한 Work 프리셋으로 설정을 변경합니다.
-     * @param presetId 선택된 WorkPreset의 고유 ID
      */
     fun selectWorkPreset(presetId: String) {
         viewModelScope.launch {
             val selectedPreset = _uiState.value.workPresets.find { it.id == presetId } ?: return@launch
-
-            // 선택된 ID를 저장소에 저장
             repo.saveCurrentWorkId(presetId)
-
-            // UI 상태 업데이트
             _uiState.update {
                 it.copy(
                     currentWorkId = presetId,
                     settings = selectedPreset.settings
                 )
             }
-            // 타이머를 리셋하여 새 설정을 즉시 반영
             resetTimer()
         }
     }
-    // --- ▲▲▲ 추가된 함수 ▲▲▲ ---
 
-    // ... 기존 ViewModel 함수들 ...
-    // (startTimer, resetTimer, pauseTimer 등 모든 함수는 그대로 유지)
+    // --- ▼▼▼ 추가/수정된 Work 관리 함수들 ▼▼▼ ---
 
-    // updateSettings 함수는 이제 Work 프리셋을 직접 수정할 때 사용될 수 있습니다.
-    // (이 예제에서는 프리셋 수정 기능까지는 구현하지 않음)
-    private fun updateSettings(transform: Settings.() -> Settings) {
-        _uiState.update { state ->
-            val updated = state.settings.transform()
-            viewModelScope.launch {
-                repo.saveSettings(updated)
-            }
-            state.copy(settings = updated)
-        }
-    }
-
-    fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
-        _uiState.update {
-            it.copy(
-                timeLeft = timeLeft,
-                isRunning = isRunning,
-                isPaused = !isRunning && timeLeft > 0,
-                currentMode = currentMode,
-                totalSessions = totalSessions
-            )
-        }
-    }
-
-    fun onTimerFinishedFromService() {
-        val finishedMode = _uiState.value.currentMode
+    /**
+     * 새로운 Work 프리셋을 추가합니다.
+     */
+    fun addWorkPreset() {
         viewModelScope.launch {
-            updateTodayStats(finishedMode)
-        }
-
-        if (finishedMode == Mode.STUDY) {
-            handleStudySessionCompletion()
+            val newPreset = WorkPreset(name = "새 Work", settings = Settings())
+            val updatedPresets = _uiState.value.workPresets + newPreset
+            repo.saveWorkPresets(updatedPresets)
+            _uiState.update { it.copy(workPresets = updatedPresets) }
         }
     }
+
+    /**
+     * Work 프리셋을 삭제합니다.
+     */
+    fun deleteWorkPreset(id: String) {
+        viewModelScope.launch {
+            val updatedPresets = _uiState.value.workPresets.filterNot { it.id == id }
+            repo.saveWorkPresets(updatedPresets)
+            _uiState.update { it.copy(workPresets = updatedPresets) }
+            // 만약 삭제한 프리셋이 현재 선택된 프리셋이었다면, 첫 번째 프리셋을 선택
+            if (_uiState.value.currentWorkId == id) {
+                selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "")
+            }
+        }
+    }
+
+    /**
+     * Work 프리셋의 이름을 변경합니다.
+     */
+    fun updateWorkPresetName(id: String, newName: String) {
+        viewModelScope.launch {
+            val updatedPresets = _uiState.value.workPresets.map {
+                if (it.id == id) it.copy(name = newName) else it
+            }
+            repo.saveWorkPresets(updatedPresets)
+            _uiState.update { it.copy(workPresets = updatedPresets) }
+        }
+    }
+
+    /**
+     * 특정 Work 프리셋의 '편집 모드'를 시작합니다.
+     */
+    fun startEditingWorkPreset(id: String) {
+        val preset = _uiState.value.workPresets.find { it.id == id }
+        _editingWorkPreset.value = preset
+    }
+
+    /**
+     * '편집 모드'를 종료합니다.
+     */
+    fun stopEditingWorkPreset() {
+        _editingWorkPreset.value = null
+        // 편집이 끝났으므로, 현재 활성화된 Work의 설정으로 다시 UI를 동기화
+        val currentSettings = _uiState.value.workPresets.find { it.id == _uiState.value.currentWorkId }?.settings ?: Settings()
+        _uiState.update { it.copy(settings = currentSettings) }
+    }
+
+    /**
+     * 설정 값 변경을 처리하는 범용 함수. '편집 모드'를 우선적으로 반영.
+     */
+    private fun updateSettings(transform: Settings.() -> Settings) {
+        viewModelScope.launch {
+            val editingId = _editingWorkPreset.value?.id
+            if (editingId != null) {
+                // 편집 모드일 경우, 해당 프리셋의 설정을 변경
+                val updatedPresets = _uiState.value.workPresets.map {
+                    if (it.id == editingId) {
+                        val updatedSettings = it.settings.transform()
+                        // 편집 상태와 UI 상태를 즉시 동기화
+                        _editingWorkPreset.value = it.copy(settings = updatedSettings)
+                        it.copy(settings = updatedSettings)
+                    } else {
+                        it
+                    }
+                }
+                repo.saveWorkPresets(updatedPresets)
+                _uiState.update { it.copy(workPresets = updatedPresets) }
+
+            } else {
+                // 편집 모드가 아닐 경우 (이전 로직), 현재 활성화된 Work의 설정을 변경
+                val currentId = _uiState.value.currentWorkId
+                val updatedPresets = _uiState.value.workPresets.map {
+                    if (it.id == currentId) {
+                        it.copy(settings = it.settings.transform())
+                    } else {
+                        it
+                    }
+                }
+                val newSettings = updatedPresets.find { it.id == currentId }?.settings ?: Settings()
+                repo.saveWorkPresets(updatedPresets)
+                _uiState.update { it.copy(workPresets = updatedPresets, settings = newSettings) }
+            }
+        }
+    }
+    // --- ▲▲▲ 추가/수정된 Work 관리 함수들 ▲▲▲ ---
+
+    // ... 기존 타이머 및 통계 관련 함수들 (updateTodayStats 등)은 모두 그대로 유지 ...
+
+    // 설정 변경 함수들은 모두 내부적으로 updateSettings를 호출하므로 수정할 필요 없음
+    fun updateStudyTime(v: Int) {
+        updateSettings { copy(studyTime = v) }
+        _uiState.update { state ->
+            if (state.currentMode == Mode.STUDY && !state.isRunning && !state.isPaused) {
+                state.copy(timeLeft = v * 60)
+            } else {
+                state
+            }
+        }
+    }
+    fun updateShortBreakTime(v: Int) = updateSettings { copy(shortBreakTime = v) }
+    fun updateLongBreakTime(v: Int) = updateSettings { copy(longBreakTime = v) }
+    fun updateLongBreakInterval(v: Int) = updateSettings { copy(longBreakInterval = v) }
+    fun toggleSound(b: Boolean) = updateSettings { copy(soundEnabled = b) }
+    fun toggleVibration(b: Boolean) = updateSettings { copy(vibrationEnabled = b) }
+    fun toggleAutoStart(b: Boolean) = updateSettings { copy(autoStart = b) }
+
+
+    // ... 나머지 함수들 (showScreen, makeSprite 등)은 모두 그대로 유지 ...
 
     private suspend fun updateTodayStats(finishedMode: Mode) {
         val today = LocalDate.now().toString()
@@ -139,36 +214,28 @@ class PomodoroViewModel(
         val currentStatsMap = repo.loadDailyStats().toMutableMap()
         val todayStat = currentStatsMap[today] ?: DailyStat(today)
 
-        // --- ▼▼▼ 수정된 통계 기록 로직 ▼▼▼ ---
-
-        // 1. 현재 Work의 이름을 찾습니다.
         val currentWorkName = s.workPresets.find { it.id == s.currentWorkId }?.name ?: "알 수 없는 Work"
 
-        // 2. 끝난 모드(공부/휴식)에 따라 해당 Work의 시간을 업데이트합니다.
         val updatedStat = when (finishedMode) {
             Mode.STUDY -> {
-                // studyTimeByWork가 null이면 emptyMap()을 사용한 후 toMutableMap() 호출
                 val newStudyTimeMap = (todayStat.studyTimeByWork ?: emptyMap()).toMutableMap()
                 val currentWorkTime = newStudyTimeMap.getOrDefault(currentWorkName, 0)
                 newStudyTimeMap[currentWorkName] = currentWorkTime + s.settings.studyTime
                 todayStat.copy(studyTimeByWork = newStudyTimeMap)
             }
             Mode.SHORT_BREAK -> {
-                // breakTimeByWork가 null이면 emptyMap()을 사용한 후 toMutableMap() 호출
                 val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
                 val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
                 newBreakTimeMap[currentWorkName] = currentWorkTime + s.settings.shortBreakTime
                 todayStat.copy(breakTimeByWork = newBreakTimeMap)
             }
             Mode.LONG_BREAK -> {
-                // breakTimeByWork가 null이면 emptyMap()을 사용한 후 toMutableMap() 호출
                 val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
                 val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
                 newBreakTimeMap[currentWorkName] = currentWorkTime + s.settings.longBreakTime
                 todayStat.copy(breakTimeByWork = newBreakTimeMap)
             }
         }
-
         currentStatsMap[today] = updatedStat
         repo.saveDailyStats(currentStatsMap)
         _uiState.update { it.copy(dailyStats = currentStatsMap) }
@@ -196,7 +263,28 @@ class PomodoroViewModel(
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
         timerService.pause()
     }
+    fun onTimerFinishedFromService() {
+        val finishedMode = _uiState.value.currentMode
+        viewModelScope.launch {
+            updateTodayStats(finishedMode)
+        }
 
+        if (finishedMode == Mode.STUDY) {
+            handleStudySessionCompletion()
+        }
+    }
+
+    fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
+        _uiState.update {
+            it.copy(
+                timeLeft = timeLeft,
+                isRunning = isRunning,
+                isPaused = !isRunning && timeLeft > 0,
+                currentMode = currentMode,
+                totalSessions = totalSessions
+            )
+        }
+    }
     private fun handleStudySessionCompletion() {
         val animal = getRandomAnimal()
         val sprite = makeSprite(animal)
@@ -213,48 +301,6 @@ class PomodoroViewModel(
             )
         }
     }
-
-    fun updateStudyTime(v: Int) {
-        updateSettings { copy(studyTime = v) }
-        _uiState.update { state ->
-            if (state.currentMode == Mode.STUDY && !state.isRunning && !state.isPaused) {
-                state.copy(timeLeft = v * 60)
-            } else {
-                state
-            }
-        }
-    }
-    fun updateShortBreakTime(v: Int) {
-        updateSettings { copy(shortBreakTime = v) }
-        _uiState.update { state ->
-            if (state.currentMode == Mode.SHORT_BREAK && !state.isRunning && !state.isPaused) {
-                state.copy(timeLeft = v * 60)
-            } else {
-                state
-            }
-        }
-    }
-
-    fun updateLongBreakTime(v: Int) {
-        updateSettings { copy(longBreakTime = v) }
-        _uiState.update { state ->
-            if (state.currentMode == Mode.LONG_BREAK && !state.isRunning && !state.isPaused) {
-                state.copy(timeLeft = v * 60)
-            } else {
-                state
-            }
-        }
-    }
-
-    fun updateLongBreakInterval(v: Int) {
-        updateSettings { copy(longBreakInterval = v) }
-    }
-
-    fun toggleSound(b: Boolean) = updateSettings{copy(soundEnabled = b)}
-    fun toggleVibration(b: Boolean) = updateSettings{ copy(vibrationEnabled = b) }
-    fun toggleAutoStart(b: Boolean) = updateSettings{ copy(autoStart = b) }
-
-
     fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
 
 

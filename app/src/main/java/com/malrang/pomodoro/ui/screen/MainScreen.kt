@@ -1,6 +1,7 @@
 package com.malrang.pomodoro.ui.screen
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -10,15 +11,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,19 +40,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.dataclass.ui.WorkPreset // --- import 추가 ---
+import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.delay
 
-/**
- * 앱의 메인 화면을 표시하는 컴포저블 함수입니다.
- */
 @Composable
 fun MainScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
@@ -62,21 +56,36 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     var heightPx by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
-    // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
-    var showWorkSelectionModal by remember { mutableStateOf(false) }
+    var showWorkManager by remember { mutableStateOf(false) }
+    var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
+    // --- ▼▼▼ 추가된 상태: 삭제 확인을 위한 상태 ▼▼▼ ---
+    var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
+    // --- ▲▲▲ 추가된 상태 ▲▲▲ ---
 
-    if (showWorkSelectionModal) {
-        WorkSelectionModal(
-            presets = state.workPresets,
-            currentPresetId = state.currentWorkId,
-            onPresetSelected = { presetId ->
-                viewModel.selectWorkPreset(presetId)
-                showWorkSelectionModal = false
+    // 이름 변경 다이얼로그
+    if (presetToRename != null) {
+        RenamePresetDialog(
+            preset = presetToRename!!,
+            onConfirm = { newName ->
+                viewModel.updateWorkPresetName(presetToRename!!.id, newName)
+                presetToRename = null
             },
-            onDismiss = { showWorkSelectionModal = false }
+            onDismiss = { presetToRename = null }
         )
     }
-    // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
+
+    // --- ▼▼▼ 추가된 Composable: 삭제 확인 다이얼로그 ▼▼▼ ---
+    if (presetToDelete != null) {
+        DeleteConfirmDialog(
+            preset = presetToDelete!!,
+            onConfirm = {
+                viewModel.deleteWorkPreset(presetToDelete!!.id)
+                presetToDelete = null
+            },
+            onDismiss = { presetToDelete = null }
+        )
+    }
+    // --- ▲▲▲ 추가된 Composable ▲▲▲ ---
 
     Box(
         modifier = Modifier
@@ -86,7 +95,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 heightPx = sz.height
             }
     ) {
-        // ... (배경 이미지, 동물 스프라이트, 이동 루프는 기존과 동일)
         Image(
             painter = painterResource(id = R.drawable.grass_background),
             contentDescription = "grass background",
@@ -116,7 +124,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             }
         }
 
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -124,28 +131,39 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("픽모도로", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-
             Spacer(Modifier.height(16.dp))
 
-            // --- ▼▼▼ 수정/추가된 부분 ▼▼▼ ---
             val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
 
-            TextButton(onClick = { showWorkSelectionModal = true }) {
+            TextButton(onClick = { showWorkManager = !showWorkManager }) {
                 Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택")
             }
-            // --- ▲▲▲ 수정/추가된 부분 ▲▲▲ ---
 
-            // 원형 타이머
+            AnimatedVisibility(visible = showWorkManager) {
+                WorkPresetsManager(
+                    presets = state.workPresets,
+                    currentPresetId = state.currentWorkId,
+                    onPresetSelected = { viewModel.selectWorkPreset(it) },
+                    onAddPreset = { viewModel.addWorkPreset() },
+                    // --- ▼▼▼ 수정된 부분: 삭제 요청 시 상태 변경 ▼▼▼ ---
+                    onDeletePreset = { preset -> presetToDelete = preset },
+                    // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
+                    onRenamePreset = { preset -> presetToRename = preset },
+                    onEditSettings = { presetId ->
+                        viewModel.startEditingWorkPreset(presetId)
+                        viewModel.showScreen(Screen.Settings)
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
                 fontSize = 60.sp,
                 fontWeight = FontWeight.Bold
             )
-
             Spacer(Modifier.height(16.dp))
-
-            // ... (CycleIndicator, 버튼, 네비게이션 등 나머지 UI는 기존과 동일)
             CycleIndicator(
                 modifier = Modifier.fillMaxWidth(),
                 currentMode = state.currentMode,
@@ -197,66 +215,162 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     }
 }
 
-// --- ▼▼▼ 추가된 Composable ▼▼▼ ---
-/**
- * Work 프리셋을 선택하는 모달창 Composable
- */
 @Composable
-fun WorkSelectionModal(
+fun WorkPresetsManager(
     presets: List<WorkPreset>,
     currentPresetId: String?,
     onPresetSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onAddPreset: () -> Unit,
+    onDeletePreset: (WorkPreset) -> Unit,
+    onRenamePreset: (WorkPreset) -> Unit,
+    onEditSettings: (String) -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column {
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 200.dp)
             ) {
-                Text(
-                    text = "Work 선택",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                LazyColumn {
-                    items(presets) { preset ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { onPresetSelected(preset.id) }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (preset.id == currentPresetId),
-                                onClick = { onPresetSelected(preset.id) }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = preset.name, style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
+                items(presets) { preset ->
+                    WorkPresetItem(
+                        preset = preset,
+                        isSelected = preset.id == currentPresetId,
+                        onSelect = { onPresetSelected(preset.id) },
+                        onRename = { onRenamePreset(preset) },
+                        onEditSettings = { onEditSettings(preset.id) },
+                        onDelete = { onDeletePreset(preset) }
+                    )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("닫기")
-                    }
-                }
+            }
+            Divider()
+            TextButton(
+                onClick = onAddPreset,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Work 추가")
+                Spacer(Modifier.width(4.dp))
+                Text("새 Work 추가")
             }
         }
     }
 }
+
+@Composable
+fun WorkPresetItem(
+    preset: WorkPreset,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    onRename: () -> Unit,
+    onEditSettings: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelect)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = isSelected,
+            onClick = onSelect
+        )
+        Text(
+            text = preset.name,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onRename) {
+            Icon(Icons.Default.Edit, contentDescription = "이름 변경", tint = MaterialTheme.colorScheme.primary)
+        }
+        IconButton(onClick = onEditSettings) {
+            Icon(Icons.Default.Settings, contentDescription = "설정 변경", tint = MaterialTheme.colorScheme.secondary)
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RenamePresetDialog(
+    preset: WorkPreset,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(preset.name) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Work 이름 변경") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text("이름") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(text) },
+                enabled = text.isNotBlank()
+            ) {
+                Text("확인")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
+}
+
+// --- ▼▼▼ 추가된 Composable: 삭제 확인창 ▼▼▼ ---
+@Composable
+fun DeleteConfirmDialog(
+    preset: WorkPreset,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Work 삭제") },
+        text = {
+            Text(
+                buildAnnotatedString {
+                    append("정말로 '")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(preset.name)
+                    }
+                    append("' Work를 삭제하시겠습니까?")
+                }
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("삭제")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
+}
 // --- ▲▲▲ 추가된 Composable ▲▲▲ ---
+
 
 // ... CycleIndicator, SpriteSheetImage 함수는 기존과 동일 ...
 @Composable
@@ -267,8 +381,6 @@ fun CycleIndicator(
     longBreakInterval: Int
 ) {
     if (longBreakInterval <= 0) return
-
-    // 1. 전체 사이클 시퀀스 생성
     val cycleSequence = remember(longBreakInterval) {
         buildList {
             for (i in 1 until longBreakInterval) {
@@ -279,8 +391,6 @@ fun CycleIndicator(
             add(Mode.LONG_BREAK)
         }
     }
-
-    // 2. 현재 세션 인덱스 계산
     val currentIndex = remember(currentMode, totalSessions, longBreakInterval) {
         val cyclePosition = (totalSessions - 1).coerceAtLeast(0) % longBreakInterval
         when (currentMode) {
@@ -288,8 +398,6 @@ fun CycleIndicator(
             else -> cyclePosition * 2 + 1
         }
     }
-
-    // 3. 시퀀스를 8개씩 묶어 여러 행으로 그림
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -315,14 +423,8 @@ fun CycleIndicator(
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             when {
-                                // 완료된 세션: 채워진 원
-                                index < currentIndex -> {
-                                    drawCircle(color = color)
-                                }
-                                // 현재 또는 미래 세션: 테두리 원
-                                else -> {
-                                    drawCircle(color = color, style = Stroke(width = 2.dp.toPx()))
-                                }
+                                index < currentIndex -> drawCircle(color = color)
+                                else -> drawCircle(color = color, style = Stroke(width = 2.dp.toPx()))
                             }
                         }
                     }

@@ -1,6 +1,6 @@
 package com.malrang.pomodoro.ui.screen
 
-import android.widget.Toast // Toast 임포트 추가
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,24 +23,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext // LocalContext 임포트 추가
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
-/**
- * 앱의 설정 화면을 표시하는 컴포저블 함수입니다.
- * 타이머 시간, 알림음, 진동 설정을 변경할 수 있습니다.
- *
- * @param viewModel [PomodoroViewModel]의 인턴스입니다.
- */
 @Composable
 fun SettingsScreen(viewModel: PomodoroViewModel) {
+    // --- ▼▼▼ 수정된 부분 ▼▼▼ ---
+    // 편집 중인 프리셋이 있으면 그것을, 없으면 현재 활성화된 프리셋의 설정을 가져옴
+    val editingPreset by viewModel.editingWorkPreset.collectAsState()
     val state by viewModel.uiState.collectAsState()
-    val settings = state.settings
-    // --- 추가: Toast 메시지를 위해 Context 가져오기 ---
+    val settings = editingPreset?.settings ?: state.settings
+    val title = editingPreset?.name ?: "기본 설정"
+    // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
+
     val context = LocalContext.current
 
     Column(
@@ -54,13 +54,17 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⚙️ 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            // --- 핵심 수정 사항: 뒤로가기 버튼 클릭 로직 변경 ---
+            // --- ▼▼▼ 수정된 부분 (타이틀 변경) ▼▼▼ ---
+            Text("⚙️ $title 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
             IconButton(onClick = {
-                if (state.isTimerStartedOnce) {
+                if (state.isTimerStartedOnce && editingPreset == null) {
                     Toast.makeText(context, "변경사항은 리셋 이후 적용됩니다", Toast.LENGTH_SHORT).show()
                 }
+                // --- ▼▼▼ 수정된 부분 (편집 모드 종료) ▼▼▼ ---
+                viewModel.stopEditingWorkPreset()
                 viewModel.showScreen(Screen.Main)
+                // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
             }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -72,6 +76,9 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
 
         Spacer(Modifier.height(24.dp))
 
+        // 슬라이더와 체크박스는 ViewModel의 함수를 호출하므로 수정할 필요 없음
+        // ViewModel 내부 로직이 알아서 편집 중인 프리셋을 수정해 줌
+
         Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
         Spacer(Modifier.height(8.dp))
 
@@ -79,29 +86,29 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Slider(
             value = settings.studyTime.toFloat(),
             onValueChange = { viewModel.updateStudyTime(it.toInt()) },
-            valueRange = 1f..60f
+            valueRange = 1f..60f,
         )
 
         Text("짧은 휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
         Slider(
             value = settings.shortBreakTime.toFloat(),
             onValueChange = { viewModel.updateShortBreakTime(it.toInt()) },
-            valueRange = 0f..60f
+            valueRange = 1f..30f, // 1분부터 시작
         )
 
         Text("긴 휴식 시간: ${settings.longBreakTime}분", color = Color.White)
         Slider(
             value = settings.longBreakTime.toFloat(),
             onValueChange = { viewModel.updateLongBreakTime(it.toInt()) },
-            valueRange = 0f..60f
+            valueRange = 1f..60f, // 1분부터 시작
         )
 
         Text("긴 휴식 간격: ${settings.longBreakInterval}회 마다", color = Color.White)
         Slider(
             value = settings.longBreakInterval.toFloat(),
             onValueChange = { viewModel.updateLongBreakInterval(it.toInt()) },
-            valueRange = 1f..12f,
-            steps = 10 // 1부터 12까지 설정 가능
+            valueRange = 2f..12f, // 2회부터
+            steps = 9
         )
         Spacer(Modifier.height(24.dp))
 
