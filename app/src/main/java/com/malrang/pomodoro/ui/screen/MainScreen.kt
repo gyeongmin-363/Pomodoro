@@ -185,6 +185,10 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 IconButton(onClick = { viewModel.resetTimer() }) {
                     Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋")
                 }
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = { viewModel.skipSession() }) {   // ✅ 건너뛰기 버튼
+                    Icon(painterResource(id = R.drawable.ic_settings), contentDescription = "건너뛰기")
+                }
             }
             Spacer(Modifier.height(24.dp))
             Text(

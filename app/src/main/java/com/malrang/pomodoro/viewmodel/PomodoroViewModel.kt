@@ -263,6 +263,43 @@ class PomodoroViewModel(
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
         timerService.pause()
     }
+
+    fun skipSession() {
+        val s = _uiState.value
+        val finishedMode = s.currentMode
+
+        // ✅ DB 저장 없음 (updateTodayStats 호출하지 않음)
+
+        // 다음 모드 및 세션 계산
+        val nextMode: Mode
+        val nextTime: Int
+        var newTotalSessions = s.totalSessions
+
+        if (finishedMode == Mode.STUDY) {
+            newTotalSessions++
+            val isLongBreakTime = newTotalSessions > 0 &&
+                    newTotalSessions % s.settings.longBreakInterval == 0
+            nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
+            nextTime = if (isLongBreakTime) s.settings.longBreakTime else s.settings.shortBreakTime
+        } else {
+            nextMode = Mode.STUDY
+            nextTime = s.settings.studyTime
+        }
+
+        _uiState.update {
+            it.copy(
+                currentMode = nextMode,
+                totalSessions = newTotalSessions,
+                timeLeft = nextTime * 60,
+                isRunning = false,
+                isPaused = false
+            )
+        }
+
+        // Service에도 skip 요청 전달
+        timerService.skip(s.currentMode, newTotalSessions)
+    }
+    
     fun onTimerFinishedFromService() {
         val finishedMode = _uiState.value.currentMode
         viewModelScope.launch {

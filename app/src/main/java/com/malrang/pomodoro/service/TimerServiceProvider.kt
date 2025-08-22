@@ -52,4 +52,17 @@ class TimerServiceProvider(private val context: Context) {
         }
         context.startService(intent)
     }
+
+    /**
+     * ✅ 새로 추가된 메서드: 세션 건너뛰기
+     * Service에서 DB 저장 없이 다음 모드로 강제 전환합니다.
+     */
+    fun skip(currentMode: Mode, totalSessions: Int) {
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = "SKIP"
+            putExtra("CURRENT_MODE", currentMode as Serializable)
+            putExtra("TOTAL_SESSIONS", totalSessions)
+        }
+        context.startService(intent)
+    }
 }
