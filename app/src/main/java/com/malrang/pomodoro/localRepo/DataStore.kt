@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
@@ -18,16 +19,16 @@ object DSKeys {
     val SEEN_IDS = stringSetPreferencesKey("seen_animal_ids")
     val DAILY_JSON = stringPreferencesKey("daily_stats_json")
     val SETTINGS_JSON = stringPreferencesKey("settings_json")
+    val WORK_PRESETS_JSON = stringPreferencesKey("work_presets_json")
+    val CURRENT_WORK_ID = stringPreferencesKey("current_work_id")
     // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
-    val WORK_PRESETS_JSON = stringPreferencesKey("work_presets_json") // Work 프리셋 목록 저장
-    val CURRENT_WORK_ID = stringPreferencesKey("current_work_id")     // 현재 선택된 Work ID 저장
+    val ACTIVE_SPRITES_JSON = stringPreferencesKey("active_sprites_json") // 활성 스프라이트 목록 저장
     // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 }
 
 class PomodoroRepository(private val context: Context) {
     private val gson = Gson()
 
-    // ... 기존 save/load 함수들 ...
     suspend fun loadSeenIds(): Set<String> =
         context.dataStore.data.first()[DSKeys.SEEN_IDS] ?: emptySet()
 
@@ -58,11 +59,9 @@ class PomodoroRepository(private val context: Context) {
         context.dataStore.edit { it[DSKeys.SETTINGS_JSON] = json }
     }
 
-    // --- ▼▼▼ 추가된 함수들 ▼▼▼ ---
     suspend fun loadWorkPresets(): List<WorkPreset> {
         val json = context.dataStore.data.first()[DSKeys.WORK_PRESETS_JSON]
         return if (json == null) {
-            // 저장된 프리셋이 없으면 기본값 생성
             createDefaultPresets()
         } else {
             val type = object : TypeToken<List<WorkPreset>>() {}.type
@@ -82,6 +81,27 @@ class PomodoroRepository(private val context: Context) {
     suspend fun saveCurrentWorkId(id: String) {
         context.dataStore.edit { it[DSKeys.CURRENT_WORK_ID] = id }
     }
+
+    // --- ▼▼▼ 추가된 함수들 ▼▼▼ ---
+
+    /**
+     * 현재 활성화된 AnimalSprite 목록을 JSON 형태로 저장합니다.
+     */
+    suspend fun saveActiveSprites(sprites: List<AnimalSprite>) {
+        val json = gson.toJson(sprites)
+        context.dataStore.edit { it[DSKeys.ACTIVE_SPRITES_JSON] = json }
+    }
+
+    /**
+     * 저장된 AnimalSprite 목록을 불러옵니다. 저장된 데이터가 없으면 빈 리스트를 반환합니다.
+     */
+    suspend fun loadActiveSprites(): List<AnimalSprite> {
+        val json = context.dataStore.data.first()[DSKeys.ACTIVE_SPRITES_JSON] ?: return emptyList()
+        val type = object : TypeToken<List<AnimalSprite>>() {}.type
+        return runCatching { gson.fromJson<List<AnimalSprite>>(json, type) }.getOrElse { emptyList() }
+    }
+
+    // --- ▲▲▲ 추가된 함수들 ▲▲▲ ---
 
     private fun createDefaultPresets(): List<WorkPreset> {
         return listOf(
@@ -111,5 +131,4 @@ class PomodoroRepository(private val context: Context) {
             )
         )
     }
-    // --- ▲▲▲ 추가된 함수들 ▲▲▲ ---
 }
