@@ -13,6 +13,7 @@ import com.malrang.pomodoro.MainActivity
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
+import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
 import kotlinx.coroutines.CoroutineScope
@@ -110,14 +111,30 @@ class TimerService : Service() {
                     putExtra("TOTAL_SESSIONS", totalSessions)
                 })
             }
-            "RESET_FULL" -> {
+            "RESET" -> {
                 job?.cancel()
                 isRunning = false
+
+                // 1. Intent에서 Settings 객체를 가져옵니다.
+                val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getSerializableExtra("SETTINGS", Settings::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getSerializableExtra("SETTINGS") as? Settings
+                }
+
+                // 2. 서비스의 settings와 timeLeft를 업데이트합니다.
+                if (newSettings != null) {
+                    settings = newSettings
+                }
+
                 currentMode = Mode.STUDY
                 totalSessions = 0
-                timeLeft = settings?.studyTime?.times(60) ?: 0
+                // 이제 settings가 null이 아니므로 정확한 공부 시간으로 timeLeft를 설정할 수 있습니다.
+                timeLeft = settings?.studyTime?.times(60) ?: (25 * 60) // (혹시 모를 경우를 대비해 기본값 25분 설정)
 
-                // ✅ UI와 동기화: 일시정지 상태로 전달
+
+                // UI와 동기화: 일시정지 상태로 전달
                 sendBroadcast(Intent(TIMER_TICK).apply {
                     putExtra("TIME_LEFT", timeLeft)
                     putExtra("IS_RUNNING", false)

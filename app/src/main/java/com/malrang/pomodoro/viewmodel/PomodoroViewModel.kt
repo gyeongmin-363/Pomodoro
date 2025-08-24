@@ -64,7 +64,7 @@ class PomodoroViewModel(
             if (TimerService.isServiceActive()) {
                 timerService.requestStatus()
             } else {
-                fullReset()
+                reset()
             }
         }
     }
@@ -82,7 +82,7 @@ class PomodoroViewModel(
                     settings = selectedPreset.settings
                 )
             }
-            fullReset()
+            reset()
         }
     }
 
@@ -185,8 +185,6 @@ class PomodoroViewModel(
     }
     // --- ▲▲▲ 추가/수정된 Work 관리 함수들 ▲▲▲ ---
 
-    // ... 기존 타이머 및 통계 관련 함수들 (updateTodayStats 등)은 모두 그대로 유지 ...
-
     // 설정 변경 함수들은 모두 내부적으로 updateSettings를 호출하므로 수정할 필요 없음
     fun updateStudyTime(v: Int) {
         updateSettings { copy(studyTime = v) }
@@ -254,22 +252,25 @@ class PomodoroViewModel(
         timerService.pause()
     }
 
-    fun fullReset() {
-        val defaultSettings = Settings()
+    fun reset() {
+        val s = _uiState.value
+        val currentWorkSettings = s.workPresets.find { it.id == s.currentWorkId }?.settings ?: Settings()
+
         _uiState.update {
             it.copy(
-                timeLeft = defaultSettings.studyTime * 60,
+                timeLeft = currentWorkSettings.studyTime * 60, // 요청 2: 변경된 공부 시간을 즉시 UI에 반영
                 totalSessions = 0,
                 isRunning = false,
                 isPaused = true,
                 isTimerStartedOnce = false,
                 currentMode = Mode.STUDY,
-                settings = defaultSettings
+                settings = currentWorkSettings,
+                activeSprites = emptyList() // 요청 1: 애니멀 스프라이트 리스트 초기화
             )
         }
 
-        // ✅ 서비스 상태도 완전히 초기화
-        timerService.resetCompletely()
+        // 서비스 상태도 완전히 초기화
+        timerService.resetCompletely(_uiState.value.settings)
     }
 
     fun skipSession() {

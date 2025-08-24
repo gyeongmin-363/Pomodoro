@@ -58,9 +58,10 @@ class TimerServiceProvider(private val context: Context) {
         context.startService(intent)
     }
 
-    fun resetCompletely() {
+    fun resetCompletely(settings: Settings) { // Settings 객체를 인자로 받도록 변경
         val intent = Intent(context, TimerService::class.java).apply {
-            action = "RESET_FULL"
+            action = "RESET"
+            putExtra("SETTINGS", settings as Serializable) // Intent에 설정값 추가
         }
         context.startService(intent)
     }
