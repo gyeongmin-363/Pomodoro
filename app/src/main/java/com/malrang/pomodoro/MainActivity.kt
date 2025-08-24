@@ -10,9 +10,14 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -67,8 +72,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             PomodoroTheme {
                 vm = viewModel(factory = PomodoroVMFactory(application))
-                PomodoroApp(vm)
-                BackPressExit()
+                Scaffold {
+                    Box(modifier = Modifier.padding(it)){
+                        PomodoroApp(vm)
+                        BackPressExit()
+                    }
+                }
             }
         }
     }

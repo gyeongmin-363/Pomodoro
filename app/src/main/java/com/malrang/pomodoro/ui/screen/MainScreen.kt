@@ -221,15 +221,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
                     Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감")
                 }
-                IconButton(onClick = {
-                    if (state.isTimerStartedOnce) {
-                        Toast.makeText(context, "변경사항은 리셋 이후 적용됩니다", Toast.LENGTH_SHORT).show()
-                    }
-                    viewModel.showScreen(Screen.Settings)
-
-                }) {
-                    Icon(painterResource(id = R.drawable.ic_settings), contentDescription = "설정")
-                }
                 IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
                     Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계")
                 }
