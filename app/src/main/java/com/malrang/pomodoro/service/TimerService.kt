@@ -196,8 +196,16 @@ class TimerService : Service() {
                 isRunning = true
                 startTimer()
             } else {
+                // --- ▼▼▼ 여기가 수정된 부분입니다 ▼▼▼ ---
+                // 다음 세션의 상태로 업데이트
+                timeLeft = nextTime * 60
+                currentMode = nextMode
+                totalSessions = newTotalSessions
+                // 타이머를 '일시정지' 상태로 변경
                 isRunning = false
-                stopSelf()
+                // 일시정지 로직을 호출하여 알림을 업데이트하고 상태를 브로드캐스트
+                pauseTimer()
+                // --- ▲▲▲ 여기가 수정된 부분입니다 ▲▲▲ ---
             }
         }
         startForeground(NOTIFICATION_ID, createNotification())
