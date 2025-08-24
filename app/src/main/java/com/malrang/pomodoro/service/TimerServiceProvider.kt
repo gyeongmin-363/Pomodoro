@@ -23,7 +23,6 @@ class TimerServiceProvider(private val context: Context) {
         val intent = Intent(context, TimerService::class.java).apply {
             action = "START"
             putExtra("TIME_LEFT", timeLeft)
-            // --- 변경: 서비스에 필요한 모든 정보를 전달 ---
             putExtra("SETTINGS", settings as Serializable)
             putExtra("CURRENT_MODE", currentMode as Serializable)
             putExtra("TOTAL_SESSIONS", totalSessions)
@@ -38,13 +37,6 @@ class TimerServiceProvider(private val context: Context) {
         context.startService(intent)
     }
 
-    fun reset(timeLeft: Int) {
-        val intent = Intent(context, TimerService::class.java).apply {
-            action = "RESET"
-            putExtra("TIME_LEFT", timeLeft)
-        }
-        context.startService(intent)
-    }
 
     fun requestStatus() {
         val intent = Intent(context, TimerService::class.java).apply {

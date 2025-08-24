@@ -70,18 +70,6 @@ class TimerService : Service() {
                 isRunning = false // 1. 서비스의 상태를 '일시정지'로 먼저 변경
                 pauseTimer()    // 2. 그 다음에 UI(알림) 업데이트 및 브로드캐스트 실행
             }
-            "RESET" -> {
-                isRunning = false
-                resetTimer()
-                timeLeft = intent.getIntExtra("TIME_LEFT", 0)
-                updateNotification()
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", isRunning)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                })
-            }
             "REQUEST_STATUS" -> {
                 sendBroadcast(Intent(TIMER_TICK).apply {
                     putExtra("TIME_LEFT", timeLeft)
@@ -209,9 +197,6 @@ class TimerService : Service() {
         })
     }
 
-    private fun resetTimer() {
-        job?.cancel()
-    }
 
     private fun updateNotification() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

@@ -64,7 +64,7 @@ class PomodoroViewModel(
             if (TimerService.isServiceActive()) {
                 timerService.requestStatus()
             } else {
-                resetTimer()
+                fullReset()
             }
         }
     }
@@ -82,7 +82,7 @@ class PomodoroViewModel(
                     settings = selectedPreset.settings
                 )
             }
-            resetTimer()
+            fullReset()
         }
     }
 
@@ -206,7 +206,6 @@ class PomodoroViewModel(
     fun toggleAutoStart(b: Boolean) = updateSettings { copy(autoStart = b) }
 
 
-    // ... 나머지 함수들 (showScreen, makeSprite 등)은 모두 그대로 유지 ...
 
     private suspend fun updateTodayStats(finishedMode: Mode) {
         val today = LocalDate.now().toString()
@@ -249,16 +248,7 @@ class PomodoroViewModel(
         timerService.start(s.timeLeft, s.settings, s.currentMode, s.totalSessions)
     }
 
-    fun resetTimer() {
-        val s = _uiState.value
-        val newTimeLeft = when (s.currentMode) {
-            Mode.STUDY -> s.settings.studyTime
-            Mode.SHORT_BREAK -> s.settings.shortBreakTime
-            Mode.LONG_BREAK -> s.settings.longBreakTime
-        }
-        _uiState.update { it.copy(isRunning = false, isPaused = false, timeLeft = newTimeLeft * 60, isTimerStartedOnce = false) }
-        timerService.reset(newTimeLeft * 60)
-    }
+
     fun pauseTimer() {
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
         timerService.pause()
