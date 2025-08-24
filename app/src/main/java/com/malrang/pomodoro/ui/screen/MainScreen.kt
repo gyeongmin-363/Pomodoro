@@ -133,7 +133,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
         }
         // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 
-        if (state.currentMode != Mode.STUDY || state.isPaused) {
+        // --- ▼▼▼ 수정된 부분: 동물 스프라이트 렌더링 조건 추가 ▼▼▼ ---
+        if ((state.currentMode != Mode.STUDY || state.isPaused) && state.useGrassBackground) {
             state.activeSprites.forEach { sp ->
                 SpriteSheetImage(
                     sprite = sp,
@@ -144,6 +145,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 )
             }
         }
+        // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
+
         LaunchedEffect(widthPx, heightPx, state.activeSprites.size) {
             if (widthPx == 0 || heightPx == 0) return@LaunchedEffect
             var last = System.nanoTime()
