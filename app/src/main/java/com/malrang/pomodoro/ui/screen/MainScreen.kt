@@ -224,12 +224,17 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 IconButton(onClick = { viewModel.skipSession() }) {   // ✅ 건너뛰기 버튼
                     Icon(painterResource(id = R.drawable.ic_settings), contentDescription = "건너뛰기")
                 }
-                // --- ▼▼▼ 추가된 부분: 배경 변경 버튼 ▼▼▼ ---
+                // --- ▼▼▼ 수정된 부분: 배경 변경 버튼 클릭 시 토스트 메시지 추가 ▼▼▼ ---
                 Spacer(Modifier.width(8.dp))
-                IconButton(onClick = { viewModel.toggleBackground() }) {
+                IconButton(onClick = {
+                    if (state.useGrassBackground) {
+                        Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
+                    }
+                    viewModel.toggleBackground()
+                }) {
                     Icon(Icons.Default.Star, contentDescription = "배경 변경")
                 }
-                // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
+                // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
             }
             Spacer(Modifier.height(24.dp))
             Text(
