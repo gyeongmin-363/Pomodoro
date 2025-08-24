@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.R
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.UUID
 import kotlin.random.Random
 
 class PomodoroViewModel(
@@ -70,22 +70,6 @@ class PomodoroViewModel(
         }
     }
 
-    // --- ▼▼▼ 추가된 함수 ▼▼▼ ---
-    /**
-     * 앱이 다시 활성화될 때 호출하여 백그라운드에서 변경된 스프라이트 목록을 새로고침합니다.
-     * (Activity/Fragment의 onResume에서 이 함수를 호출해야 합니다)
-     */
-    fun refreshActiveSprites() {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    activeSprites = repo.loadActiveSprites(),
-                    collectedAnimals = repo.loadSeenIds().mapNotNull { id -> AnimalsTable.byId(id) }.toSet()
-                )
-            }
-        }
-    }
-    // --- ▲▲▲ 추가된 함수 ▲▲▲ ---
 
     fun selectWorkPreset(presetId: String) {
         viewModelScope.launch {
@@ -185,41 +169,6 @@ class PomodoroViewModel(
     fun toggleVibration(b: Boolean) = updateSettings { copy(vibrationEnabled = b) }
     fun toggleAutoStart(b: Boolean) = updateSettings { copy(autoStart = b) }
 
-
-    private suspend fun updateTodayStats(finishedMode: Mode) {
-        val today = LocalDate.now().toString()
-        val s = _uiState.value
-        val currentStatsMap = repo.loadDailyStats().toMutableMap()
-        val todayStat = currentStatsMap[today] ?: DailyStat(today)
-
-        val currentWorkName = s.workPresets.find { it.id == s.currentWorkId }?.name ?: "알 수 없는 Work"
-
-        val updatedStat = when (finishedMode) {
-            Mode.STUDY -> {
-                val newStudyTimeMap = (todayStat.studyTimeByWork ?: emptyMap()).toMutableMap()
-                val currentWorkTime = newStudyTimeMap.getOrDefault(currentWorkName, 0)
-                newStudyTimeMap[currentWorkName] = currentWorkTime + s.settings.studyTime
-                todayStat.copy(studyTimeByWork = newStudyTimeMap)
-            }
-            Mode.SHORT_BREAK -> {
-                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
-                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
-                newBreakTimeMap[currentWorkName] = currentWorkTime + s.settings.shortBreakTime
-                todayStat.copy(breakTimeByWork = newBreakTimeMap)
-            }
-            Mode.LONG_BREAK -> {
-                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
-                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
-                newBreakTimeMap[currentWorkName] = currentWorkTime + s.settings.longBreakTime
-                todayStat.copy(breakTimeByWork = newBreakTimeMap)
-            }
-        }
-        currentStatsMap[today] = updatedStat
-        repo.saveDailyStats(currentStatsMap)
-        _uiState.update { it.copy(dailyStats = currentStatsMap) }
-    }
-
-
     fun startTimer() {
         if (_uiState.value.isRunning) return
         val s = _uiState.value
@@ -285,15 +234,7 @@ class PomodoroViewModel(
         timerService.skip(s.currentMode, newTotalSessions)
     }
 
-    // --- ▼▼▼ 여기가 수정된 부분입니다 ▼▼▼ ---
-    fun onTimerFinishedFromService() {
-        // 통계 업데이트는 ViewModel에서 계속 담당
-        viewModelScope.launch {
-            updateTodayStats(_uiState.value.currentMode)
-        }
-        // 스프라이트 생성 로직은 이제 Service가 담당하므로 관련 코드를 제거합니다.
-    }
-    // --- ▲▲▲ 여기가 수정된 부분입니다 ▲▲▲ ---
+
 
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
         _uiState.update {

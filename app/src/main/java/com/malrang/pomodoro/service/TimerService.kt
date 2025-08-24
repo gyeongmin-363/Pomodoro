@@ -19,6 +19,7 @@ import com.malrang.pomodoro.dataclass.animalInfo.Rarity
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteData
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
+import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
@@ -29,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.util.UUID
 import kotlin.random.Random
 
@@ -45,9 +47,7 @@ class TimerService : Service() {
     private lateinit var vibratorHelper: VibratorHelper
     private lateinit var repo: PomodoroRepository
 
-    // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
     private lateinit var wakeLock: PowerManager.WakeLock
-    // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
 
     override fun onCreate() {
@@ -58,10 +58,8 @@ class TimerService : Service() {
         vibratorHelper = VibratorHelper(this)
         repo = PomodoroRepository(this)
 
-        // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
-        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -101,11 +99,9 @@ class TimerService : Service() {
             }
             "SKIP" -> {
                 job?.cancel()
-                // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
                 if (wakeLock.isHeld) {
                     wakeLock.release()
                 }
-                // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
                 val currentSettings = settings ?: return START_STICKY
 
                 var nextMode = Mode.STUDY
@@ -139,11 +135,9 @@ class TimerService : Service() {
             "RESET" -> {
                 job?.cancel()
                 isRunning = false
-                // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
                 if (wakeLock.isHeld) {
                     wakeLock.release()
                 }
-                // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
                 val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getSerializableExtra("SETTINGS", Settings::class.java)
@@ -175,11 +169,7 @@ class TimerService : Service() {
 
     private fun startTimer() {
         job?.cancel()
-        // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
-        // 타이머를 시작할 때 WakeLock을 얻습니다.
-        // 1시간 30분(90분) 타임아웃을 설정하여 무한정 유지되지 않도록 합니다.
         wakeLock.acquire(90*60*1000L /*90 minutes*/)
-        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
         job = CoroutineScope(Dispatchers.Main).launch {
             while (timeLeft > 0) {
                 delay(1000)
@@ -192,12 +182,9 @@ class TimerService : Service() {
                     putExtra("TOTAL_SESSIONS", totalSessions)
                 })
             }
-            // --- ▼▼▼ 추가/수정된 부분 ▼▼▼ ---
-            // 타이머가 끝나면 WakeLock을 해제합니다.
             if (wakeLock.isHeld) {
                 wakeLock.release()
             }
-            // --- ▲▲▲ 추가/수정된 부분 ▲▲▲ ---
 
             val finishedMode = currentMode
             val currentSettings = settings ?: return@launch
@@ -205,11 +192,7 @@ class TimerService : Service() {
             if (currentSettings.soundEnabled) { soundPlayer.playSound() }
             if (currentSettings.vibrationEnabled) { vibratorHelper.vibrate() }
 
-            sendBroadcast(Intent(TIMER_FINISHED))
-
-            if (finishedMode == Mode.STUDY) {
-                handleStudySessionCompletion()
-            }
+            handleSessionCompletion(finishedMode)
 
             var nextMode = Mode.STUDY
             var nextTime = 0
@@ -242,12 +225,9 @@ class TimerService : Service() {
 
     private fun pauseTimer() {
         job?.cancel()
-        // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
-        // 타이머가 일시정지되면 WakeLock을 해제합니다.
         if (wakeLock.isHeld) {
             wakeLock.release()
         }
-        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
         updateNotification()
         sendBroadcast(Intent(TIMER_TICK).apply {
             putExtra("TIME_LEFT", timeLeft)
@@ -257,15 +237,54 @@ class TimerService : Service() {
         })
     }
 
-    private fun handleStudySessionCompletion() {
+    private fun handleSessionCompletion(finishedMode: Mode) {
         CoroutineScope(Dispatchers.IO).launch {
-            val animal = getRandomAnimal()
-            val sprite = makeSprite(animal)
-            val updatedSeenIds = repo.loadSeenIds() + animal.id
-            val updatedSprites = repo.loadActiveSprites() + sprite
-            repo.saveSeenIds(updatedSeenIds)
-            repo.saveActiveSprites(updatedSprites)
+            updateTodayStats(finishedMode)
+
+            if (finishedMode == Mode.STUDY) {
+                val animal = getRandomAnimal()
+                val sprite = makeSprite(animal)
+                val updatedSeenIds = repo.loadSeenIds() + animal.id
+                val updatedSprites = repo.loadActiveSprites() + sprite
+                repo.saveSeenIds(updatedSeenIds)
+                repo.saveActiveSprites(updatedSprites)
+            }
         }
+    }
+
+    private suspend fun updateTodayStats(finishedMode: Mode) {
+        val currentSettings = settings ?: return
+
+        val today = LocalDate.now().toString()
+        val currentStatsMap = repo.loadDailyStats().toMutableMap()
+        val todayStat = currentStatsMap[today] ?: DailyStat(today)
+
+        val currentWorkId = repo.loadCurrentWorkId()
+        val workPresets = repo.loadWorkPresets()
+        val currentWorkName = workPresets.find { it.id == currentWorkId }?.name ?: "알 수 없는 Work"
+
+        val updatedStat = when (finishedMode) {
+            Mode.STUDY -> {
+                val newStudyTimeMap = (todayStat.studyTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newStudyTimeMap.getOrDefault(currentWorkName, 0)
+                newStudyTimeMap[currentWorkName] = currentWorkTime + currentSettings.studyTime
+                todayStat.copy(studyTimeByWork = newStudyTimeMap)
+            }
+            Mode.SHORT_BREAK -> {
+                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
+                newBreakTimeMap[currentWorkName] = currentWorkTime + currentSettings.shortBreakTime
+                todayStat.copy(breakTimeByWork = newBreakTimeMap)
+            }
+            Mode.LONG_BREAK -> {
+                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
+                newBreakTimeMap[currentWorkName] = currentWorkTime + currentSettings.longBreakTime
+                todayStat.copy(breakTimeByWork = newBreakTimeMap)
+            }
+        }
+        currentStatsMap[today] = updatedStat
+        repo.saveDailyStats(currentStatsMap)
     }
 
     private fun getRandomAnimal(): Animal {
@@ -352,18 +371,14 @@ class TimerService : Service() {
         job?.cancel()
         isRunning = false
         isServiceActive = false
-        // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
-        // 서비스가 소멸될 때 WakeLock을 해제합니다.
         if (wakeLock.isHeld) {
             wakeLock.release()
         }
-        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
     }
 
     companion object {
         private const val NOTIFICATION_ID = 2022
         const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
-        const val TIMER_FINISHED = "com.malrang.pomodoro.TIMER_FINISHED"
         private var isServiceActive = false
         fun isServiceActive(): Boolean = isServiceActive
     }
