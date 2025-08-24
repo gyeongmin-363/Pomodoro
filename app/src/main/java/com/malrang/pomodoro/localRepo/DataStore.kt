@@ -1,6 +1,7 @@
 package com.malrang.pomodoro.localRepo
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -35,6 +36,8 @@ object DSKeys {
     val CURRENT_WORK_ID = stringPreferencesKey("current_work_id")
     /** 현재 화면에 표시되는 활성 스프라이트(동물) 목록을 JSON 형태로 저장하기 위한 키 */
     val ACTIVE_SPRITES_JSON = stringPreferencesKey("active_sprites_json")
+    /** 잔디 배경화면 사용 여부를 저장하기 위한 키 */
+    val USE_GRASS_BACKGROUND = booleanPreferencesKey("use_grass_background")
 }
 
 /**
@@ -135,6 +138,23 @@ class PomodoroRepository(private val context: Context) {
         val json = context.dataStore.data.first()[DSKeys.ACTIVE_SPRITES_JSON] ?: return emptyList()
         val type = object : TypeToken<List<AnimalSprite>>() {}.type
         return runCatching { gson.fromJson<List<AnimalSprite>>(json, type) }.getOrElse { emptyList() }
+    }
+
+    /**
+     * DataStore에서 잔디 배경 사용 여부를 불러옵니다.
+     * @return 저장된 설정이 없으면 true (기본값)를 반환합니다.
+     */
+    suspend fun loadUseGrassBackground(): Boolean {
+        // 기본값을 true로 설정하여 처음에는 잔디 배경을 보여줍니다.
+        return context.dataStore.data.first()[DSKeys.USE_GRASS_BACKGROUND] ?: true
+    }
+
+    /**
+     * 잔디 배경 사용 여부를 DataStore에 저장합니다.
+     * @param useGrass 잔디 배경을 사용할지 여부
+     */
+    suspend fun saveUseGrassBackground(useGrass: Boolean) {
+        context.dataStore.edit { it[DSKeys.USE_GRASS_BACKGROUND] = useGrass }
     }
 
     /**

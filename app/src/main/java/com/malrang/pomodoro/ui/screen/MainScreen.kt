@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -114,12 +116,23 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             )
         }
 
-        Image(
-            painter = painterResource(id = R.drawable.grass_background),
-            contentDescription = "grass background",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        // --- ▼▼▼ 수정된 부분: 배경화면 조건부 렌더링 ▼▼▼ ---
+        if (state.useGrassBackground) {
+            Image(
+                painter = painterResource(id = R.drawable.grass_background),
+                contentDescription = "grass background",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            )
+        }
+        // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
+
         if (state.currentMode != Mode.STUDY || state.isPaused) {
             state.activeSprites.forEach { sp ->
                 SpriteSheetImage(
@@ -190,7 +203,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 longBreakInterval = state.settings.longBreakInterval
             )
             Spacer(Modifier.height(16.dp))
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!state.isRunning) {
                     IconButton(onClick = { viewModel.startTimer() }) {
                         Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작")
@@ -208,6 +221,12 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 IconButton(onClick = { viewModel.skipSession() }) {   // ✅ 건너뛰기 버튼
                     Icon(painterResource(id = R.drawable.ic_settings), contentDescription = "건너뛰기")
                 }
+                // --- ▼▼▼ 추가된 부분: 배경 변경 버튼 ▼▼▼ ---
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = { viewModel.toggleBackground() }) {
+                    Icon(Icons.Default.Star, contentDescription = "배경 변경")
+                }
+                // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
             }
             Spacer(Modifier.height(24.dp))
             Text(

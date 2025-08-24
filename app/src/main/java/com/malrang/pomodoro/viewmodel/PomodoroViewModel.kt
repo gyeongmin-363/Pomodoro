@@ -46,6 +46,7 @@ class PomodoroViewModel(
             val presets = repo.loadWorkPresets()
             val currentWorkId = repo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
             val sprites = repo.loadActiveSprites()
+            val useGrassBackground = repo.loadUseGrassBackground()
 
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
             val currentWork = presets.find { it.id == currentWorkId }
@@ -58,7 +59,8 @@ class PomodoroViewModel(
                     settings = currentSettings,
                     workPresets = presets,
                     currentWorkId = currentWorkId,
-                    activeSprites = sprites
+                    activeSprites = sprites,
+                    useGrassBackground = useGrassBackground
                 )
             }
 
@@ -169,6 +171,19 @@ class PomodoroViewModel(
     fun toggleVibration(b: Boolean) = updateSettings { copy(vibrationEnabled = b) }
     fun toggleAutoStart(b: Boolean) = updateSettings { copy(autoStart = b) }
 
+    // --- ▼▼▼ 추가된 함수 ▼▼▼ ---
+    /**
+     * 배경화면 설정을 토글합니다 (잔디/어두운 배경).
+     */
+    fun toggleBackground() {
+        viewModelScope.launch {
+            val newPreference = !_uiState.value.useGrassBackground
+            repo.saveUseGrassBackground(newPreference)
+            _uiState.update { it.copy(useGrassBackground = newPreference) }
+        }
+    }
+    // --- ▲▲▲ 추가된 함수 ▲▲▲ ---
+
     fun startTimer() {
         if (_uiState.value.isRunning) return
         val s = _uiState.value
@@ -211,6 +226,7 @@ class PomodoroViewModel(
         val nextMode: Mode
         val nextTime: Int
         var newTotalSessions = s.totalSessions
+
 
         if (s.currentMode == Mode.STUDY) {
             newTotalSessions++
