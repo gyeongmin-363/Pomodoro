@@ -41,19 +41,16 @@ class PomodoroViewModel(
 
     init {
         viewModelScope.launch {
-            // --- ▼▼▼ 수정된 부분 ▼▼▼ ---
-            // 앱 시작 시 저장된 모든 데이터를 불러옵니다.
             val seenIds = repo.loadSeenIds()
             val daily = repo.loadDailyStats()
             val presets = repo.loadWorkPresets()
             val currentWorkId = repo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
-            val sprites = repo.loadActiveSprites() // 저장된 스프라이트 목록 불러오기
+            val sprites = repo.loadActiveSprites()
 
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
             val currentWork = presets.find { it.id == currentWorkId }
             val currentSettings = currentWork?.settings ?: Settings()
 
-            // 불러온 데이터로 UI 상태를 한 번에 업데이트합니다.
             _uiState.update {
                 it.copy(
                     collectedAnimals = seenAnimals.toSet(),
@@ -61,10 +58,9 @@ class PomodoroViewModel(
                     settings = currentSettings,
                     workPresets = presets,
                     currentWorkId = currentWorkId,
-                    activeSprites = sprites // UI에 스프라이트 복원
+                    activeSprites = sprites
                 )
             }
-            // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 
             if (TimerService.isServiceActive()) {
                 timerService.requestStatus()
@@ -74,9 +70,23 @@ class PomodoroViewModel(
         }
     }
 
+    // --- ▼▼▼ 추가된 함수 ▼▼▼ ---
     /**
-     * 사용자가 선택한 Work 프리셋으로 설정을 변경합니다.
+     * 앱이 다시 활성화될 때 호출하여 백그라운드에서 변경된 스프라이트 목록을 새로고침합니다.
+     * (Activity/Fragment의 onResume에서 이 함수를 호출해야 합니다)
      */
+    fun refreshActiveSprites() {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    activeSprites = repo.loadActiveSprites(),
+                    collectedAnimals = repo.loadSeenIds().mapNotNull { id -> AnimalsTable.byId(id) }.toSet()
+                )
+            }
+        }
+    }
+    // --- ▲▲▲ 추가된 함수 ▲▲▲ ---
+
     fun selectWorkPreset(presetId: String) {
         viewModelScope.launch {
             val selectedPreset = _uiState.value.workPresets.find { it.id == presetId } ?: return@launch
@@ -91,11 +101,6 @@ class PomodoroViewModel(
         }
     }
 
-    // --- ▼▼▼ 추가/수정된 Work 관리 함수들 ▼▼▼ ---
-
-    /**
-     * 새로운 Work 프리셋을 추가합니다.
-     */
     fun addWorkPreset() {
         viewModelScope.launch {
             val newPreset = WorkPreset(name = "새 Work", settings = Settings())
@@ -105,24 +110,18 @@ class PomodoroViewModel(
         }
     }
 
-    /**
-     * Work 프리셋을 삭제합니다.
-     */
     fun deleteWorkPreset(id: String) {
         viewModelScope.launch {
             val updatedPresets = _uiState.value.workPresets.filterNot { it.id == id }
             repo.saveWorkPresets(updatedPresets)
             _uiState.update { it.copy(workPresets = updatedPresets) }
-            // 만약 삭제한 프리셋이 현재 선택된 프리셋이었다면, 첫 번째 프리셋을 선택
+
             if (_uiState.value.currentWorkId == id) {
                 selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "")
             }
         }
     }
 
-    /**
-     * Work 프리셋의 이름을 변경합니다.
-     */
     fun updateWorkPresetName(id: String, newName: String) {
         viewModelScope.launch {
             val updatedPresets = _uiState.value.workPresets.map {
@@ -133,54 +132,36 @@ class PomodoroViewModel(
         }
     }
 
-    /**
-     * 특정 Work 프리셋의 '편집 모드'를 시작합니다.
-     */
     fun startEditingWorkPreset(id: String) {
         val preset = _uiState.value.workPresets.find { it.id == id }
         _editingWorkPreset.value = preset
     }
 
-    /**
-     * '편집 모드'를 종료합니다.
-     */
     fun stopEditingWorkPreset() {
         _editingWorkPreset.value = null
-        // 편집이 끝났으므로, 현재 활성화된 Work의 설정으로 다시 UI를 동기화
         val currentSettings = _uiState.value.workPresets.find { it.id == _uiState.value.currentWorkId }?.settings ?: Settings()
         _uiState.update { it.copy(settings = currentSettings) }
     }
 
-    /**
-     * 설정 값 변경을 처리하는 범용 함수. '편집 모드'를 우선적으로 반영.
-     */
     private fun updateSettings(transform: Settings.() -> Settings) {
         viewModelScope.launch {
             val editingId = _editingWorkPreset.value?.id
             if (editingId != null) {
-                // 편집 모드일 경우, 해당 프리셋의 설정을 변경
                 val updatedPresets = _uiState.value.workPresets.map {
                     if (it.id == editingId) {
                         val updatedSettings = it.settings.transform()
-                        // 편집 상태와 UI 상태를 즉시 동기화
                         _editingWorkPreset.value = it.copy(settings = updatedSettings)
                         it.copy(settings = updatedSettings)
-                    } else {
-                        it
-                    }
+                    } else it
                 }
                 repo.saveWorkPresets(updatedPresets)
                 _uiState.update { it.copy(workPresets = updatedPresets) }
 
             } else {
-                // 편집 모드가 아닐 경우 (이전 로직), 현재 활성화된 Work의 설정을 변경
                 val currentId = _uiState.value.currentWorkId
                 val updatedPresets = _uiState.value.workPresets.map {
-                    if (it.id == currentId) {
-                        it.copy(settings = it.settings.transform())
-                    } else {
-                        it
-                    }
+                    if (it.id == currentId) it.copy(settings = it.settings.transform())
+                    else it
                 }
                 val newSettings = updatedPresets.find { it.id == currentId }?.settings ?: Settings()
                 repo.saveWorkPresets(updatedPresets)
@@ -188,17 +169,13 @@ class PomodoroViewModel(
             }
         }
     }
-    // --- ▲▲▲ 추가/수정된 Work 관리 함수들 ▲▲▲ ---
 
-    // 설정 변경 함수들은 모두 내부적으로 updateSettings를 호출하므로 수정할 필요 없음
     fun updateStudyTime(v: Int) {
         updateSettings { copy(studyTime = v) }
         _uiState.update { state ->
             if (state.currentMode == Mode.STUDY && !state.isRunning && !state.isPaused) {
                 state.copy(timeLeft = v * 60)
-            } else {
-                state
-            }
+            } else state
         }
     }
     fun updateShortBreakTime(v: Int) = updateSettings { copy(shortBreakTime = v) }
@@ -207,7 +184,6 @@ class PomodoroViewModel(
     fun toggleSound(b: Boolean) = updateSettings { copy(soundEnabled = b) }
     fun toggleVibration(b: Boolean) = updateSettings { copy(vibrationEnabled = b) }
     fun toggleAutoStart(b: Boolean) = updateSettings { copy(autoStart = b) }
-
 
 
     private suspend fun updateTodayStats(finishedMode: Mode) {
@@ -251,55 +227,45 @@ class PomodoroViewModel(
         timerService.start(s.timeLeft, s.settings, s.currentMode, s.totalSessions)
     }
 
-
     fun pauseTimer() {
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
         timerService.pause()
     }
 
     fun reset() {
-        val s = _uiState.value
-        val currentWorkSettings = s.workPresets.find { it.id == s.currentWorkId }?.settings ?: Settings()
-
-        _uiState.update {
-            it.copy(
-                timeLeft = currentWorkSettings.studyTime * 60,
-                totalSessions = 0,
-                isRunning = false,
-                isPaused = true,
-                isTimerStartedOnce = false,
-                currentMode = Mode.STUDY,
-                settings = currentWorkSettings,
-                activeSprites = emptyList() // 요청 1: 애니멀 스프라이트 리스트 초기화
-            )
-        }
-
-        // --- ▼▼▼ 추가된 코드 ▼▼▼ ---
-        // 저장된 스프라이트 정보도 비워줍니다.
         viewModelScope.launch {
-            repo.saveActiveSprites(emptyList())
-        }
-        // --- ▲▲▲ 추가된 코드 ▲▲▲ ---
+            val s = _uiState.value
+            val currentWorkSettings = s.workPresets.find { it.id == s.currentWorkId }?.settings ?: Settings()
 
-        // 서비스 상태도 완전히 초기화
-        timerService.resetCompletely(_uiState.value.settings)
+            // 스프라이트 목록을 비우고 저장소에도 반영
+            repo.saveActiveSprites(emptyList())
+
+            _uiState.update {
+                it.copy(
+                    timeLeft = currentWorkSettings.studyTime * 60,
+                    totalSessions = 0,
+                    isRunning = false,
+                    isPaused = true,
+                    isTimerStartedOnce = false,
+                    currentMode = Mode.STUDY,
+                    settings = currentWorkSettings,
+                    activeSprites = emptyList()
+                )
+            }
+            // 서비스 상태도 완전히 초기화
+            timerService.resetCompletely(_uiState.value.settings)
+        }
     }
 
     fun skipSession() {
         val s = _uiState.value
-        val finishedMode = s.currentMode
-
-        // ✅ DB 저장 없음 (updateTodayStats 호출하지 않음)
-
-        // 다음 모드 및 세션 계산
         val nextMode: Mode
         val nextTime: Int
         var newTotalSessions = s.totalSessions
 
-        if (finishedMode == Mode.STUDY) {
+        if (s.currentMode == Mode.STUDY) {
             newTotalSessions++
-            val isLongBreakTime = newTotalSessions > 0 &&
-                    newTotalSessions % s.settings.longBreakInterval == 0
+            val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % s.settings.longBreakInterval == 0
             nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
             nextTime = if (isLongBreakTime) s.settings.longBreakTime else s.settings.shortBreakTime
         } else {
@@ -316,21 +282,18 @@ class PomodoroViewModel(
                 isPaused = false
             )
         }
-
-        // Service에도 skip 요청 전달
         timerService.skip(s.currentMode, newTotalSessions)
     }
 
+    // --- ▼▼▼ 여기가 수정된 부분입니다 ▼▼▼ ---
     fun onTimerFinishedFromService() {
-        val finishedMode = _uiState.value.currentMode
+        // 통계 업데이트는 ViewModel에서 계속 담당
         viewModelScope.launch {
-            updateTodayStats(finishedMode)
+            updateTodayStats(_uiState.value.currentMode)
         }
-
-        if (finishedMode == Mode.STUDY) {
-            handleStudySessionCompletion()
-        }
+        // 스프라이트 생성 로직은 이제 Service가 담당하므로 관련 코드를 제거합니다.
     }
+    // --- ▲▲▲ 여기가 수정된 부분입니다 ▲▲▲ ---
 
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
         _uiState.update {
@@ -343,52 +306,8 @@ class PomodoroViewModel(
             )
         }
     }
-    private fun handleStudySessionCompletion() {
-        val animal = getRandomAnimal()
-        val sprite = makeSprite(animal)
-        val updatedCollectedAnimals = _uiState.value.collectedAnimals + animal
-        val updatedSeenIds = updatedCollectedAnimals.map { it.id }.toSet()
 
-        // --- ▼▼▼ 수정된 부분 ▼▼▼ ---
-        val newSpriteList = _uiState.value.activeSprites + sprite
-
-        viewModelScope.launch {
-            repo.saveSeenIds(updatedSeenIds)
-            repo.saveActiveSprites(newSpriteList) // 변경된 스프라이트 목록을 저장
-        }
-        _uiState.update {
-            it.copy(
-                activeSprites = newSpriteList, // UI 상태 업데이트
-                collectedAnimals = updatedCollectedAnimals
-            )
-        }
-        // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
-    }
     fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
-
-
-    private fun makeSprite(animal: Animal): AnimalSprite {
-        val spriteData = SpriteMap.map[animal]
-            ?: SpriteData(
-                idleRes = R.drawable.classical_idle,
-                jumpRes = R.drawable.classical_jump,
-            )
-        return AnimalSprite(
-            id = UUID.randomUUID().toString(),
-            animalId = animal.id,
-            idleSheetRes = spriteData.idleRes,
-            idleCols = spriteData.idleCols,
-            idleRows = spriteData.idleRows,
-            jumpSheetRes = spriteData.jumpRes,
-            jumpCols = spriteData.jumpCols,
-            jumpRows = spriteData.jumpRows,
-            x = Random.nextInt(0, 600).toFloat(),
-            y = Random.nextInt(0, 1000).toFloat(),
-            vx = listOf(-70f, 70f).random(),
-            vy = listOf(-50f, 50f).random(),
-            sizeDp = 48f
-        )
-    }
 
     fun updateSprites(deltaSec: Float, widthPx: Int, heightPx: Int) {
         _uiState.update { s ->
@@ -421,16 +340,5 @@ class PomodoroViewModel(
             }
             s.copy(activeSprites = updated)
         }
-    }
-
-    private fun getRandomAnimal(): Animal {
-        val roll = Random.nextInt(100)
-        val rarity = when {
-            roll < 60 -> Rarity.COMMON
-            roll < 85 -> Rarity.RARE
-            roll < 97 -> Rarity.EPIC
-            else -> Rarity.LEGENDARY
-        }
-        return AnimalsTable.randomByRarity(rarity)
     }
 }

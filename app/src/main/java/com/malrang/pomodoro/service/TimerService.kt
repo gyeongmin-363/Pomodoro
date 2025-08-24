@@ -11,6 +11,12 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.malrang.pomodoro.MainActivity
 import com.malrang.pomodoro.R
+import com.malrang.pomodoro.dataclass.animalInfo.Animal
+import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
+import com.malrang.pomodoro.dataclass.animalInfo.Rarity
+import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
+import com.malrang.pomodoro.dataclass.sprite.SpriteData
+import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
@@ -21,6 +27,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.UUID
+import kotlin.random.Random
 
 class TimerService : Service() {
 
@@ -33,6 +41,9 @@ class TimerService : Service() {
     private var totalSessions: Int = 0
     private lateinit var soundPlayer: SoundPlayer
     private lateinit var vibratorHelper: VibratorHelper
+    // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
+    private lateinit var repo: PomodoroRepository // Repository 인스턴스
+    // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
 
     override fun onCreate() {
@@ -41,6 +52,9 @@ class TimerService : Service() {
         createNotificationChannel()
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
+        // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
+        repo = PomodoroRepository(this) // Repository 초기화
+        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -67,9 +81,8 @@ class TimerService : Service() {
                 }
             }
             "PAUSE" -> {
-                // --- 핵심 수정 사항: 상태를 먼저 변경하고 UI 업데이트 함수를 호출 ---
-                isRunning = false // 1. 서비스의 상태를 '일시정지'로 먼저 변경
-                pauseTimer()    // 2. 그 다음에 UI(알림) 업데이트 및 브로드캐스트 실행
+                isRunning = false
+                pauseTimer()
             }
             "REQUEST_STATUS" -> {
                 sendBroadcast(Intent(TIMER_TICK).apply {
@@ -115,7 +128,6 @@ class TimerService : Service() {
                 job?.cancel()
                 isRunning = false
 
-                // 1. Intent에서 Settings 객체를 가져옵니다.
                 val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getSerializableExtra("SETTINGS", Settings::class.java)
                 } else {
@@ -123,18 +135,14 @@ class TimerService : Service() {
                     intent.getSerializableExtra("SETTINGS") as? Settings
                 }
 
-                // 2. 서비스의 settings와 timeLeft를 업데이트합니다.
                 if (newSettings != null) {
                     settings = newSettings
                 }
 
                 currentMode = Mode.STUDY
                 totalSessions = 0
-                // 이제 settings가 null이 아니므로 정확한 공부 시간으로 timeLeft를 설정할 수 있습니다.
-                timeLeft = settings?.studyTime?.times(60) ?: (25 * 60) // (혹시 모를 경우를 대비해 기본값 25분 설정)
+                timeLeft = settings?.studyTime?.times(60) ?: (25 * 60)
 
-
-                // UI와 동기화: 일시정지 상태로 전달
                 sendBroadcast(Intent(TIMER_TICK).apply {
                     putExtra("TIME_LEFT", timeLeft)
                     putExtra("IS_RUNNING", false)
@@ -144,7 +152,6 @@ class TimerService : Service() {
 
                 updateNotification()
             }
-
         }
         return START_STICKY
     }
@@ -164,22 +171,26 @@ class TimerService : Service() {
                 })
             }
 
+            val finishedMode = currentMode
             val currentSettings = settings ?: return@launch
 
-            if (currentSettings.soundEnabled) {
-                soundPlayer.playSound()
-            }
-            if (currentSettings.vibrationEnabled) {
-                vibratorHelper.vibrate()
-            }
+            if (currentSettings.soundEnabled) { soundPlayer.playSound() }
+            if (currentSettings.vibrationEnabled) { vibratorHelper.vibrate() }
 
             sendBroadcast(Intent(TIMER_FINISHED))
+
+            // --- ▼▼▼ 여기가 수정된 부분입니다 ▼▼▼ ---
+            // 공부 세션이 끝났다면, 여기서 바로 동물을 뽑고 저장합니다.
+            if (finishedMode == Mode.STUDY) {
+                handleStudySessionCompletion()
+            }
+            // --- ▲▲▲ 여기가 수정된 부분입니다 ▲▲▲ ---
 
             var nextMode = Mode.STUDY
             var nextTime = 0
             var newTotalSessions = totalSessions
 
-            if (currentMode == Mode.STUDY) {
+            if (finishedMode == Mode.STUDY) {
                 newTotalSessions++
                 val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % currentSettings.longBreakInterval == 0
                 nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
@@ -189,23 +200,16 @@ class TimerService : Service() {
                 nextTime = currentSettings.studyTime
             }
 
+            timeLeft = nextTime * 60
+            currentMode = nextMode
+            totalSessions = newTotalSessions
+
             if (currentSettings.autoStart) {
-                timeLeft = nextTime * 60
-                currentMode = nextMode
-                totalSessions = newTotalSessions
                 isRunning = true
                 startTimer()
             } else {
-                // --- ▼▼▼ 여기가 수정된 부분입니다 ▼▼▼ ---
-                // 다음 세션의 상태로 업데이트
-                timeLeft = nextTime * 60
-                currentMode = nextMode
-                totalSessions = newTotalSessions
-                // 타이머를 '일시정지' 상태로 변경
                 isRunning = false
-                // 일시정지 로직을 호출하여 알림을 업데이트하고 상태를 브로드캐스트
                 pauseTimer()
-                // --- ▲▲▲ 여기가 수정된 부분입니다 ▲▲▲ ---
             }
         }
         startForeground(NOTIFICATION_ID, createNotification())
@@ -213,7 +217,7 @@ class TimerService : Service() {
 
     private fun pauseTimer() {
         job?.cancel()
-        updateNotification() // isRunning이 false로 바뀐 후에 호출되므로, 정확한 알림이 생성됨
+        updateNotification()
         sendBroadcast(Intent(TIMER_TICK).apply {
             putExtra("TIME_LEFT", timeLeft)
             putExtra("IS_RUNNING", false)
@@ -222,6 +226,58 @@ class TimerService : Service() {
         })
     }
 
+    // --- ▼▼▼ ViewModel에서 옮겨온 함수들 ▼▼▼ ---
+
+    /**
+     * 공부 세션 완료 시 호출. 새로운 동물을 뽑고 저장소에 저장.
+     */
+    private fun handleStudySessionCompletion() {
+        // 백그라운드 작업이므로 별도의 코루틴에서 실행
+        CoroutineScope(Dispatchers.IO).launch {
+            val animal = getRandomAnimal()
+            val sprite = makeSprite(animal)
+
+            // 기존 동물/스프라이트 목록을 불러와서 추가한 뒤 저장
+            val updatedSeenIds = repo.loadSeenIds() + animal.id
+            val updatedSprites = repo.loadActiveSprites() + sprite
+
+            repo.saveSeenIds(updatedSeenIds)
+            repo.saveActiveSprites(updatedSprites)
+        }
+    }
+
+    private fun getRandomAnimal(): Animal {
+        val roll = Random.nextInt(100)
+        val rarity = when {
+            roll < 60 -> Rarity.COMMON
+            roll < 85 -> Rarity.RARE
+            roll < 97 -> Rarity.EPIC
+            else -> Rarity.LEGENDARY
+        }
+        return AnimalsTable.randomByRarity(rarity)
+    }
+
+    private fun makeSprite(animal: Animal): AnimalSprite {
+        val spriteData = SpriteMap.map[animal]
+            ?: SpriteData(idleRes = R.drawable.classical_idle, jumpRes = R.drawable.classical_jump)
+        return AnimalSprite(
+            id = UUID.randomUUID().toString(),
+            animalId = animal.id,
+            idleSheetRes = spriteData.idleRes,
+            idleCols = spriteData.idleCols,
+            idleRows = spriteData.idleRows,
+            jumpSheetRes = spriteData.jumpRes,
+            jumpCols = spriteData.jumpCols,
+            jumpRows = spriteData.jumpRows,
+            x = Random.nextInt(0, 600).toFloat(),
+            y = Random.nextInt(0, 1000).toFloat(),
+            vx = listOf(-70f, 70f).random(),
+            vy = listOf(-50f, 50f).random(),
+            sizeDp = 48f
+        )
+    }
+    // --- ▲▲▲ ViewModel에서 옮겨온 함수들 ▲▲▲ ---
+
 
     private fun updateNotification() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -229,11 +285,7 @@ class TimerService : Service() {
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            "pomodoro_timer",
-            "Pomodoro Timer",
-            NotificationManager.IMPORTANCE_LOW
-        )
+        val channel = NotificationChannel("pomodoro_timer", "Pomodoro Timer", NotificationManager.IMPORTANCE_LOW)
         channel.setShowBadge(false)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
@@ -257,17 +309,10 @@ class TimerService : Service() {
                 val minutes = timeLeft / 60
                 val seconds = timeLeft % 60
                 String.format("남은 시간: %02d:%02d (일시정지)", minutes, seconds)
-            } else {
-                "시간 종료"
-            }
+            } else "시간 종료"
         }
 
-        val sessionText = if (currentMode == Mode.STUDY) {
-            " | 세션: ${totalSessions + 1}"
-        } else {
-            ""
-        }
-
+        val sessionText = if (currentMode == Mode.STUDY) " | 세션: ${totalSessions + 1}" else ""
         val contentText = "$statusText$sessionText"
 
         return NotificationCompat.Builder(this, "pomodoro_timer")
@@ -280,9 +325,7 @@ class TimerService : Service() {
     }
 
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
