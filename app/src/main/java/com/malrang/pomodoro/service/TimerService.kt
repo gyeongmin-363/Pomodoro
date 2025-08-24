@@ -5,9 +5,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.malrang.pomodoro.MainActivity
 import com.malrang.pomodoro.R
@@ -41,8 +43,10 @@ class TimerService : Service() {
     private var totalSessions: Int = 0
     private lateinit var soundPlayer: SoundPlayer
     private lateinit var vibratorHelper: VibratorHelper
+    private lateinit var repo: PomodoroRepository
+
     // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
-    private lateinit var repo: PomodoroRepository // Repository 인스턴스
+    private lateinit var wakeLock: PowerManager.WakeLock
     // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
 
@@ -52,8 +56,11 @@ class TimerService : Service() {
         createNotificationChannel()
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
+        repo = PomodoroRepository(this)
+
         // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
-        repo = PomodoroRepository(this) // Repository 초기화
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
         // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
     }
 
@@ -94,6 +101,11 @@ class TimerService : Service() {
             }
             "SKIP" -> {
                 job?.cancel()
+                // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                }
+                // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
                 val currentSettings = settings ?: return START_STICKY
 
                 var nextMode = Mode.STUDY
@@ -127,6 +139,11 @@ class TimerService : Service() {
             "RESET" -> {
                 job?.cancel()
                 isRunning = false
+                // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                }
+                // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
                 val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getSerializableExtra("SETTINGS", Settings::class.java)
@@ -158,6 +175,11 @@ class TimerService : Service() {
 
     private fun startTimer() {
         job?.cancel()
+        // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
+        // 타이머를 시작할 때 WakeLock을 얻습니다.
+        // 1시간 30분(90분) 타임아웃을 설정하여 무한정 유지되지 않도록 합니다.
+        wakeLock.acquire(90*60*1000L /*90 minutes*/)
+        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
         job = CoroutineScope(Dispatchers.Main).launch {
             while (timeLeft > 0) {
                 delay(1000)
@@ -170,6 +192,12 @@ class TimerService : Service() {
                     putExtra("TOTAL_SESSIONS", totalSessions)
                 })
             }
+            // --- ▼▼▼ 추가/수정된 부분 ▼▼▼ ---
+            // 타이머가 끝나면 WakeLock을 해제합니다.
+            if (wakeLock.isHeld) {
+                wakeLock.release()
+            }
+            // --- ▲▲▲ 추가/수정된 부분 ▲▲▲ ---
 
             val finishedMode = currentMode
             val currentSettings = settings ?: return@launch
@@ -179,12 +207,9 @@ class TimerService : Service() {
 
             sendBroadcast(Intent(TIMER_FINISHED))
 
-            // --- ▼▼▼ 여기가 수정된 부분입니다 ▼▼▼ ---
-            // 공부 세션이 끝났다면, 여기서 바로 동물을 뽑고 저장합니다.
             if (finishedMode == Mode.STUDY) {
                 handleStudySessionCompletion()
             }
-            // --- ▲▲▲ 여기가 수정된 부분입니다 ▲▲▲ ---
 
             var nextMode = Mode.STUDY
             var nextTime = 0
@@ -217,6 +242,12 @@ class TimerService : Service() {
 
     private fun pauseTimer() {
         job?.cancel()
+        // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
+        // 타이머가 일시정지되면 WakeLock을 해제합니다.
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
+        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
         updateNotification()
         sendBroadcast(Intent(TIMER_TICK).apply {
             putExtra("TIME_LEFT", timeLeft)
@@ -226,21 +257,12 @@ class TimerService : Service() {
         })
     }
 
-    // --- ▼▼▼ ViewModel에서 옮겨온 함수들 ▼▼▼ ---
-
-    /**
-     * 공부 세션 완료 시 호출. 새로운 동물을 뽑고 저장소에 저장.
-     */
     private fun handleStudySessionCompletion() {
-        // 백그라운드 작업이므로 별도의 코루틴에서 실행
         CoroutineScope(Dispatchers.IO).launch {
             val animal = getRandomAnimal()
             val sprite = makeSprite(animal)
-
-            // 기존 동물/스프라이트 목록을 불러와서 추가한 뒤 저장
             val updatedSeenIds = repo.loadSeenIds() + animal.id
             val updatedSprites = repo.loadActiveSprites() + sprite
-
             repo.saveSeenIds(updatedSeenIds)
             repo.saveActiveSprites(updatedSprites)
         }
@@ -276,8 +298,6 @@ class TimerService : Service() {
             sizeDp = 48f
         )
     }
-    // --- ▲▲▲ ViewModel에서 옮겨온 함수들 ▲▲▲ ---
-
 
     private fun updateNotification() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -332,6 +352,12 @@ class TimerService : Service() {
         job?.cancel()
         isRunning = false
         isServiceActive = false
+        // --- ▼▼▼ 추가된 부분 ▼▼▼ ---
+        // 서비스가 소멸될 때 WakeLock을 해제합니다.
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
+        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
     }
 
     companion object {
