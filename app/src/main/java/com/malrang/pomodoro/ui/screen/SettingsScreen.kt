@@ -10,10 +10,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,9 +29,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
@@ -119,20 +125,20 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
         ) {
-            Button(
+            IconButton(
                 onClick = {
                     viewModel.stopEditingWorkPreset()
                     viewModel.showScreen(Screen.Main)
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+//                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
             ) {
-                Text("취소")
+                Icon(Icons.Default.Close, "취소")
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Button(onClick = { showDialog = true }) {
-                Text("저장")
+            IconButton(onClick = { showDialog = true }) {
+                Icon(painterResource(R.drawable.ic_save),"저장")
             }
         }
         // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
