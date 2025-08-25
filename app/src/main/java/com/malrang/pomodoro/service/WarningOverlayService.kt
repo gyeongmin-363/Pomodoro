@@ -44,14 +44,22 @@ class WarningOverlayService : Service() {
 
             val backButton = overlayView?.findViewById<Button>(R.id.btn_back_to_app)
             backButton?.setOnClickListener {
-                // 앱으로 돌아가는 인텐트 실행
                 val mainActivityIntent = Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 }
                 startActivity(mainActivityIntent)
+                stopSelf()
+            }
+
+            // ✅ '앱 계속 사용' 버튼 리스너 추가
+            val continueButton = overlayView?.findViewById<Button>(R.id.btn_continue_using)
+            continueButton?.setOnClickListener {
+                // "임시 허용" 신호를 감시 서비스에 보냄
+                sendBroadcast(Intent("com.malrang.pomodoro.ACTION_TEMP_PASS"))
                 // 오버레이 제거
                 stopSelf()
             }
+
 
             windowManager.addView(overlayView, params)
         }

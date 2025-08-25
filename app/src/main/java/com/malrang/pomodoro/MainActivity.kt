@@ -25,28 +25,25 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.service.AppUsageMonitoringService
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
+import com.malrang.pomodoro.service.WarningOverlayService
 import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.withpet.BackPressExit
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private val vm: PomodoroViewModel by viewModels { PomodoroVMFactory(application) }
 
-    // ... (timerUpdateReceiver, requestPermissionLauncher는 기존과 동일) ...
     private val timerUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == TimerService.TIMER_TICK) {
+                // ... (내용 동일)
                 val timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                 val isRunning = intent.getBooleanExtra("IS_RUNNING", false)
                 val currentMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -64,7 +61,6 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -81,25 +77,12 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // ✅ 권한 확인
+        // 앱 시작 시 권한 확인
         if (!hasUsageStatsPermission()) {
             requestUsageStatsPermission()
         }
         if (!Settings.canDrawOverlays(this)) {
             requestOverlayPermission()
-        }
-
-        lifecycleScope.launch {
-            vm.uiState
-                .map { it.isRunning && it.currentMode == Mode.STUDY }
-                .distinctUntilChanged()
-                .collect { isStudying ->
-                    if (isStudying) {
-                        startAppMonitoringService(vm.uiState.value.whitelistedApps)
-                    } else {
-                        stopAppMonitoringService()
-                    }
-                }
         }
     }
 
@@ -107,6 +90,19 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         val timerFilter = IntentFilter(TimerService.TIMER_TICK)
         registerReceiver(timerUpdateReceiver, timerFilter)
+
+        // ✅ 화면으로 돌아올 때마다 모든 감시와 경고를 중지시킵니다.
+        stopAppMonitoringService()
+        stopWarningOverlay()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // ✅ 공부 중에 앱을 벗어나는 경우, 감시 서비스를 새로 시작합니다.
+        val state = vm.uiState.value
+        if (state.isRunning && state.currentMode == Mode.STUDY) {
+            startAppMonitoringService(state.whitelistedApps)
+        }
     }
 
     override fun onPause() {
@@ -114,7 +110,7 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(timerUpdateReceiver)
     }
 
-    // ... (onDestroy, askNotificationPermission, hasUsageStatsPermission, requestUsageStatsPermission는 기존과 동일) ...
+    // ... (onDestroy, askNotificationPermission, 권한 관련 함수들은 기존과 동일) ...
     override fun onDestroy() {
         super.onDestroy()
         if (TimerService.isServiceActive()) {
@@ -152,8 +148,6 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, "공부 중 다른 앱 사용 감지를 위해 권한이 필요합니다.", Toast.LENGTH_LONG).show()
         startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
     }
-
-    // ✅ 다른 앱 위에 그리기 권한을 요청하는 함수
     private fun requestOverlayPermission() {
         Toast.makeText(this, "경고창을 표시하기 위해 다른 앱 위에 그리기 권한이 필요합니다.", Toast.LENGTH_LONG).show()
         val intent = Intent(
@@ -172,11 +166,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun stopAppMonitoringService() {
-        // ✅ 서비스를 중지할 때 STOP 액션을 보내 오버레이도 확실히 제거하도록 함
-        val intent = Intent(this, AppUsageMonitoringService::class.java).apply {
-            action = "STOP"
-        }
-        startService(intent)
+        stopService(Intent(this, AppUsageMonitoringService::class.java))
+    }
+
+    private fun stopWarningOverlay() {
+        stopService(Intent(this, WarningOverlayService::class.java))
     }
 }
 
