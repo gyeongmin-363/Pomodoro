@@ -55,6 +55,12 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
     val state by viewModel.uiState.collectAsState()
     val totalAnimals = Animal.entries.size
     var selectedAnimal by remember { mutableStateOf<Animal?>(null) }
+    // 희귀도 내림차순, 이름 오름차순으로 정렬
+    val sortedAnimals = state.collectedAnimals.sortedWith(
+        compareByDescending<Animal> { it.rarity.ordinal }
+            .thenBy { it.displayName }
+    )
+
 
     Column(
         modifier = Modifier
@@ -95,21 +101,21 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
             }
         } else {
             LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.fillMaxSize()) {
-                items(state.collectedAnimals.toList()) { animal ->
+                items(sortedAnimals) { animal -> // 정렬된 리스트를 사용합니다.
                     Card(
                         modifier = Modifier
                             .padding(4.dp)
-                            .height(160.dp) // 1. 카드의 높이를 고정값으로 설정
+                            .height(160.dp)
                             .fillMaxWidth()
                             .clickable { selectedAnimal = animal },
                         colors = CardDefaults.cardColors(containerColor = Color(0x33FFFFFF))
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.SpaceAround, // 2. Column의 내용물을 수직으로 중앙 정렬
+                            verticalArrangement = Arrangement.SpaceAround,
                             modifier = Modifier
                                 .padding(8.dp)
-                                .fillMaxSize() // 3. Column이 Card의 전체 공간을 채우도록 설정
+                                .fillMaxSize()
                         ) {
                             SpriteItem(animal = animal, size = 64f)
                             Column(
@@ -120,7 +126,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = Color.White,
-                                    textAlign = TextAlign.Center // 4. 텍스트가 두 줄 이상일 경우 중앙 정렬
+                                    textAlign = TextAlign.Center
                                 )
                                 Text(
                                     text = getRarityString(animal.rarity),
@@ -135,7 +141,6 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
         }
     }
 
-    // 선택된 동물이 있으면 모달 창 표시
     if (selectedAnimal != null) {
         Dialog(onDismissRequest = { selectedAnimal = null }) {
             Box(
@@ -169,10 +174,8 @@ fun AnimalDetailModal(animal: Animal, onDismissRequest: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // 더 큰 스프라이트 이미지
                 SpriteItem(animal = animal, size = 128f)
                 Spacer(modifier = Modifier.height(16.dp))
-                // 동물 이름
                 Text(
                     text = animal.displayName,
                     fontSize = 22.sp,
@@ -180,7 +183,6 @@ fun AnimalDetailModal(animal: Animal, onDismissRequest: () -> Unit) {
                     color = Color.White
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                // 등급
                 Text(
                     text = getRarityString(animal.rarity),
                     fontSize = 16.sp,
@@ -188,7 +190,6 @@ fun AnimalDetailModal(animal: Animal, onDismissRequest: () -> Unit) {
                     color = getRarityColor(animal.rarity)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                // 동물 설명
                 Text(
                     text = animal.description,
                     fontSize = 14.sp,
@@ -231,7 +232,6 @@ fun SpriteItem(animal: Animal, size: Float) {
     )
 }
 
-// 희귀도에 따른 문자열 반환
 @Composable
 private fun getRarityString(rarity: Rarity): String {
     return when (rarity) {
@@ -242,7 +242,6 @@ private fun getRarityString(rarity: Rarity): String {
     }
 }
 
-// 희귀도에 따른 색상 반환
 @Composable
 private fun getRarityColor(rarity: Rarity): Color {
     return when (rarity) {
