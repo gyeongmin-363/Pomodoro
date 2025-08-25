@@ -2,6 +2,7 @@ package com.malrang.pomodoro.ui.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -12,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
@@ -20,6 +24,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -58,6 +64,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             .fillMaxSize()
             .background(Color(0xFF1E1B4B))
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -136,7 +143,42 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             Checkbox(checked = settings.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) }, colors = checkboxColors)
             Text("자동 시작", color = Color.White)
         }
-        // --- ▲▲▲ UI 개선 ▲▲▲ ---
+        Spacer(Modifier.height(24.dp))
+
+        // ✅ "다른 앱 차단" UI 섹션 추가
+        Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+        Spacer(Modifier.height(8.dp))
+
+        val blockOptions = listOf(
+            com.malrang.pomodoro.dataclass.ui.BlockMode.NONE to "없음",
+            com.malrang.pomodoro.dataclass.ui.BlockMode.PARTIAL to "부분 차단",
+            com.malrang.pomodoro.dataclass.ui.BlockMode.FULL to "완전 차단"
+        )
+
+        Column {
+            blockOptions.forEach { (mode, text) ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = (settings.blockMode == mode),
+                            onClick = { viewModel.updateBlockMode(mode) }
+                        )
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (settings.blockMode == mode),
+                        onClick = { viewModel.updateBlockMode(mode) },
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = Color.White,
+                            unselectedColor = Color.Gray
+                        )
+                    )
+                    Text(text = text, color = Color.White, modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        }
 
         Spacer(Modifier.weight(1f))
 

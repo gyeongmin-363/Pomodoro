@@ -182,6 +182,10 @@ class PomodoroViewModel(
         }
     }
 
+    // ✅ 차단 모드 업데이트 함수 추가
+    fun updateBlockMode(mode: com.malrang.pomodoro.dataclass.ui.BlockMode) = updateSettings { copy(blockMode = mode) }
+
+
     fun updateStudyTime(v: Int) {
         updateSettings { copy(studyTime = v) }
         _uiState.update { state ->

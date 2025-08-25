@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
+import com.malrang.pomodoro.dataclass.ui.BlockMode
 import kotlinx.coroutines.*
 
 class AppUsageMonitoringService : Service() {
@@ -19,7 +20,9 @@ class AppUsageMonitoringService : Service() {
     private val launcherPackageNames = mutableSetOf<String>()
     private var isOverlayShown = false
     private var isTemporaryPassActive = false
+    private var currentBlockMode: BlockMode = BlockMode.PARTIAL // 기본값 설정
 
+    // '앱 계속 사용' 버튼 클릭 시 신호를 받는 리시버
     private val tempPassReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.malrang.pomodoro.ACTION_TEMP_PASS") {
@@ -33,6 +36,7 @@ class AppUsageMonitoringService : Service() {
         super.onCreate()
         usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         fetchLauncherPackageNames()
+        // 브로드캐스트 리시버 등록
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(tempPassReceiver, IntentFilter("com.malrang.pomodoro.ACTION_TEMP_PASS"), RECEIVER_NOT_EXPORTED)
         } else {
@@ -45,8 +49,21 @@ class AppUsageMonitoringService : Service() {
         val whitelistedApps = intent?.getStringArrayExtra("WHITELISTED_APPS")?.toSet() ?: emptySet()
         val ownPackageName = packageName
 
+        // MainActivity로부터 현재 설정된 차단 모드를 받아옴
+        val blockModeString = intent?.getStringExtra("BLOCK_MODE")
+        currentBlockMode = runCatching {
+            BlockMode.valueOf(blockModeString ?: "")
+        }.getOrElse { BlockMode.PARTIAL }
+
+
         job?.cancel()
         job = CoroutineScope(Dispatchers.IO).launch {
+            // 차단 모드가 '없음'이면 감시할 필요가 없으므로 코루틴 종료
+            if (currentBlockMode == BlockMode.NONE) {
+                stopSelf() // 서비스 자체를 종료
+                return@launch
+            }
+
             while (isActive) {
                 val foregroundApp = getForegroundApp()
 
@@ -55,19 +72,16 @@ class AppUsageMonitoringService : Service() {
                         !whitelistedApps.contains(foregroundApp) &&
                         !launcherPackageNames.contains(foregroundApp)
 
-                // ✅ 로직 수정: 안전한 앱일 때와 금지된 앱일 때의 역할을 명확히 분리
                 if (isForbiddenApp) {
-                    // 금지된 앱을 사용 중인 경우
-                    // 임시 허용 상태가 아니고, 오버레이가 아직 표시되지 않았다면 오버레이를 띄웁니다.
+                    // 금지된 앱 사용 중 + 임시 허용 상태 아님 + 오버레이 아직 안 뜸
                     if (!isTemporaryPassActive && !isOverlayShown) {
                         startWarningOverlay()
                         isOverlayShown = true
                     }
                 } else {
-                    // 안전한 앱을 사용 중인 경우 (우리 앱, 홈 화면, 화이트리스트 앱 등)
-                    // 다음을 위해 임시 허용 상태를 리셋합니다.
+                    // 안전한 앱 사용 중 (뽀모도로, 화이트리스트, 홈 화면 등)
+                    // 다음을 위해 임시 허용 상태를 초기화
                     isTemporaryPassActive = false
-                    // ✅ 중요: 여기서 더 이상 오버레이를 끄지 않습니다!
                 }
                 delay(1000)
             }
@@ -107,7 +121,11 @@ class AppUsageMonitoringService : Service() {
     }
 
     private fun startWarningOverlay() {
-        startService(Intent(this, WarningOverlayService::class.java))
+        // WarningOverlayService에 현재 차단 모드를 전달
+        val intent = Intent(this, WarningOverlayService::class.java).apply {
+            putExtra("BLOCK_MODE", currentBlockMode.name)
+        }
+        startService(intent)
     }
 
     private fun stopWarningOverlay() {

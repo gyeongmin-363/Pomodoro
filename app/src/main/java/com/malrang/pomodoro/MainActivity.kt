@@ -98,10 +98,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        // ✅ 공부 중에 앱을 벗어나는 경우, 감시 서비스를 새로 시작합니다.
         val state = vm.uiState.value
+        // ✅ 공부 중일 때만 감시 서비스를 시작합니다.
         if (state.isRunning && state.currentMode == Mode.STUDY) {
-            startAppMonitoringService(state.whitelistedApps)
+            // ✅ 현재 설정된 차단 모드와 화이트리스트를 함께 전달합니다.
+            startAppMonitoringService(state.whitelistedApps, state.settings.blockMode)
         }
     }
 
@@ -157,13 +158,17 @@ class MainActivity : ComponentActivity() {
         startActivity(intent)
     }
 
-    private fun startAppMonitoringService(whitelist: Set<String>) {
+    // ✅ startAppMonitoringService 함수 시그니처 수정
+    private fun startAppMonitoringService(whitelist: Set<String>, blockMode: com.malrang.pomodoro.dataclass.ui.BlockMode) {
         if (!hasUsageStatsPermission() || !Settings.canDrawOverlays(this)) return
         val intent = Intent(this, AppUsageMonitoringService::class.java).apply {
             putExtra("WHITELISTED_APPS", whitelist.toTypedArray())
+            // ✅ 인텐트에 차단 모드 추가
+            putExtra("BLOCK_MODE", blockMode.name)
         }
         startService(intent)
     }
+
 
     private fun stopAppMonitoringService() {
         stopService(Intent(this, AppUsageMonitoringService::class.java))
