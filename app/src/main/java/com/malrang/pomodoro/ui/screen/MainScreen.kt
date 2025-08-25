@@ -59,15 +59,13 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     var heightPx by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
-    // 다이얼로그 상태 관리
     var showWorkManager by remember { mutableStateOf(false) }
     var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
     var newPresetName by remember { mutableStateOf("") }
     var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
     var showResetConfirm by remember { mutableStateOf(false) }
-    var showSkipConfirm by remember { mutableStateOf(false) } // 건너뛰기 확인 다이얼로그 상태 추가
+    var showSkipConfirm by remember { mutableStateOf(false) }
 
-    // 이름 변경 다이얼로그
     if (presetToRename != null) {
         PixelArtConfirmDialog(
             onDismissRequest = { presetToRename = null },
@@ -97,7 +95,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
         }
     }
 
-    // 삭제 확인 다이얼로그
     if (presetToDelete != null) {
         PixelArtConfirmDialog(
             onDismissRequest = { presetToDelete = null },
@@ -121,7 +118,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
         }
     }
 
-    // --- ▼▼▼ 추가된 부분: 건너뛰기 확인 다이얼로그 ▼▼▼ ---
     if (showSkipConfirm) {
         PixelArtConfirmDialog(
             onDismissRequest = { showSkipConfirm = false },
@@ -135,7 +131,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             Text("현재 세션을 건너뛰시겠습니까?", color = Color.LightGray)
         }
     }
-    // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
     Box(
         modifier = Modifier
@@ -145,7 +140,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 heightPx = sz.height
             }
     ) {
-        // 리셋 확인 다이얼로그
         if (showResetConfirm) {
             PixelArtConfirmDialog(
                 onDismissRequest = { showResetConfirm = false },
@@ -263,11 +257,9 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = Color.White)
                 }
                 Spacer(Modifier.width(8.dp))
-                // --- ▼▼▼ 수정된 부분: 건너뛰기 버튼 클릭 시 다이얼로그 표시 ▼▼▼ ---
                 IconButton(onClick = { showSkipConfirm = true }) {
                     Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = Color.White)
                 }
-                // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = {
                     if (state.useGrassBackground) {
@@ -286,6 +278,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 }
             )
             Spacer(Modifier.height(24.dp))
+            // ... MainScreen.kt의 IconButton 부분 ...
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
                     Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = Color.White)
@@ -293,11 +287,21 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
                     Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = Color.White)
                 }
+                // ✅ 버튼 클릭 시 Whitelist 화면으로 이동하도록 수정
+                IconButton(onClick = {
+                    viewModel.showScreen(Screen.Whitelist)
+                }) {
+                    // ic_whitelist 아이콘이 없다면, 기본 설정 아이콘 등으로 대체할 수 있습니다.
+                    // 예: Icon(Icons.Default.Settings, contentDescription = "앱 허용 설정", tint = Color.White)
+                    Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "앱 허용 설정", tint = Color.White)
+                }
             }
         }
     }
 }
 
+
+// ... (WorkPresetsManager, WorkPresetItem, CycleIndicator, SpriteSheetImage 함수는 기존과 동일)
 @Composable
 fun WorkPresetsManager(
     presets: List<WorkPreset>,
@@ -312,10 +316,10 @@ fun WorkPresetsManager(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .border(2.dp, Color.White), // 테두리 수정
-        shape = RectangleShape, // 모양 수정
+            .border(2.dp, Color.White),
+        shape = RectangleShape,
         colors = CardDefaults.cardColors(
-            containerColor = Color(0x992D2A5A) // 배경색 수정
+            containerColor = Color(0x992D2A5A)
         )
     ) {
         Column {
@@ -388,13 +392,6 @@ fun WorkPresetItem(
     }
 }
 
-
-// 재사용을 위해 PixelArtConfirmDialog 로 대체되었으므로 아래 함수들은 삭제합니다.
-// @Composable fun RenamePresetDialog(...) { ... }
-// @Composable fun DeleteConfirmDialog(...) { ... }
-
-
-// ... CycleIndicator, SpriteSheetImage 함수는 기존과 동일 ...
 @Composable
 fun CycleIndicator(
     modifier: Modifier = Modifier,
@@ -414,16 +411,11 @@ fun CycleIndicator(
         }
     }
 
-    // ▼▼▼ 로직 수정 부분 ▼▼▼
     val currentIndex = remember(currentMode, totalSessions, longBreakInterval) {
         val cycleLength = longBreakInterval * 2
-        // 요구사항 1: 긴 휴식이 끝난 직후의 STUDY 세션에서는 인디케이터를 꽉 찬 상태로 유지합니다.
-        // totalSessions가 longBreakInterval의 배수일 때가 긴 휴식이 끝난 시점입니다.
         if (currentMode == Mode.STUDY && totalSessions > 0 && totalSessions % longBreakInterval == 0) {
             cycleLength
         } else {
-            // 요구사항 2: 위 STUDY 세션이 끝나면(즉, totalSessions가 1 증가하면)
-            // 인디케이터가 초기화되고 첫 번째 STUDY 블록이 채워집니다.
             val cyclePosition = (totalSessions - 1).coerceAtLeast(0) % longBreakInterval
             when (currentMode) {
                 Mode.STUDY -> (totalSessions % longBreakInterval) * 2
@@ -431,7 +423,6 @@ fun CycleIndicator(
             }
         }
     }
-    // ▲▲▲ 로직 수정 부분 ▲▲▲
 
     Column(
         modifier = modifier,

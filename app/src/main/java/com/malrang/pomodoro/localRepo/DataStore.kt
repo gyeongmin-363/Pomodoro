@@ -38,6 +38,8 @@ object DSKeys {
     val ACTIVE_SPRITES_JSON = stringPreferencesKey("active_sprites_json")
     /** 잔디 배경화면 사용 여부를 저장하기 위한 키 */
     val USE_GRASS_BACKGROUND = booleanPreferencesKey("use_grass_background")
+    /** ✅ 화이트리스트 앱 목록을 저장하기 위한 키 */
+    val WHITELISTED_APPS = stringSetPreferencesKey("whitelisted_apps")
 }
 
 /**
@@ -155,6 +157,21 @@ class PomodoroRepository(private val context: Context) {
      */
     suspend fun saveUseGrassBackground(useGrass: Boolean) {
         context.dataStore.edit { it[DSKeys.USE_GRASS_BACKGROUND] = useGrass }
+    }
+
+    /**
+     * DataStore에서 화이트리스트 앱 목록을 불러옵니다.
+     * @return 저장된 앱 패키지 이름의 집합(Set)을 반환합니다.
+     */
+    suspend fun loadWhitelistedApps(): Set<String> =
+        context.dataStore.data.first()[DSKeys.WHITELISTED_APPS] ?: emptySet()
+
+    /**
+     * 화이트리스트 앱 목록을 DataStore에 저장합니다.
+     * @param apps 저장할 앱 패키지 이름의 집합(Set)
+     */
+    suspend fun saveWhitelistedApps(apps: Set<String>) {
+        context.dataStore.edit { it[DSKeys.WHITELISTED_APPS] = apps }
     }
 
     /**
