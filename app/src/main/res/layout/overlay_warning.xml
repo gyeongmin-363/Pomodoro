@@ -37,7 +37,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="앱 계속 사용" />
+            android:text="앱 사용" />
 
         <Button
             android:id="@+id/btn_back_to_app"
@@ -45,7 +45,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:text="앱으로 돌아가기" />
+            android:text="돌아가기" />
 
     </LinearLayout>
 
