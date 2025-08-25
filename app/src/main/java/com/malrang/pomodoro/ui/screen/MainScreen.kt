@@ -278,8 +278,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 }
             )
             Spacer(Modifier.height(24.dp))
-            // ... MainScreen.kt의 IconButton 부분 ...
 
+            // ✅ 화이트리스트 버튼이 제거된 최종 UI
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
                     Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = Color.White)
@@ -287,14 +287,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
                     Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = Color.White)
                 }
-                // ✅ 버튼 클릭 시 Whitelist 화면으로 이동하도록 수정
-                IconButton(onClick = {
-                    viewModel.showScreen(Screen.Whitelist)
-                }) {
-                    // ic_whitelist 아이콘이 없다면, 기본 설정 아이콘 등으로 대체할 수 있습니다.
-                    // 예: Icon(Icons.Default.Settings, contentDescription = "앱 허용 설정", tint = Color.White)
-                    Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "앱 허용 설정", tint = Color.White)
-                }
+                // 설정 화면으로 이동하는 버튼은 WorkPreset 관리 UI에 이미 존재하므로 여기서는 제거하거나 다른 기능으로 대체 가능합니다.
+                // 일단은 비워두겠습니다.
             }
         }
     }

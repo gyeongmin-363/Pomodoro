@@ -30,6 +30,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -79,7 +80,6 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
         Spacer(Modifier.height(8.dp))
 
-        // --- ▼▼▼ UI 개선: 슬라이더 및 체크박스 색상 통일 ▼▼▼ ---
         val sliderColors = SliderDefaults.colors(
             thumbColor = Color.White,
             activeTrackColor = Color(0xFF3F51B5),
@@ -145,8 +145,17 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         }
         Spacer(Modifier.height(24.dp))
 
-        // ✅ "다른 앱 차단" UI 섹션 추가
-        Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+        // ✅ "다른 앱 차단" 타이틀과 "예외 목록 설정" 버튼을 한 줄에 배치
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+            TextButton(onClick = { viewModel.showScreen(Screen.Whitelist) }) {
+                Text("예외 목록 설정")
+            }
+        }
         Spacer(Modifier.height(8.dp))
 
         val blockOptions = listOf(
@@ -203,7 +212,6 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         }
     }
 
-    // --- ▼▼▼ 수정된 부분: 공용 다이얼로그 Composable 사용 ▼▼▼ ---
     if (showDialog) {
         PixelArtConfirmDialog(
             onDismissRequest = { showDialog = false },
@@ -222,5 +230,4 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             )
         }
     }
-    // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 }

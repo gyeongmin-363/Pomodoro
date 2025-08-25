@@ -9,7 +9,7 @@ import com.malrang.pomodoro.ui.screen.CollectionScreen
 import com.malrang.pomodoro.ui.screen.MainScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen
 import com.malrang.pomodoro.ui.screen.StatsScreen
-import com.malrang.pomodoro.ui.screen.WhitelistScreen // ✅ WhitelistScreen 임포트
+import com.malrang.pomodoro.ui.screen.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.withpet.BackPressMove
 
@@ -17,14 +17,14 @@ import com.malrang.withpet.BackPressMove
  * 앱의 메인 컴포저블 함수입니다.
  * 현재 UI 상태에 따라 적절한 화면을 표시하는 역할을 합니다.
  *
- * @param viewModel [PomodoroViewModel]의 인스턴스입니다.
+ * @param vm [PomodoroViewModel]의 인스턴스입니다.
  */
 @Composable
 fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
     val s by vm.uiState.collectAsState()
 
     // ✅ MainScreen이 아닐 경우 뒤로가기 버튼을 누르면 Main으로 이동
-    if (s.currentScreen != Screen.Main) {
+    if (s.currentScreen != Screen.Main && s.currentScreen != Screen.Whitelist ) {
         BackPressMove {
             vm.showScreen(Screen.Main)
         }
@@ -35,9 +35,7 @@ fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
         Screen.Collection -> CollectionScreen(vm)
         Screen.Settings -> SettingsScreen(vm)
         Screen.Stats -> StatsScreen(vm)
-        // ✅ Whitelist 화면을 보여주는 case 추가
         Screen.Whitelist -> WhitelistScreen(vm)
-        // AnimalScreen은 MainScreen에 통합되었으므로 제거
         else -> MainScreen(vm)
     }
 }
