@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.tween
@@ -175,7 +176,13 @@ fun ExpandableCalendarView(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            val daysOfWeek = listOf("일", "월", "화", "수", "목", "금", "토")
+            val daysOfWeek = if (isExpanded) {
+                // 달력이 펼쳐진 상태(월간)일 때는 '일'부터 시작
+                listOf("일", "월", "화", "수", "목", "금", "토")
+            } else {
+                // 달력이 접힌 상태(주간)일 때는 '월'부터 시작
+                listOf("월", "화", "수", "목", "금", "토", "일")
+            }
             Row(Modifier.fillMaxWidth()) {
                 daysOfWeek.forEach { day ->
                     val color = when (day) {
@@ -294,7 +301,7 @@ fun ExpandableCalendarView(
 private fun WeeklyCalendarGrid(selectedDate: LocalDate, dailyStats: Map<String, DailyStat>) {
     val today = LocalDate.now()
     // 주의 시작을 일요일로 변경
-    val firstDayOfWeek = selectedDate.with(DayOfWeek.SUNDAY)
+    val firstDayOfWeek = selectedDate.with(DayOfWeek.MONDAY)
 
     Row(modifier = Modifier.fillMaxWidth()) {
         (0..6).forEach { i ->
@@ -406,9 +413,9 @@ fun DayCell(
 
 @Composable
 fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) {
-    val weekLabels = listOf("일", "월", "화", "수", "목", "금", "토")
+    val weekLabels = listOf("월", "화", "수", "목", "금", "토", "일")
     // 주의 시작을 일요일로 변경
-    val firstDayOfWeek = displayDate.with(DayOfWeek.SUNDAY)
+    val firstDayOfWeek = displayDate.with(DayOfWeek.MONDAY)
 
     val weeklyData = (0..6).map { i ->
         val date = firstDayOfWeek.plusDays(i.toLong())
