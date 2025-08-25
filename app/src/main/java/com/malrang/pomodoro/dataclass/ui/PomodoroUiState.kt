@@ -15,6 +15,7 @@ import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
  * @property collectedAnimals 수집한 동물 목록입니다.
  * @property totalSessions 완료한 총 공부 세션 수입니다.
  * @property settings 앱의 설정값을 담고 있습니다.
+ * @property useGrassBackground 풀 배경화면 사용 여부를 나타냅니다.
  */
 data class PomodoroUiState(
     val currentScreen: Screen = Screen.Main,
@@ -36,5 +37,6 @@ data class PomodoroUiState(
     val workPresets: List<WorkPreset> = emptyList(), // 모든 Work 프리셋 목록
     val currentWorkId: String? = null,               // 현재 선택된 Work의 ID
 
-    val isTimerStartedOnce: Boolean = false
+    val isTimerStartedOnce: Boolean = false,
+    val useGrassBackground: Boolean = true // --- ▼▼▼ 추가된 속성 ▼▼▼ ---
 )
