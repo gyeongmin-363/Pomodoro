@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
 //    implementation("com.himanshoe:charty:2.1.0-beta03.4") 멀티라인차트가 안되어 취소
     implementation ("io.github.ehsannarmani:compose-charts:0.1.9")
+    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

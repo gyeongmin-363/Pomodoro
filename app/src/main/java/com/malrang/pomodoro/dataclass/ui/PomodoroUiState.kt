@@ -38,5 +38,6 @@ data class PomodoroUiState(
     val currentWorkId: String? = null,               // 현재 선택된 Work의 ID
 
     val isTimerStartedOnce: Boolean = false,
-    val useGrassBackground: Boolean = true // --- ▼▼▼ 추가된 속성 ▼▼▼ ---
+    val useGrassBackground: Boolean = true,
+    val whitelistedApps: Set<String> = emptySet()
 )

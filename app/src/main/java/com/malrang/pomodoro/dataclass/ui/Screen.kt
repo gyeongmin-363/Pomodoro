@@ -13,5 +13,7 @@ enum class Screen {
     /** 설정 화면 */
     Settings,
     /** 통계 */
-    Stats
+    Stats,
+    /** 화이트리스트 */
+    Whitelist
 }
