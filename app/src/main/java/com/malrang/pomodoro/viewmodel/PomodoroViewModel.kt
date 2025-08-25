@@ -44,6 +44,7 @@ class PomodoroViewModel(
             val seenIds = repo.loadSeenIds()
             val daily = repo.loadDailyStats()
             val presets = repo.loadWorkPresets()
+            val whitelistedApps = repo.loadWhitelistedApps() // ✅ 화이트리스트 로드
             val currentWorkId = repo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
             val sprites = repo.loadActiveSprites()
             val useGrassBackground = repo.loadUseGrassBackground()
@@ -60,7 +61,8 @@ class PomodoroViewModel(
                     workPresets = presets,
                     currentWorkId = currentWorkId,
                     activeSprites = sprites,
-                    useGrassBackground = useGrassBackground
+                    useGrassBackground = useGrassBackground,
+                    whitelistedApps = whitelistedApps // ✅ UI 상태에 화이트리스트 추가
                 )
             }
 
@@ -72,6 +74,30 @@ class PomodoroViewModel(
         }
     }
 
+
+    /**
+     * ✅ 화이트리스트에 앱을 추가합니다.
+     * @param packageName 추가할 앱의 패키지 이름
+     */
+    fun addToWhitelist(packageName: String) {
+        viewModelScope.launch {
+            val updatedWhitelist = _uiState.value.whitelistedApps + packageName
+            repo.saveWhitelistedApps(updatedWhitelist)
+            _uiState.update { it.copy(whitelistedApps = updatedWhitelist) }
+        }
+    }
+
+    /**
+     * ✅ 화이트리스트에서 앱을 제거합니다.
+     * @param packageName 제거할 앱의 패키지 이름
+     */
+    fun removeFromWhitelist(packageName: String) {
+        viewModelScope.launch {
+            val updatedWhitelist = _uiState.value.whitelistedApps - packageName
+            repo.saveWhitelistedApps(updatedWhitelist)
+            _uiState.update { it.copy(whitelistedApps = updatedWhitelist) }
+        }
+    }
 
     fun selectWorkPreset(presetId: String) {
         viewModelScope.launch {
