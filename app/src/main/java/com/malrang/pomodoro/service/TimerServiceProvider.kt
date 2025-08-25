@@ -23,7 +23,6 @@ class TimerServiceProvider(private val context: Context) {
         val intent = Intent(context, TimerService::class.java).apply {
             action = "START"
             putExtra("TIME_LEFT", timeLeft)
-            // --- 변경: 서비스에 필요한 모든 정보를 전달 ---
             putExtra("SETTINGS", settings as Serializable)
             putExtra("CURRENT_MODE", currentMode as Serializable)
             putExtra("TOTAL_SESSIONS", totalSessions)
@@ -38,17 +37,31 @@ class TimerServiceProvider(private val context: Context) {
         context.startService(intent)
     }
 
-    fun reset(timeLeft: Int) {
-        val intent = Intent(context, TimerService::class.java).apply {
-            action = "RESET"
-            putExtra("TIME_LEFT", timeLeft)
-        }
-        context.startService(intent)
-    }
 
     fun requestStatus() {
         val intent = Intent(context, TimerService::class.java).apply {
             action = "REQUEST_STATUS"
+        }
+        context.startService(intent)
+    }
+
+    /**
+     * ✅ 새로 추가된 메서드: 세션 건너뛰기
+     * Service에서 DB 저장 없이 다음 모드로 강제 전환합니다.
+     */
+    fun skip(currentMode: Mode, totalSessions: Int) {
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = "SKIP"
+            putExtra("CURRENT_MODE", currentMode as Serializable)
+            putExtra("TOTAL_SESSIONS", totalSessions)
+        }
+        context.startService(intent)
+    }
+
+    fun resetCompletely(settings: Settings) { // Settings 객체를 인자로 받도록 변경
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = "RESET"
+            putExtra("SETTINGS", settings as Serializable) // Intent에 설정값 추가
         }
         context.startService(intent)
     }

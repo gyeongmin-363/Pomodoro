@@ -1,47 +1,57 @@
 package com.malrang.pomodoro.ui.screen
 
-import android.widget.Toast // Toast 임포트 추가
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext // LocalContext 임포트 추가
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
-/**
- * 앱의 설정 화면을 표시하는 컴포저블 함수입니다.
- * 타이머 시간, 알림음, 진동 설정을 변경할 수 있습니다.
- *
- * @param viewModel [PomodoroViewModel]의 인턴스입니다.
- */
 @Composable
 fun SettingsScreen(viewModel: PomodoroViewModel) {
+    val editingPreset by viewModel.editingWorkPreset.collectAsState()
     val state by viewModel.uiState.collectAsState()
-    val settings = state.settings
-    // --- 추가: Toast 메시지를 위해 Context 가져오기 ---
-    val context = LocalContext.current
+    val settings = editingPreset?.settings ?: state.settings
+    val title = editingPreset?.name ?: "기본 설정"
+
+    var showDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -54,20 +64,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⚙️ 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            // --- 핵심 수정 사항: 뒤로가기 버튼 클릭 로직 변경 ---
-            IconButton(onClick = {
-                if (state.isTimerStartedOnce) {
-                    Toast.makeText(context, "변경사항은 리셋 이후 적용됩니다", Toast.LENGTH_SHORT).show()
-                }
-                viewModel.showScreen(Screen.Main)
-            }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "돌아가기",
-                    tint = Color.White
-                )
-            }
+            Text("⚙️ $title 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
 
         Spacer(Modifier.height(24.dp))
@@ -75,52 +72,113 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
         Spacer(Modifier.height(8.dp))
 
+        // --- ▼▼▼ UI 개선: 슬라이더 및 체크박스 색상 통일 ▼▼▼ ---
+        val sliderColors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = Color(0xFF3F51B5),
+            inactiveTrackColor = Color.Gray
+        )
+
         Text("공부 시간: ${settings.studyTime}분", color = Color.White)
         Slider(
             value = settings.studyTime.toFloat(),
             onValueChange = { viewModel.updateStudyTime(it.toInt()) },
-            valueRange = 1f..60f
+            valueRange = 1f..60f,
+            colors = sliderColors
         )
 
         Text("짧은 휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
         Slider(
             value = settings.shortBreakTime.toFloat(),
             onValueChange = { viewModel.updateShortBreakTime(it.toInt()) },
-            valueRange = 0f..60f
+            valueRange = 1f..30f,
+            colors = sliderColors
         )
 
         Text("긴 휴식 시간: ${settings.longBreakTime}분", color = Color.White)
         Slider(
             value = settings.longBreakTime.toFloat(),
             onValueChange = { viewModel.updateLongBreakTime(it.toInt()) },
-            valueRange = 0f..60f
+            valueRange = 1f..60f,
+            colors = sliderColors
         )
 
         Text("긴 휴식 간격: ${settings.longBreakInterval}회 마다", color = Color.White)
         Slider(
             value = settings.longBreakInterval.toFloat(),
             onValueChange = { viewModel.updateLongBreakInterval(it.toInt()) },
-            valueRange = 1f..12f,
-            steps = 10 // 1부터 12까지 설정 가능
+            valueRange = 2f..12f,
+            steps = 9,
+            colors = sliderColors
         )
         Spacer(Modifier.height(24.dp))
 
         Text("알림 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
         Spacer(Modifier.height(8.dp))
 
+        val checkboxColors = CheckboxDefaults.colors(
+            checkedColor = Color(0xFF3F51B5),
+            uncheckedColor = Color.White,
+            checkmarkColor = Color.White
+        )
+
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) })
+            Checkbox(checked = settings.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) }, colors = checkboxColors)
             Text("알림음 사용", color = Color.White)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) })
+            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) }, colors = checkboxColors)
             Text("진동 사용", color = Color.White)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) })
+            Checkbox(checked = settings.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) }, colors = checkboxColors)
             Text("자동 시작", color = Color.White)
         }
+        // --- ▲▲▲ UI 개선 ▲▲▲ ---
+
+        Spacer(Modifier.weight(1f))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            IconButton(
+                onClick = {
+                    viewModel.stopEditingWorkPreset()
+                    viewModel.showScreen(Screen.Main)
+                },
+            ) {
+                Icon(Icons.Default.Close, "취소", tint = Color.White)
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            IconButton(onClick = { showDialog = true }) {
+                Icon(painterResource(R.drawable.ic_save),"저장", tint = Color.White)
+            }
+        }
     }
+
+    // --- ▼▼▼ 수정된 부분: 공용 다이얼로그 Composable 사용 ▼▼▼ ---
+    if (showDialog) {
+        PixelArtConfirmDialog(
+            onDismissRequest = { showDialog = false },
+            title = "저장하시겠습니까?",
+            confirmText = "확인",
+            onConfirm = {
+                viewModel.reset()
+                viewModel.stopEditingWorkPreset()
+                viewModel.showScreen(Screen.Main)
+                showDialog = false
+            }
+        ) {
+            Text(
+                text = "저장하면 타이머가 초기화됩니다.\n계속 진행할까요?",
+                color = Color.LightGray
+            )
+        }
+    }
+    // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 }

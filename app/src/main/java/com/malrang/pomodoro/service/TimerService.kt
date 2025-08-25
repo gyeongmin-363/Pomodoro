@@ -5,14 +5,24 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.malrang.pomodoro.MainActivity
 import com.malrang.pomodoro.R
+import com.malrang.pomodoro.dataclass.animalInfo.Animal
+import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
+import com.malrang.pomodoro.dataclass.animalInfo.Rarity
+import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
+import com.malrang.pomodoro.dataclass.sprite.SpriteData
+import com.malrang.pomodoro.dataclass.sprite.SpriteMap
+import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
+import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +30,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.util.UUID
+import kotlin.random.Random
 
 class TimerService : Service() {
 
@@ -32,6 +45,9 @@ class TimerService : Service() {
     private var totalSessions: Int = 0
     private lateinit var soundPlayer: SoundPlayer
     private lateinit var vibratorHelper: VibratorHelper
+    private lateinit var repo: PomodoroRepository
+
+    private lateinit var wakeLock: PowerManager.WakeLock
 
 
     override fun onCreate() {
@@ -40,6 +56,10 @@ class TimerService : Service() {
         createNotificationChannel()
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
+        repo = PomodoroRepository(this)
+
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -66,21 +86,8 @@ class TimerService : Service() {
                 }
             }
             "PAUSE" -> {
-                // --- 핵심 수정 사항: 상태를 먼저 변경하고 UI 업데이트 함수를 호출 ---
-                isRunning = false // 1. 서비스의 상태를 '일시정지'로 먼저 변경
-                pauseTimer()    // 2. 그 다음에 UI(알림) 업데이트 및 브로드캐스트 실행
-            }
-            "RESET" -> {
                 isRunning = false
-                resetTimer()
-                timeLeft = intent.getIntExtra("TIME_LEFT", 0)
-                updateNotification()
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", isRunning)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                })
+                pauseTimer()
             }
             "REQUEST_STATUS" -> {
                 sendBroadcast(Intent(TIMER_TICK).apply {
@@ -90,12 +97,79 @@ class TimerService : Service() {
                     putExtra("TOTAL_SESSIONS", totalSessions)
                 })
             }
+            "SKIP" -> {
+                job?.cancel()
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                }
+                val currentSettings = settings ?: return START_STICKY
+
+                var nextMode = Mode.STUDY
+                var nextTime = 0
+                var newTotalSessions = totalSessions
+
+                if (currentMode == Mode.STUDY) {
+                    newTotalSessions++
+                    val isLongBreakTime = newTotalSessions > 0 &&
+                            newTotalSessions % currentSettings.longBreakInterval == 0
+                    nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
+                    nextTime = if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime
+                } else {
+                    nextMode = Mode.STUDY
+                    nextTime = currentSettings.studyTime
+                }
+
+                currentMode = nextMode
+                totalSessions = newTotalSessions
+                timeLeft = nextTime * 60
+                isRunning = false
+
+                updateNotification()
+                sendBroadcast(Intent(TIMER_TICK).apply {
+                    putExtra("TIME_LEFT", timeLeft)
+                    putExtra("IS_RUNNING", isRunning)
+                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
+                    putExtra("TOTAL_SESSIONS", totalSessions)
+                })
+            }
+            "RESET" -> {
+                job?.cancel()
+                isRunning = false
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                }
+
+                val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getSerializableExtra("SETTINGS", Settings::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getSerializableExtra("SETTINGS") as? Settings
+                }
+
+                if (newSettings != null) {
+                    settings = newSettings
+                }
+
+                currentMode = Mode.STUDY
+                totalSessions = 0
+                timeLeft = settings?.studyTime?.times(60) ?: (25 * 60)
+
+                sendBroadcast(Intent(TIMER_TICK).apply {
+                    putExtra("TIME_LEFT", timeLeft)
+                    putExtra("IS_RUNNING", false)
+                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
+                    putExtra("TOTAL_SESSIONS", totalSessions)
+                })
+
+                updateNotification()
+            }
         }
         return START_STICKY
     }
 
     private fun startTimer() {
         job?.cancel()
+        wakeLock.acquire(90*60*1000L /*90 minutes*/)
         job = CoroutineScope(Dispatchers.Main).launch {
             while (timeLeft > 0) {
                 delay(1000)
@@ -108,23 +182,23 @@ class TimerService : Service() {
                     putExtra("TOTAL_SESSIONS", totalSessions)
                 })
             }
+            if (wakeLock.isHeld) {
+                wakeLock.release()
+            }
 
+            val finishedMode = currentMode
             val currentSettings = settings ?: return@launch
 
-            if (currentSettings.soundEnabled) {
-                soundPlayer.playSound()
-            }
-            if (currentSettings.vibrationEnabled) {
-                vibratorHelper.vibrate()
-            }
+            if (currentSettings.soundEnabled) { soundPlayer.playSound() }
+            if (currentSettings.vibrationEnabled) { vibratorHelper.vibrate() }
 
-            sendBroadcast(Intent(TIMER_FINISHED))
+            handleSessionCompletion(finishedMode)
 
             var nextMode = Mode.STUDY
             var nextTime = 0
             var newTotalSessions = totalSessions
 
-            if (currentMode == Mode.STUDY) {
+            if (finishedMode == Mode.STUDY) {
                 newTotalSessions++
                 val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % currentSettings.longBreakInterval == 0
                 nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
@@ -134,15 +208,16 @@ class TimerService : Service() {
                 nextTime = currentSettings.studyTime
             }
 
+            timeLeft = nextTime * 60
+            currentMode = nextMode
+            totalSessions = newTotalSessions
+
             if (currentSettings.autoStart) {
-                timeLeft = nextTime * 60
-                currentMode = nextMode
-                totalSessions = newTotalSessions
                 isRunning = true
                 startTimer()
             } else {
                 isRunning = false
-                stopSelf()
+                pauseTimer()
             }
         }
         startForeground(NOTIFICATION_ID, createNotification())
@@ -150,7 +225,10 @@ class TimerService : Service() {
 
     private fun pauseTimer() {
         job?.cancel()
-        updateNotification() // isRunning이 false로 바뀐 후에 호출되므로, 정확한 알림이 생성됨
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
+        updateNotification()
         sendBroadcast(Intent(TIMER_TICK).apply {
             putExtra("TIME_LEFT", timeLeft)
             putExtra("IS_RUNNING", false)
@@ -159,8 +237,85 @@ class TimerService : Service() {
         })
     }
 
-    private fun resetTimer() {
-        job?.cancel()
+    private fun handleSessionCompletion(finishedMode: Mode) {
+        CoroutineScope(Dispatchers.IO).launch {
+            updateTodayStats(finishedMode)
+
+            if (finishedMode == Mode.STUDY) {
+                val animal = getRandomAnimal()
+                val sprite = makeSprite(animal)
+                val updatedSeenIds = repo.loadSeenIds() + animal.id
+                val updatedSprites = repo.loadActiveSprites() + sprite
+                repo.saveSeenIds(updatedSeenIds)
+                repo.saveActiveSprites(updatedSprites)
+            }
+        }
+    }
+
+    private suspend fun updateTodayStats(finishedMode: Mode) {
+        val currentSettings = settings ?: return
+
+        val today = LocalDate.now().toString()
+        val currentStatsMap = repo.loadDailyStats().toMutableMap()
+        val todayStat = currentStatsMap[today] ?: DailyStat(today)
+
+        val currentWorkId = repo.loadCurrentWorkId()
+        val workPresets = repo.loadWorkPresets()
+        val currentWorkName = workPresets.find { it.id == currentWorkId }?.name ?: "알 수 없는 Work"
+
+        val updatedStat = when (finishedMode) {
+            Mode.STUDY -> {
+                val newStudyTimeMap = (todayStat.studyTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newStudyTimeMap.getOrDefault(currentWorkName, 0)
+                newStudyTimeMap[currentWorkName] = currentWorkTime + currentSettings.studyTime
+                todayStat.copy(studyTimeByWork = newStudyTimeMap)
+            }
+            Mode.SHORT_BREAK -> {
+                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
+                newBreakTimeMap[currentWorkName] = currentWorkTime + currentSettings.shortBreakTime
+                todayStat.copy(breakTimeByWork = newBreakTimeMap)
+            }
+            Mode.LONG_BREAK -> {
+                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
+                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
+                newBreakTimeMap[currentWorkName] = currentWorkTime + currentSettings.longBreakTime
+                todayStat.copy(breakTimeByWork = newBreakTimeMap)
+            }
+        }
+        currentStatsMap[today] = updatedStat
+        repo.saveDailyStats(currentStatsMap)
+    }
+
+    private fun getRandomAnimal(): Animal {
+        val roll = Random.nextInt(100)
+        val rarity = when {
+            roll < 60 -> Rarity.COMMON
+            roll < 85 -> Rarity.RARE
+            roll < 97 -> Rarity.EPIC
+            else -> Rarity.LEGENDARY
+        }
+        return AnimalsTable.randomByRarity(rarity)
+    }
+
+    private fun makeSprite(animal: Animal): AnimalSprite {
+        val spriteData = SpriteMap.map[animal]
+            ?: SpriteData(idleRes = R.drawable.classical_idle, jumpRes = R.drawable.classical_jump)
+        return AnimalSprite(
+            id = UUID.randomUUID().toString(),
+            animalId = animal.id,
+            idleSheetRes = spriteData.idleRes,
+            idleCols = spriteData.idleCols,
+            idleRows = spriteData.idleRows,
+            jumpSheetRes = spriteData.jumpRes,
+            jumpCols = spriteData.jumpCols,
+            jumpRows = spriteData.jumpRows,
+            x = Random.nextInt(0, 600).toFloat(),
+            y = Random.nextInt(0, 1000).toFloat(),
+            vx = listOf(-70f, 70f).random(),
+            vy = listOf(-50f, 50f).random(),
+            sizeDp = 48f
+        )
     }
 
     private fun updateNotification() {
@@ -169,11 +324,7 @@ class TimerService : Service() {
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            "pomodoro_timer",
-            "Pomodoro Timer",
-            NotificationManager.IMPORTANCE_LOW
-        )
+        val channel = NotificationChannel("pomodoro_timer", "Pomodoro Timer", NotificationManager.IMPORTANCE_LOW)
         channel.setShowBadge(false)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
@@ -197,17 +348,10 @@ class TimerService : Service() {
                 val minutes = timeLeft / 60
                 val seconds = timeLeft % 60
                 String.format("남은 시간: %02d:%02d (일시정지)", minutes, seconds)
-            } else {
-                "시간 종료"
-            }
+            } else "시간 종료"
         }
 
-        val sessionText = if (currentMode == Mode.STUDY) {
-            " | 세션: ${totalSessions + 1}"
-        } else {
-            ""
-        }
-
+        val sessionText = if (currentMode == Mode.STUDY) " | 세션: ${totalSessions + 1}" else ""
         val contentText = "$statusText$sessionText"
 
         return NotificationCompat.Builder(this, "pomodoro_timer")
@@ -220,21 +364,21 @@ class TimerService : Service() {
     }
 
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
         job?.cancel()
         isRunning = false
         isServiceActive = false
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
     }
 
     companion object {
         private const val NOTIFICATION_ID = 2022
         const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
-        const val TIMER_FINISHED = "com.malrang.pomodoro.TIMER_FINISHED"
         private var isServiceActive = false
         fun isServiceActive(): Boolean = isServiceActive
     }
