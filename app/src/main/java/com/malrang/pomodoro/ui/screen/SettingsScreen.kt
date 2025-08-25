@@ -1,8 +1,10 @@
 package com.malrang.pomodoro.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,13 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,12 +33,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 @Composable
@@ -44,9 +51,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
     val settings = editingPreset?.settings ?: state.settings
     val title = editingPreset?.name ?: "기본 설정"
 
-    // --- ▼▼▼ 추가된 부분 (Dialog 상태 관리) ▼▼▼ ---
     var showDialog by remember { mutableStateOf(false) }
-    // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
     Column(
         modifier = Modifier
@@ -60,9 +65,6 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("⚙️ $title 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            // --- ▼▼▼ 삭제된 부분 (뒤로가기 아이콘 버튼) ▼▼▼ ---
-            // IconButton(...) { ... }
-            // --- ▲▲▲ 삭제된 부분 ▲▲▲ ---
         }
 
         Spacer(Modifier.height(24.dp))
@@ -70,11 +72,19 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
         Spacer(Modifier.height(8.dp))
 
+        // --- ▼▼▼ UI 개선: 슬라이더 및 체크박스 색상 통일 ▼▼▼ ---
+        val sliderColors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = Color(0xFF3F51B5),
+            inactiveTrackColor = Color.Gray
+        )
+
         Text("공부 시간: ${settings.studyTime}분", color = Color.White)
         Slider(
             value = settings.studyTime.toFloat(),
             onValueChange = { viewModel.updateStudyTime(it.toInt()) },
             valueRange = 1f..60f,
+            colors = sliderColors
         )
 
         Text("짧은 휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
@@ -82,6 +92,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             value = settings.shortBreakTime.toFloat(),
             onValueChange = { viewModel.updateShortBreakTime(it.toInt()) },
             valueRange = 1f..30f,
+            colors = sliderColors
         )
 
         Text("긴 휴식 시간: ${settings.longBreakTime}분", color = Color.White)
@@ -89,6 +100,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             value = settings.longBreakTime.toFloat(),
             onValueChange = { viewModel.updateLongBreakTime(it.toInt()) },
             valueRange = 1f..60f,
+            colors = sliderColors
         )
 
         Text("긴 휴식 간격: ${settings.longBreakInterval}회 마다", color = Color.White)
@@ -96,30 +108,37 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             value = settings.longBreakInterval.toFloat(),
             onValueChange = { viewModel.updateLongBreakInterval(it.toInt()) },
             valueRange = 2f..12f,
-            steps = 9
+            steps = 9,
+            colors = sliderColors
         )
         Spacer(Modifier.height(24.dp))
 
         Text("알림 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
         Spacer(Modifier.height(8.dp))
 
+        val checkboxColors = CheckboxDefaults.colors(
+            checkedColor = Color(0xFF3F51B5),
+            uncheckedColor = Color.White,
+            checkmarkColor = Color.White
+        )
+
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) })
+            Checkbox(checked = settings.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) }, colors = checkboxColors)
             Text("알림음 사용", color = Color.White)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) })
+            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) }, colors = checkboxColors)
             Text("진동 사용", color = Color.White)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) })
+            Checkbox(checked = settings.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) }, colors = checkboxColors)
             Text("자동 시작", color = Color.White)
         }
+        // --- ▲▲▲ UI 개선 ▲▲▲ ---
 
-        // --- ▼▼▼ 추가된 부분 (하단 버튼) ▼▼▼ ---
-        Spacer(Modifier.weight(1f)) // 버튼을 하단으로 밀어내기 위한 Spacer
+        Spacer(Modifier.weight(1f))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -130,47 +149,36 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
                     viewModel.stopEditingWorkPreset()
                     viewModel.showScreen(Screen.Main)
                 },
-//                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
             ) {
-                Icon(Icons.Default.Close, "취소")
+                Icon(Icons.Default.Close, "취소", tint = Color.White)
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             IconButton(onClick = { showDialog = true }) {
-                Icon(painterResource(R.drawable.ic_save),"저장")
+                Icon(painterResource(R.drawable.ic_save),"저장", tint = Color.White)
             }
         }
-        // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
     }
 
-    // --- ▼▼▼ 추가된 부분 (저장 확인 Dialog) ▼▼▼ ---
+    // --- ▼▼▼ 수정된 부분: 공용 다이얼로그 Composable 사용 ▼▼▼ ---
     if (showDialog) {
-        AlertDialog(
+        PixelArtConfirmDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("저장 확인") },
-            text = { Text("저장 시, 타이머가 초기화됩니다. 계속하시겠습니까?") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.reset()
-                        viewModel.stopEditingWorkPreset()
-                        viewModel.showScreen(Screen.Main)
-                        showDialog = false
-                    }
-                ) {
-                    Text("확인")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
-                ) {
-                    Text("취소")
-                }
+            title = "저장하시겠습니까?",
+            confirmText = "확인",
+            onConfirm = {
+                viewModel.reset()
+                viewModel.stopEditingWorkPreset()
+                viewModel.showScreen(Screen.Main)
+                showDialog = false
             }
-        )
+        ) {
+            Text(
+                text = "저장하면 타이머가 초기화됩니다.\n계속 진행할까요?",
+                color = Color.LightGray
+            )
+        }
     }
-    // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
+    // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 }

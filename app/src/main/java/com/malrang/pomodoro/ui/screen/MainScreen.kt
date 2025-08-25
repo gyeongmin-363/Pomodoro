@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.ContentScale
@@ -41,12 +41,14 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
+import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.delay
 
@@ -57,35 +59,83 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     var heightPx by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
+    // 다이얼로그 상태 관리
     var showWorkManager by remember { mutableStateOf(false) }
     var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
+    var newPresetName by remember { mutableStateOf("") }
     var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
     var showResetConfirm by remember { mutableStateOf(false) }
+    var showSkipConfirm by remember { mutableStateOf(false) } // 건너뛰기 확인 다이얼로그 상태 추가
 
     // 이름 변경 다이얼로그
     if (presetToRename != null) {
-        RenamePresetDialog(
-            preset = presetToRename!!,
-            onConfirm = { newName ->
-                viewModel.updateWorkPresetName(presetToRename!!.id, newName)
+        PixelArtConfirmDialog(
+            onDismissRequest = { presetToRename = null },
+            title = "Work 이름 변경",
+            confirmText = "확인",
+            confirmButtonEnabled = newPresetName.isNotBlank(),
+            onConfirm = {
+                viewModel.updateWorkPresetName(presetToRename!!.id, newPresetName)
                 presetToRename = null
-            },
-            onDismiss = { presetToRename = null }
-        )
+            }
+        ) {
+            OutlinedTextField(
+                value = newPresetName,
+                onValueChange = { newPresetName = it },
+                label = { Text("새 이름") },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = Color.White,
+                    focusedLabelColor = Color.White,
+                    unfocusedLabelColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+            )
+        }
     }
 
-    // --- ▼▼▼ 추가된 Composable: 삭제 확인 다이얼로그 ▼▼▼ ---
+    // 삭제 확인 다이얼로그
     if (presetToDelete != null) {
-        DeleteConfirmDialog(
-            preset = presetToDelete!!,
+        PixelArtConfirmDialog(
+            onDismissRequest = { presetToDelete = null },
+            title = "Work 삭제",
+            confirmText = "삭제",
             onConfirm = {
                 viewModel.deleteWorkPreset(presetToDelete!!.id)
                 presetToDelete = null
-            },
-            onDismiss = { presetToDelete = null }
-        )
+            }
+        ) {
+            Text(
+                buildAnnotatedString {
+                    append("정말로 '")
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color=Color.White)) {
+                        append(presetToDelete!!.name)
+                    }
+                    append("' Work를 삭제하시겠습니까?")
+                },
+                color = Color.LightGray
+            )
+        }
     }
-    // --- ▲▲▲ 추가된 Composable ▲▲▲ ---
+
+    // --- ▼▼▼ 추가된 부분: 건너뛰기 확인 다이얼로그 ▼▼▼ ---
+    if (showSkipConfirm) {
+        PixelArtConfirmDialog(
+            onDismissRequest = { showSkipConfirm = false },
+            title = "세션 건너뛰기",
+            confirmText = "확인",
+            onConfirm = {
+                viewModel.skipSession()
+                showSkipConfirm = false
+            }
+        ) {
+            Text("현재 세션을 건너뛰시겠습니까?", color = Color.LightGray)
+        }
+    }
+    // --- ▲▲▲ 추가된 부분 ▲▲▲ ---
 
     Box(
         modifier = Modifier
@@ -95,26 +145,19 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 heightPx = sz.height
             }
     ) {
-        // ✅ 리셋 확인 다이얼로그
+        // 리셋 확인 다이얼로그
         if (showResetConfirm) {
-            AlertDialog(
+            PixelArtConfirmDialog(
                 onDismissRequest = { showResetConfirm = false },
-                title = { Text("리셋 확인") },
-                text = { Text("정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            viewModel.reset()   // ⬅️ 새 함수 호출
-                            showResetConfirm = false
-                        }
-                    ) { Text("확인") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showResetConfirm = false }) {
-                        Text("취소")
-                    }
+                title = "리셋 확인",
+                confirmText = "확인",
+                onConfirm = {
+                    viewModel.reset()
+                    showResetConfirm = false
                 }
-            )
+            ) {
+                Text("정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.", color = Color.LightGray)
+            }
         }
 
         if (state.useGrassBackground) {
@@ -162,14 +205,14 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("픽모도로", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("픽모도로", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
             Spacer(Modifier.height(16.dp))
 
             val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
 
             TextButton(onClick = { showWorkManager = !showWorkManager }) {
-                Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택")
+                Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = Color.White)
             }
 
             AnimatedVisibility(visible = showWorkManager) {
@@ -178,10 +221,11 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     currentPresetId = state.currentWorkId,
                     onPresetSelected = { viewModel.selectWorkPreset(it) },
                     onAddPreset = { viewModel.addWorkPreset() },
-                    // --- ▼▼▼ 수정된 부분: 삭제 요청 시 상태 변경 ▼▼▼ ---
                     onDeletePreset = { preset -> presetToDelete = preset },
-                    // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
-                    onRenamePreset = { preset -> presetToRename = preset },
+                    onRenamePreset = { preset ->
+                        newPresetName = preset.name
+                        presetToRename = preset
+                    },
                     onEditSettings = { presetId ->
                         viewModel.startEditingWorkPreset(presetId)
                         viewModel.showScreen(Screen.Settings)
@@ -193,7 +237,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             Text(
                 text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
                 fontSize = 60.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
             Spacer(Modifier.height(16.dp))
             CycleIndicator(
@@ -206,22 +251,23 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!state.isRunning) {
                     IconButton(onClick = { viewModel.startTimer() }) {
-                        Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작")
+                        Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = Color.White)
                     }
                 } else {
                     IconButton(onClick = { viewModel.pauseTimer() }) {
-                        Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지")
+                        Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = Color.White)
                     }
                 }
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = { showResetConfirm = true }) {
-                    Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋")
+                    Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = Color.White)
                 }
                 Spacer(Modifier.width(8.dp))
-                IconButton(onClick = { viewModel.skipSession() }) {   // ✅ 건너뛰기 버튼
-                    Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기")
+                // --- ▼▼▼ 수정된 부분: 건너뛰기 버튼 클릭 시 다이얼로그 표시 ▼▼▼ ---
+                IconButton(onClick = { showSkipConfirm = true }) {
+                    Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = Color.White)
                 }
-                // --- ▼▼▼ 수정된 부분: 배경 변경 버튼 클릭 시 토스트 메시지 추가 ▼▼▼ ---
+                // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = {
                     if (state.useGrassBackground) {
@@ -229,9 +275,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     }
                     viewModel.toggleBackground()
                 }) {
-                    Icon(painterResource(R.drawable.ic_wallpaper), contentDescription = "배경 변경")
+                    Icon(painterResource(R.drawable.ic_wallpaper), contentDescription = "배경 변경", tint = Color.White)
                 }
-                // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
             }
             Spacer(Modifier.height(24.dp))
             Text(
@@ -243,10 +288,10 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
-                    Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감")
+                    Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = Color.White)
                 }
                 IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
-                    Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계")
+                    Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = Color.White)
                 }
             }
         }
@@ -267,11 +312,10 @@ fun WorkPresetsManager(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .border(4.dp, Color.Black), // 두꺼운 픽셀 테두리
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors().copy(
-            containerColor = Color(0xaa555555)
+            .border(2.dp, Color.White), // 테두리 수정
+        shape = RectangleShape, // 모양 수정
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0x992D2A5A) // 배경색 수정
         )
     ) {
         Column {
@@ -289,14 +333,14 @@ fun WorkPresetsManager(
                     )
                 }
             }
-            Divider()
+            Divider(color = Color.White.copy(alpha = 0.5f))
             TextButton(
                 onClick = onAddPreset,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Work 추가")
+                Icon(Icons.Default.Add, contentDescription = "Work 추가", tint = Color.White)
                 Spacer(Modifier.width(4.dp))
-                Text("새 Work 추가")
+                Text("새 Work 추가", color = Color.White)
             }
         }
     }
@@ -320,98 +364,34 @@ fun WorkPresetItem(
     ) {
         RadioButton(
             selected = isSelected,
-            onClick = onSelect
+            onClick = onSelect,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = Color.White,
+                unselectedColor = Color.Gray
+            )
         )
         Text(
             text = preset.name,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            color = Color.White
         )
         IconButton(onClick = onRename) {
-            Icon(Icons.Default.Edit, contentDescription = "이름 변경", tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Default.Edit, contentDescription = "이름 변경", tint = Color.Cyan)
         }
         IconButton(onClick = onEditSettings) {
-            Icon(Icons.Default.Settings, contentDescription = "설정 변경", tint = MaterialTheme.colorScheme.secondary)
+            Icon(Icons.Default.Settings, contentDescription = "설정 변경", tint = Color.Yellow)
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = MaterialTheme.colorScheme.error)
+            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = Color(0xFFE91E63))
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RenamePresetDialog(
-    preset: WorkPreset,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var text by remember { mutableStateOf(preset.name) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Work 이름 변경") },
-        text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("이름") },
-                singleLine = true
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(text) },
-                enabled = text.isNotBlank()
-            ) {
-                Text("확인")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
-        }
-    )
-}
-
-// --- ▼▼▼ 추가된 Composable: 삭제 확인창 ▼▼▼ ---
-@Composable
-fun DeleteConfirmDialog(
-    preset: WorkPreset,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Work 삭제") },
-        text = {
-            Text(
-                buildAnnotatedString {
-                    append("정말로 '")
-                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append(preset.name)
-                    }
-                    append("' Work를 삭제하시겠습니까?")
-                }
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("삭제")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
-        }
-    )
-}
-// --- ▲▲▲ 추가된 Composable ▲▲▲ ---
+// 재사용을 위해 PixelArtConfirmDialog 로 대체되었으므로 아래 함수들은 삭제합니다.
+// @Composable fun RenamePresetDialog(...) { ... }
+// @Composable fun DeleteConfirmDialog(...) { ... }
 
 
 // ... CycleIndicator, SpriteSheetImage 함수는 기존과 동일 ...
@@ -453,20 +433,21 @@ fun CycleIndicator(
             ) {
                 rowItems.forEach { (index, mode) ->
                     val color = when (mode) {
-                        Mode.STUDY -> Color.Red
-                        Mode.SHORT_BREAK -> Color.Green
-                        Mode.LONG_BREAK -> Color.Blue
+                        Mode.STUDY -> Color(0xFFC62828)
+                        Mode.SHORT_BREAK -> Color(0xFF2E7D32)
+                        Mode.LONG_BREAK -> Color(0xFF1565C0)
                     }
 
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
                             .size(16.dp)
+                            .border(1.dp, Color.White.copy(alpha=0.5f), RectangleShape)
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             when {
-                                index < currentIndex -> drawCircle(color = color)
-                                else -> drawCircle(color = color, style = Stroke(width = 2.dp.toPx()))
+                                index < currentIndex -> drawRect(color = color)
+                                else -> drawRect(color = color.copy(alpha=0.3f))
                             }
                         }
                     }
