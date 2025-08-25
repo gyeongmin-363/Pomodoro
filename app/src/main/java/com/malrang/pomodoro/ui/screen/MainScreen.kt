@@ -413,13 +413,26 @@ fun CycleIndicator(
             add(Mode.LONG_BREAK)
         }
     }
+
+    // ▼▼▼ 로직 수정 부분 ▼▼▼
     val currentIndex = remember(currentMode, totalSessions, longBreakInterval) {
-        val cyclePosition = (totalSessions - 1).coerceAtLeast(0) % longBreakInterval
-        when (currentMode) {
-            Mode.STUDY -> (totalSessions % longBreakInterval) * 2
-            else -> cyclePosition * 2 + 1
+        val cycleLength = longBreakInterval * 2
+        // 요구사항 1: 긴 휴식이 끝난 직후의 STUDY 세션에서는 인디케이터를 꽉 찬 상태로 유지합니다.
+        // totalSessions가 longBreakInterval의 배수일 때가 긴 휴식이 끝난 시점입니다.
+        if (currentMode == Mode.STUDY && totalSessions > 0 && totalSessions % longBreakInterval == 0) {
+            cycleLength
+        } else {
+            // 요구사항 2: 위 STUDY 세션이 끝나면(즉, totalSessions가 1 증가하면)
+            // 인디케이터가 초기화되고 첫 번째 STUDY 블록이 채워집니다.
+            val cyclePosition = (totalSessions - 1).coerceAtLeast(0) % longBreakInterval
+            when (currentMode) {
+                Mode.STUDY -> (totalSessions % longBreakInterval) * 2
+                else -> cyclePosition * 2 + 1
+            }
         }
     }
+    // ▲▲▲ 로직 수정 부분 ▲▲▲
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -456,7 +469,6 @@ fun CycleIndicator(
         }
     }
 }
-
 
 @Composable
 fun SpriteSheetImage(
