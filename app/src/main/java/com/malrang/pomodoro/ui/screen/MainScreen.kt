@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -116,7 +117,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             )
         }
 
-        // --- ▼▼▼ 수정된 부분: 배경화면 조건부 렌더링 ▼▼▼ ---
         if (state.useGrassBackground) {
             Image(
                 painter = painterResource(id = R.drawable.grass_background),
@@ -131,9 +131,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     .background(Color.Black)
             )
         }
-        // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 
-        // --- ▼▼▼ 수정된 부분: 동물 스프라이트 렌더링 조건 추가 ▼▼▼ ---
         if ((state.currentMode != Mode.STUDY || state.isPaused) && state.useGrassBackground) {
             state.activeSprites.forEach { sp ->
                 SpriteSheetImage(
@@ -145,7 +143,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 )
             }
         }
-        // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 
         LaunchedEffect(widthPx, heightPx, state.activeSprites.size) {
             if (widthPx == 0 || heightPx == 0) return@LaunchedEffect
@@ -269,9 +266,13 @@ fun WorkPresetsManager(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .border(4.dp, Color.Black), // 두꺼운 픽셀 테두리
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors().copy(
+            containerColor = Color(0xaa555555)
+        )
     ) {
         Column {
             LazyColumn(
