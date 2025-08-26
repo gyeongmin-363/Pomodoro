@@ -15,5 +15,7 @@ enum class Screen {
     /** 통계 */
     Stats,
     /** 화이트리스트 */
-    Whitelist
+    Whitelist,
+    /** 권한 설정 화면 */
+    Permission
 }

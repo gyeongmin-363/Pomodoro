@@ -39,5 +39,7 @@ data class PomodoroUiState(
 
     val isTimerStartedOnce: Boolean = false,
     val useGrassBackground: Boolean = true,
-    val whitelistedApps: Set<String> = emptySet()
+    val whitelistedApps: Set<String> = emptySet(),
+
+    val permissions: List<PermissionInfo> = emptyList()
 )

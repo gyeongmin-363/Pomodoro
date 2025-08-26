@@ -1,10 +1,18 @@
 package com.malrang.pomodoro.viewmodel
 
+import android.Manifest
+import android.app.AppOpsManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.dataclass.ui.Mode
+import com.malrang.pomodoro.dataclass.ui.PermissionInfo
+import com.malrang.pomodoro.dataclass.ui.PermissionType
 import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.Settings
@@ -67,6 +75,60 @@ class PomodoroViewModel(
             }
         }
     }
+
+    /**
+     * ✅ 현재 필요한 모든 권한의 상태를 확인하고 UI 상태를 업데이트합니다.
+     * 모든 권한이 부여되었는지 여부를 반환합니다.
+     * @return 모든 권한이 부여되었다면 true, 아니면 false.
+     */
+    fun checkAndupdatePermissions(context: Context): Boolean {
+        val permissionList = mutableListOf<PermissionInfo>()
+
+        // 1. 알림 권한 (API 33+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionList.add(
+                PermissionInfo(
+                    type = PermissionType.NOTIFICATION,
+                    title = "알림",
+                    description = "타이머 진행 상황을 알림으로 표시하기 위해 필요합니다.",
+                    isGranted = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                )
+            )
+        }
+
+        // 2. 다른 앱 위에 표시 권한
+        permissionList.add(
+            PermissionInfo(
+                type = PermissionType.OVERLAY,
+                title = "다른 앱 위에 표시",
+                description = "공부 중 다른 앱 사용 시 경고창을 띄우기 위해 필요합니다.",
+                isGranted = android.provider.Settings.canDrawOverlays(context)
+            )
+        )
+
+        // 3. 사용 정보 접근 권한
+        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            context.packageName
+        )
+        permissionList.add(
+            PermissionInfo(
+                type = PermissionType.USAGE_STATS,
+                title = "사용 정보 접근",
+                description = "공부에 방해되는 앱 사용을 감지하기 위해 필요합니다.",
+                isGranted = mode == AppOpsManager.MODE_ALLOWED
+            )
+        )
+
+        _uiState.update { it.copy(permissions = permissionList) }
+
+        return permissionList.all { it.isGranted }
+    }
+
 
     /**
      * 설정 화면에 진입할 때, 현재 설정을 임시 설정으로 복사합니다.
