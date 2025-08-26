@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -353,7 +354,7 @@ class TimerService : Service() {
 
         val sessionText = if (currentMode == Mode.STUDY) " | 세션: ${totalSessions + 1}" else ""
         val contentText = "$statusText$sessionText"
-
+        
         return NotificationCompat.Builder(this, "pomodoro_timer")
             .setContentTitle("뽀모도로 타이머: $modeText")
             .setContentText(contentText)
