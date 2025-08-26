@@ -66,6 +66,32 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     var showResetConfirm by remember { mutableStateOf(false) }
     var showSkipConfirm by remember { mutableStateOf(false) }
 
+    // 배경에 따른 컨텐츠 색상 결정
+    val contentColor = if (state.useGrassBackground) Color.Black else Color.White
+    val secondaryTextColor = if (state.useGrassBackground) Color.DarkGray else Color.LightGray
+    val highlightColor = if (state.useGrassBackground) Color(0xFF01579B) else Color.Cyan // 잔디 배경일 때 더 어두운 파란색
+    val textFieldColors = if (state.useGrassBackground) {
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color.Black,
+            unfocusedBorderColor = Color.Gray,
+            cursorColor = Color.Black,
+            focusedLabelColor = Color.Black,
+            unfocusedLabelColor = Color.Gray,
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black
+        )
+    } else {
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color.White,
+            unfocusedBorderColor = Color.Gray,
+            cursorColor = Color.White,
+            focusedLabelColor = Color.White,
+            unfocusedLabelColor = Color.Gray,
+            focusedTextColor = Color.White,
+            unfocusedTextColor = Color.White
+        )
+    }
+
     if (presetToRename != null) {
         PixelArtConfirmDialog(
             onDismissRequest = { presetToRename = null },
@@ -82,15 +108,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 onValueChange = { newPresetName = it },
                 label = { Text("새 이름") },
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.White,
-                    unfocusedBorderColor = Color.Gray,
-                    cursorColor = Color.White,
-                    focusedLabelColor = Color.White,
-                    unfocusedLabelColor = Color.Gray,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
-                )
+                colors = textFieldColors
             )
         }
     }
@@ -108,12 +126,12 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             Text(
                 buildAnnotatedString {
                     append("정말로 '")
-                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color=Color.White)) {
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = contentColor)) {
                         append(presetToDelete!!.name)
                     }
                     append("' Work를 삭제하시겠습니까?")
                 },
-                color = Color.LightGray
+                color = secondaryTextColor
             )
         }
     }
@@ -128,7 +146,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 showSkipConfirm = false
             }
         ) {
-            Text("현재 세션을 건너뛰시겠습니까?", color = Color.LightGray)
+            Text("현재 세션을 건너뛰시겠습니까?", color = secondaryTextColor)
         }
     }
 
@@ -150,7 +168,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     showResetConfirm = false
                 }
             ) {
-                Text("정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.", color = Color.LightGray)
+                Text("정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.", color = secondaryTextColor)
             }
         }
 
@@ -199,14 +217,18 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("픽모도로", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            val titleText = when (state.currentMode) {
+                Mode.STUDY -> "📖 공부 시간"
+                Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
+            }
+            Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
             Spacer(Modifier.height(16.dp))
 
             val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
 
             TextButton(onClick = { showWorkManager = !showWorkManager }) {
-                Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = Color.White)
+                Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
             }
 
             AnimatedVisibility(visible = showWorkManager) {
@@ -223,7 +245,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     onEditSettings = { presetId ->
                         viewModel.startEditingWorkPreset(presetId)
                         viewModel.showScreen(Screen.Settings)
-                    }
+                    },
+                    useGrassBackground = state.useGrassBackground
                 )
             }
 
@@ -232,33 +255,34 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
                 fontSize = 60.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = contentColor
             )
             Spacer(Modifier.height(16.dp))
             CycleIndicator(
                 modifier = Modifier.fillMaxWidth(),
                 currentMode = state.currentMode,
                 totalSessions = state.totalSessions,
-                longBreakInterval = state.settings.longBreakInterval
+                longBreakInterval = state.settings.longBreakInterval,
+                borderColor = contentColor.copy(alpha = 0.5f)
             )
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!state.isRunning) {
                     IconButton(onClick = { viewModel.startTimer() }) {
-                        Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = Color.White)
+                        Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = contentColor)
                     }
                 } else {
                     IconButton(onClick = { viewModel.pauseTimer() }) {
-                        Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = Color.White)
+                        Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = contentColor)
                     }
                 }
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = { showResetConfirm = true }) {
-                    Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = Color.White)
+                    Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = contentColor)
                 }
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = { showSkipConfirm = true }) {
-                    Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = Color.White)
+                    Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = contentColor)
                 }
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = {
@@ -267,35 +291,31 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     }
                     viewModel.toggleBackground()
                 }) {
-                    Icon(painterResource(R.drawable.ic_wallpaper), contentDescription = "배경 변경", tint = Color.White)
+                    Icon(painterResource(R.drawable.ic_wallpaper), contentDescription = "배경 변경", tint = contentColor)
                 }
             }
             Spacer(Modifier.height(24.dp))
             Text(
                 buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = Color.LightGray)) { append("연속 완료 세션 : ") }
-                    withStyle(style = SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Cyan)) { append("${state.totalSessions} ") }
+                    withStyle(style = SpanStyle(color = secondaryTextColor)) { append("연속 완료 세션 : ") }
+                    withStyle(style = SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = highlightColor)) { append("${state.totalSessions} ") }
                 }
             )
             Spacer(Modifier.height(24.dp))
 
-            // ✅ 화이트리스트 버튼이 제거된 최종 UI
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
-                    Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = Color.White)
+                    Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = contentColor)
                 }
                 IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
-                    Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = Color.White)
+                    Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = contentColor)
                 }
-                // 설정 화면으로 이동하는 버튼은 WorkPreset 관리 UI에 이미 존재하므로 여기서는 제거하거나 다른 기능으로 대체 가능합니다.
-                // 일단은 비워두겠습니다.
             }
         }
     }
 }
 
 
-// ... (WorkPresetsManager, WorkPresetItem, CycleIndicator, SpriteSheetImage 함수는 기존과 동일)
 @Composable
 fun WorkPresetsManager(
     presets: List<WorkPreset>,
@@ -304,16 +324,19 @@ fun WorkPresetsManager(
     onAddPreset: () -> Unit,
     onDeletePreset: (WorkPreset) -> Unit,
     onRenamePreset: (WorkPreset) -> Unit,
-    onEditSettings: (String) -> Unit
+    onEditSettings: (String) -> Unit,
+    useGrassBackground: Boolean
 ) {
+    val contentColor = if (useGrassBackground) Color.Black else Color.White
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .border(2.dp, Color.White),
+            .border(2.dp, contentColor),
         shape = RectangleShape,
         colors = CardDefaults.cardColors(
-            containerColor = Color(0x992D2A5A)
+            containerColor = if (useGrassBackground) Color(0x99FFFFFF) else Color(0x992D2A5A)
         )
     ) {
         Column {
@@ -327,18 +350,19 @@ fun WorkPresetsManager(
                         onSelect = { onPresetSelected(preset.id) },
                         onRename = { onRenamePreset(preset) },
                         onEditSettings = { onEditSettings(preset.id) },
-                        onDelete = { onDeletePreset(preset) }
+                        onDelete = { onDeletePreset(preset) },
+                        useGrassBackground = useGrassBackground
                     )
                 }
             }
-            Divider(color = Color.White.copy(alpha = 0.5f))
+            Divider(color = contentColor.copy(alpha = 0.5f))
             TextButton(
                 onClick = onAddPreset,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Work 추가", tint = Color.White)
+                Icon(Icons.Default.Add, contentDescription = "Work 추가", tint = contentColor)
                 Spacer(Modifier.width(4.dp))
-                Text("새 Work 추가", color = Color.White)
+                Text("새 Work 추가", color = contentColor)
             }
         }
     }
@@ -351,8 +375,25 @@ fun WorkPresetItem(
     onSelect: () -> Unit,
     onRename: () -> Unit,
     onEditSettings: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    useGrassBackground: Boolean
 ) {
+    val contentColor = if (useGrassBackground) Color.Black else Color.White
+    val radioColors = if (useGrassBackground) {
+        RadioButtonDefaults.colors(
+            selectedColor = Color.Black,
+            unselectedColor = Color.Gray
+        )
+    } else {
+        RadioButtonDefaults.colors(
+            selectedColor = Color.White,
+            unselectedColor = Color.Gray
+        )
+    }
+    val editIconTint = if (useGrassBackground) Color(0xFF0D47A1) else Color.Cyan
+    val settingsIconTint = if (useGrassBackground) Color(0xFFF9A825) else Color.Yellow
+    val deleteIconTint = if (useGrassBackground) Color(0xFFB71C1C) else Color(0xFFE91E63)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -363,25 +404,22 @@ fun WorkPresetItem(
         RadioButton(
             selected = isSelected,
             onClick = onSelect,
-            colors = RadioButtonDefaults.colors(
-                selectedColor = Color.White,
-                unselectedColor = Color.Gray
-            )
+            colors = radioColors
         )
         Text(
             text = preset.name,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
-            color = Color.White
+            color = contentColor
         )
         IconButton(onClick = onRename) {
-            Icon(Icons.Default.Edit, contentDescription = "이름 변경", tint = Color.Cyan)
+            Icon(Icons.Default.Edit, contentDescription = "이름 변경", tint = editIconTint)
         }
         IconButton(onClick = onEditSettings) {
-            Icon(Icons.Default.Settings, contentDescription = "설정 변경", tint = Color.Yellow)
+            Icon(Icons.Default.Settings, contentDescription = "설정 변경", tint = settingsIconTint)
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = Color(0xFFE91E63))
+            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = deleteIconTint)
         }
     }
 }
@@ -391,7 +429,8 @@ fun CycleIndicator(
     modifier: Modifier = Modifier,
     currentMode: Mode,
     totalSessions: Int,
-    longBreakInterval: Int
+    longBreakInterval: Int,
+    borderColor: Color
 ) {
     if (longBreakInterval <= 0) return
     val cycleSequence = remember(longBreakInterval) {
@@ -440,7 +479,7 @@ fun CycleIndicator(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
                             .size(16.dp)
-                            .border(1.dp, Color.White.copy(alpha=0.5f), RectangleShape)
+                            .border(1.dp, borderColor, RectangleShape)
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             when {
