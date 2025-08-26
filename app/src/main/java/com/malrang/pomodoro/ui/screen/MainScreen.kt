@@ -68,7 +68,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
     // 배경에 따른 컨텐츠 색상 결정
     val contentColor = if (state.useGrassBackground) Color.Black else Color.White
-    val secondaryTextColor = if (state.useGrassBackground) Color.DarkGray else Color.LightGray
+    val secondaryTextColor = Color.LightGray
     val highlightColor = if (state.useGrassBackground) Color(0xFF01579B) else Color.Cyan // 잔디 배경일 때 더 어두운 파란색
     val textFieldColors = if (state.useGrassBackground) {
         OutlinedTextFieldDefaults.colors(
@@ -126,7 +126,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             Text(
                 buildAnnotatedString {
                     append("정말로 '")
-                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = contentColor)) {
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = Color.White)) {
                         append(presetToDelete!!.name)
                     }
                     append("' Work를 삭제하시겠습니까?")
@@ -284,15 +284,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 IconButton(onClick = { showSkipConfirm = true }) {
                     Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = contentColor)
                 }
-                Spacer(Modifier.width(8.dp))
-                IconButton(onClick = {
-                    if (state.useGrassBackground) {
-                        Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
-                    }
-                    viewModel.toggleBackground()
-                }) {
-                    Icon(painterResource(R.drawable.ic_wallpaper), contentDescription = "배경 변경", tint = contentColor)
-                }
+
             }
             Spacer(Modifier.height(24.dp))
             Text(
@@ -309,6 +301,14 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 }
                 IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
                     Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = contentColor)
+                }
+                IconButton(onClick = {
+                    if (state.useGrassBackground) {
+                        Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
+                    }
+                    viewModel.toggleBackground()
+                }) {
+                    Icon(painterResource(R.drawable.light_night), contentDescription = "배경 변경", tint = contentColor)
                 }
             }
         }
