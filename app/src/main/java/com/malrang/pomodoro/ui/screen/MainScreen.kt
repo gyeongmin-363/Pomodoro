@@ -53,6 +53,7 @@ import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
+import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.delay
 
@@ -286,7 +287,7 @@ fun PortraitMainScreen(
     ) {
 
         TextButton(onClick = { onShowWorkManagerChange(!showWorkManager) }) {
-            Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
+            Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor, style = com.malrang.pomodoro.ui.theme.Typography.bodyLarge)
             Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
         }
 
