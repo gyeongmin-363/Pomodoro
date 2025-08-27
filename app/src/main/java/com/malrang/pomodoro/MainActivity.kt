@@ -1,7 +1,7 @@
 package com.malrang.pomodoro
 
 import android.Manifest
-import android.app.AppOpsManager
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -12,7 +12,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,6 +25,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.malrang.pomodoro.dataclass.ui.Mode
+import com.malrang.pomodoro.dataclass.ui.PermissionType
+import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.service.AppUsageMonitoringService
 import com.malrang.pomodoro.service.TimerService
@@ -35,6 +36,7 @@ import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.withpet.BackPressExit
+import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
 
@@ -43,65 +45,82 @@ class MainActivity : ComponentActivity() {
     private val timerUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == TimerService.TIMER_TICK) {
-                // ... (내용 동일)
                 val timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                 val isRunning = intent.getBooleanExtra("IS_RUNNING", false)
+
+                // [설명] 티라미수(API 33) 이상에서는 getSerializableExtra의 두 번째 인자로 클래스 타입을 넘겨야 합니다.
+                // 하위 버전과의 호환성을 위해 분기 처리했으며, 기존 코드가 올바르게 작성되었습니다.
                 val currentMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getSerializableExtra("CURRENT_MODE", Mode::class.java)
                 } else {
+                    // [설명] 하위 버전에서는 @Suppress("DEPRECATION")을 사용하여 이전 방식을 사용합니다.
                     @Suppress("DEPRECATION")
                     intent.getSerializableExtra("CURRENT_MODE") as? Mode
                 } ?: Mode.STUDY
+
                 val totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
                 vm.updateTimerStateFromService(timeLeft, isRunning, currentMode, totalSessions)
             }
         }
     }
-    private val requestPermissionLauncher = registerForActivityResult(
+
+    private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { }
+    ) {
+        checkPermissionsAndNavigate()
+    }
+
+    private val settingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        checkPermissionsAndNavigate()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        askNotificationPermission()
 
         setContent {
             PomodoroTheme {
                 Scaffold {
-                    Box(modifier = Modifier.padding(it)){
-                        PomodoroApp(vm)
+                    Box(modifier = Modifier.padding(it)) {
+                        PomodoroApp(vm, onRequestPermission = ::requestNextPermission)
                         BackPressExit()
                     }
                 }
             }
         }
-
-        // 앱 시작 시 권한 확인
-        if (!hasUsageStatsPermission()) {
-            requestUsageStatsPermission()
-        }
-        if (!Settings.canDrawOverlays(this)) {
-            requestOverlayPermission()
-        }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onResume() {
         super.onResume()
         val timerFilter = IntentFilter(TimerService.TIMER_TICK)
-        registerReceiver(timerUpdateReceiver, timerFilter)
 
-        // ✅ 화면으로 돌아올 때마다 모든 감시와 경고를 중지시킵니다.
+        // [설명] 티라미수(API 33) 이상에서는 리시버 등록 시 데이터 수신 가능 여부(exported)를 명시해야 합니다.
+        // RECEIVER_NOT_EXPORTED는 앱 내부에서만 브로드캐스트를 수신하겠다는 의미입니다.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                timerUpdateReceiver,
+                timerFilter,
+                Context.RECEIVER_NOT_EXPORTED // 티라미수 이상에서 추가된 플래그
+            )
+        } else {
+            // [설명] 하위 버전에서는 해당 플래그 없이, 이전 방식으로 리시버를 등록합니다.
+            @Suppress("DEPRECATION")
+            registerReceiver(timerUpdateReceiver, timerFilter)
+        }
+
+        checkPermissionsAndNavigate()
         stopAppMonitoringService()
         stopWarningOverlay()
     }
 
     override fun onStop() {
         super.onStop()
-        // ✅ 공부 중에 앱을 벗어나는 경우, 감시 서비스를 새로 시작합니다.
         val state = vm.uiState.value
         if (state.isRunning && state.currentMode == Mode.STUDY) {
-            startAppMonitoringService(state.whitelistedApps)
+            startAppMonitoringService(state.whitelistedApps, state.settings.blockMode)
         }
     }
 
@@ -110,57 +129,77 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(timerUpdateReceiver)
     }
 
-    // ... (onDestroy, askNotificationPermission, 권한 관련 함수들은 기존과 동일) ...
     override fun onDestroy() {
         super.onDestroy()
         if (TimerService.isServiceActive()) {
             var hasNotificationPermission = true
+            // [설명] POST_NOTIFICATIONS 권한은 티라미수(API 33) 이상에서만 필요합니다.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (ContextCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
                     hasNotificationPermission = false
                 }
             }
+            // [설명] 티라미수 버전에서 알림 권한이 없다면 서비스를 종료합니다.
+            // 하위 버전에서는 hasNotificationPermission이 항상 true이므로, 이 조건에 걸리지 않고 서비스가 유지됩니다.
+            // 이는 올바른 동작입니다. (하위 버전은 앱 설치 시 알림 권한을 자동으로 획득)
             if (!hasNotificationPermission) {
                 val stopIntent = Intent(this, TimerService::class.java)
                 stopService(stopIntent)
             }
         }
     }
-    private fun askNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
-                PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+
+    private fun checkPermissionsAndNavigate() {
+        val allGranted = vm.checkAndupdatePermissions(this)
+        if (!allGranted) {
+            vm.showScreen(Screen.Permission)
+        } else {
+            if (vm.uiState.value.currentScreen == Screen.Permission) {
+                vm.showScreen(Screen.Main)
             }
         }
     }
-    private fun hasUsageStatsPermission(): Boolean {
-        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = appOps.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
-            packageName
-        )
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
-    private fun requestUsageStatsPermission() {
-        Toast.makeText(this, "공부 중 다른 앱 사용 감지를 위해 권한이 필요합니다.", Toast.LENGTH_LONG).show()
-        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-    }
-    private fun requestOverlayPermission() {
-        Toast.makeText(this, "경고창을 표시하기 위해 다른 앱 위에 그리기 권한이 필요합니다.", Toast.LENGTH_LONG).show()
-        val intent = Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:$packageName")
-        )
-        startActivity(intent)
+
+    private fun requestNextPermission() {
+        val nextPermission = vm.uiState.value.permissions.firstOrNull { !it.isGranted }
+        when (nextPermission?.type) {
+            PermissionType.NOTIFICATION -> {
+                // [설명] POST_NOTIFICATIONS 권한 요청은 티라미수(API 33) 이상에서만 필요합니다.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                // [설명] 하위 버전에서는 이 권한이 존재하지 않으므로, 아무런 동작을 하지 않는 것이 맞습니다.
+                // 따라서 'else' 블록이 없는 것이 올바른 구현입니다.
+            }
+            PermissionType.OVERLAY -> {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    "package:$packageName".toUri()
+                )
+                settingsLauncher.launch(intent)
+            }
+            PermissionType.USAGE_STATS -> {
+                settingsLauncher.launch(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            }
+            else -> {
+                checkPermissionsAndNavigate()
+            }
+        }
     }
 
-    private fun startAppMonitoringService(whitelist: Set<String>) {
-        if (!hasUsageStatsPermission() || !Settings.canDrawOverlays(this)) return
+    private fun startAppMonitoringService(
+        whitelist: Set<String>,
+        blockMode: com.malrang.pomodoro.dataclass.ui.BlockMode
+    ) {
+        if (vm.uiState.value.permissions.any { !it.isGranted }) return
+
         val intent = Intent(this, AppUsageMonitoringService::class.java).apply {
             putExtra("WHITELISTED_APPS", whitelist.toTypedArray())
+            putExtra("BLOCK_MODE", blockMode.name)
         }
         startService(intent)
     }
@@ -173,7 +212,6 @@ class MainActivity : ComponentActivity() {
         stopService(Intent(this, WarningOverlayService::class.java))
     }
 }
-
 
 class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

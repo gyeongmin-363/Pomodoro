@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.withpet.BackPressMove
 
 /**
  * 설치된 앱 목록을 보여주고 화이트리스트를 관리하는 화면입니다.
@@ -34,10 +35,8 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
     val context = LocalContext.current
     val packageManager = context.packageManager
 
-    // ✅ 검색어 상태를 관리합니다.
     var searchQuery by remember { mutableStateOf("") }
 
-// ✅ 시스템 앱을 포함한 모든 설치된 앱 목록을 가져옵니다.
     val allApps = remember {
         packageManager.queryIntentActivities(
             Intent(Intent.ACTION_MAIN, null).apply {
@@ -51,10 +50,6 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
             }
     }
 
-
-
-
-    // ✅ 검색어에 따라 앱 목록을 필터링합니다.
     val filteredApps = remember(searchQuery, allApps) {
         if (searchQuery.isBlank()) {
             allApps
@@ -65,12 +60,18 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
         }
     }
 
+    // ✅ 시스템 뒤로가기 버튼을 눌렀을 때 SettingsScreen으로 이동하도록 설정
+    BackPressMove {
+        viewModel.showScreen(Screen.Settings)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("앱 허용 목록 (전체)") },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.showScreen(Screen.Main) }) {
+                    // ✅ 아이콘 버튼을 눌렀을 때 SettingsScreen으로 이동하도록 수정
+                    IconButton(onClick = { viewModel.showScreen(Screen.Settings) }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }
@@ -82,7 +83,6 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            // ✅ 검색창 UI 추가
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -105,7 +105,6 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // ✅ 필터링된 앱 목록을 사용합니다.
                 items(filteredApps, key = { it.packageName }) { appInfo ->
                     val appName = packageManager.getApplicationLabel(appInfo).toString()
                     val packageName = appInfo.packageName

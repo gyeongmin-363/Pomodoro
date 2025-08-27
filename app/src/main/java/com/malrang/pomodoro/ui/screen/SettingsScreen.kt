@@ -1,10 +1,8 @@
 package com.malrang.pomodoro.ui.screen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,19 +10,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,12 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
@@ -47,17 +47,27 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 @Composable
 fun SettingsScreen(viewModel: PomodoroViewModel) {
     val editingPreset by viewModel.editingWorkPreset.collectAsState()
-    val state by viewModel.uiState.collectAsState()
-    val settings = editingPreset?.settings ?: state.settings
+    val settings by viewModel.draftSettings.collectAsState()
     val title = editingPreset?.name ?: "기본 설정"
 
     var showDialog by remember { mutableStateOf(false) }
+
+    // 설정 화면이 시작될 때 ViewModel에 임시 설정을 초기화하도록 요청합니다.
+    LaunchedEffect(Unit) {
+        viewModel.initializeDraftSettings()
+    }
+
+    // settings가 null이면 UI를 그리지 않아 NullPointerException을 방지합니다.
+    if (settings == null) {
+        return
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF1E1B4B))
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -72,40 +82,39 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
         Spacer(Modifier.height(8.dp))
 
-        // --- ▼▼▼ UI 개선: 슬라이더 및 체크박스 색상 통일 ▼▼▼ ---
         val sliderColors = SliderDefaults.colors(
             thumbColor = Color.White,
             activeTrackColor = Color(0xFF3F51B5),
             inactiveTrackColor = Color.Gray
         )
 
-        Text("공부 시간: ${settings.studyTime}분", color = Color.White)
+        Text("공부 시간: ${settings!!.studyTime}분", color = Color.White)
         Slider(
-            value = settings.studyTime.toFloat(),
+            value = settings!!.studyTime.toFloat(),
             onValueChange = { viewModel.updateStudyTime(it.toInt()) },
             valueRange = 1f..60f,
             colors = sliderColors
         )
 
-        Text("짧은 휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
+        Text("짧은 휴식 시간: ${settings!!.shortBreakTime}분", color = Color.White)
         Slider(
-            value = settings.shortBreakTime.toFloat(),
+            value = settings!!.shortBreakTime.toFloat(),
             onValueChange = { viewModel.updateShortBreakTime(it.toInt()) },
             valueRange = 1f..30f,
             colors = sliderColors
         )
 
-        Text("긴 휴식 시간: ${settings.longBreakTime}분", color = Color.White)
+        Text("긴 휴식 시간: ${settings!!.longBreakTime}분", color = Color.White)
         Slider(
-            value = settings.longBreakTime.toFloat(),
+            value = settings!!.longBreakTime.toFloat(),
             onValueChange = { viewModel.updateLongBreakTime(it.toInt()) },
             valueRange = 1f..60f,
             colors = sliderColors
         )
 
-        Text("긴 휴식 간격: ${settings.longBreakInterval}회 마다", color = Color.White)
+        Text("긴 휴식 간격: ${settings!!.longBreakInterval}회 마다", color = Color.White)
         Slider(
-            value = settings.longBreakInterval.toFloat(),
+            value = settings!!.longBreakInterval.toFloat(),
             onValueChange = { viewModel.updateLongBreakInterval(it.toInt()) },
             valueRange = 2f..12f,
             steps = 9,
@@ -123,20 +132,63 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) }, colors = checkboxColors)
+            Checkbox(checked = settings!!.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) }, colors = checkboxColors)
             Text("알림음 사용", color = Color.White)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) }, colors = checkboxColors)
+            Checkbox(checked = settings!!.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) }, colors = checkboxColors)
             Text("진동 사용", color = Color.White)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) }, colors = checkboxColors)
+            Checkbox(checked = settings!!.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) }, colors = checkboxColors)
             Text("자동 시작", color = Color.White)
         }
-        // --- ▲▲▲ UI 개선 ▲▲▲ ---
+        Spacer(Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+            TextButton(onClick = { viewModel.showScreen(Screen.Whitelist) }) {
+                Text("예외 목록 설정")
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+
+        val blockOptions = listOf(
+            com.malrang.pomodoro.dataclass.ui.BlockMode.NONE to "없음",
+            com.malrang.pomodoro.dataclass.ui.BlockMode.PARTIAL to "부분 차단",
+            com.malrang.pomodoro.dataclass.ui.BlockMode.FULL to "완전 차단"
+        )
+
+        Column {
+            blockOptions.forEach { (mode, text) ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = (settings!!.blockMode == mode),
+                            onClick = { viewModel.updateBlockMode(mode) }
+                        )
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = (settings!!.blockMode == mode),
+                        onClick = { viewModel.updateBlockMode(mode) },
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = Color.White,
+                            unselectedColor = Color.Gray
+                        )
+                    )
+                    Text(text = text, color = Color.White, modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        }
 
         Spacer(Modifier.weight(1f))
 
@@ -146,7 +198,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         ) {
             IconButton(
                 onClick = {
-                    viewModel.stopEditingWorkPreset()
+                    viewModel.clearDraftSettings()
                     viewModel.showScreen(Screen.Main)
                 },
             ) {
@@ -161,15 +213,14 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         }
     }
 
-    // --- ▼▼▼ 수정된 부분: 공용 다이얼로그 Composable 사용 ▼▼▼ ---
     if (showDialog) {
         PixelArtConfirmDialog(
             onDismissRequest = { showDialog = false },
             title = "저장하시겠습니까?",
             confirmText = "확인",
             onConfirm = {
-                viewModel.reset()
-                viewModel.stopEditingWorkPreset()
+                // 변경사항을 저장하고 타이머를 초기화한 후 메인 화면으로 돌아갑니다.
+                viewModel.saveSettingsAndReset()
                 viewModel.showScreen(Screen.Main)
                 showDialog = false
             }
@@ -180,5 +231,4 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             )
         }
     }
-    // --- ▲▲▲ 수정된 부분 ▲▲▲ ---
 }

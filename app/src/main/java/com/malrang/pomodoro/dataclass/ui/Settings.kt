@@ -16,5 +16,6 @@ data class Settings(
     val longBreakInterval: Int = 4, // 새로운 속성: 긴 휴식까지의 공부 세션 횟수
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
-    val autoStart: Boolean = true   // ✅ 기본값은 자동 시작
+    val autoStart: Boolean = true,   // ✅ 기본값은 자동 시작
+    val blockMode: BlockMode = BlockMode.PARTIAL
 ) : Serializable
