@@ -11,127 +11,111 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.malrang.pomodoro.dataclass.ui.PermissionInfo
 import com.malrang.pomodoro.dataclass.ui.PermissionType
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
-/**
- * 앱 실행에 필요한 권한을 설정하는 화면입니다.
- */
 @Composable
 fun PermissionScreen(vm: PomodoroViewModel) {
     val uiState by vm.uiState.collectAsState()
     val sessionAttemptedPermissions by vm.sessionAttemptedPermissions.collectAsState()
-    val notificationPermanentlyDenied by vm.notificationPermanentlyDenied.collectAsState()
+    val notificationDenialCount by vm.notificationDenialCount.collectAsState()
 
     val permissions = uiState.permissions
     val context = LocalContext.current
     val activity = context as Activity
 
-    // 🔽 [수정] '시도 횟수'와 '총 권한 수'를 계산합니다.
     val attemptedCount = sessionAttemptedPermissions.size
     val totalCount = permissions.size
-    val grantedCount = permissions.count { it.isGranted }
+    val allPermissionsGranted = if (totalCount == 0) false else permissions.all { it.isGranted }
+    val nextPermission = permissions.firstOrNull { it.type !in sessionAttemptedPermissions }
 
-    val nextPermissionToAttempt = permissions.firstOrNull { !sessionAttemptedPermissions.contains(it.type) }
-    val nextPermission = nextPermissionToAttempt ?: permissions.firstOrNull { !it.isGranted }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.onPermissionRequestResult(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
-    // 🔽 [추가] 시도 횟수가 총 권한 수와 같아지면 메인 화면으로 자동 이동하는 효과
     LaunchedEffect(attemptedCount, totalCount) {
-        // 요청할 권한이 있고, 모든 권한에 대한 시도가 완료되었다면 이동
-        if (totalCount > 0 && attemptedCount == totalCount) {
+        if (totalCount > 0 && attemptedCount >= totalCount) {
             vm.showScreen(Screen.Main)
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "앱 사용을 위한 권한 설정",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
+    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "앱 사용을 위한 권한 설정", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 24.dp))
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(permissions) { permission ->
-                    PermissionItem(
-                        permission = permission,
-                        hasBeenAttempted = sessionAttemptedPermissions.contains(permission.type)
-                    )
+                    PermissionItem(permission = permission, hasBeenAttempted = sessionAttemptedPermissions.contains(permission.type))
                 }
             }
 
             Button(
                 onClick = {
                     if (nextPermission != null) {
-                        vm.setPermissionAttemptedInSession(nextPermission.type)
-                        when (nextPermission.type) {
-                            PermissionType.NOTIFICATION -> {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    val permissionString = Manifest.permission.POST_NOTIFICATIONS
-                                    val wasAlreadyAttemptedInSession = sessionAttemptedPermissions.contains(PermissionType.NOTIFICATION)
-                                    val shouldGoToSettings = notificationPermanentlyDenied ||
-                                            (wasAlreadyAttemptedInSession &&
-                                                    !ActivityCompat.shouldShowRequestPermissionRationale(activity, permissionString))
-
-                                    if (shouldGoToSettings) {
-                                        vm.setNotificationPermanentlyDenied()
-                                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                        }
-                                        context.startActivity(intent)
-                                    } else {
-                                        ActivityCompat.requestPermissions(activity, arrayOf(permissionString), 1001)
+                        if (nextPermission.type == PermissionType.NOTIFICATION) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                if (notificationDenialCount >= 2) {
+                                    // 🔽 [수정] 설정으로 이동할 때도 '시도'한 것으로 기록하여 무한 루프를 방지합니다.
+                                    vm.setPermissionAttemptedInSession(nextPermission.type)
+                                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                                     }
+                                    context.startActivity(intent)
+                                } else {
+                                    vm.setPermissionAttemptedInSession(nextPermission.type)
+                                    ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
                                 }
                             }
-                            PermissionType.OVERLAY -> {
-                                val intent = Intent(
-                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    Uri.parse("package:${context.packageName}")
-                                )
-                                context.startActivity(intent)
-                            }
-                            PermissionType.USAGE_STATS -> {
-                                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                                context.startActivity(intent)
+                        } else {
+                            vm.setPermissionAttemptedInSession(nextPermission.type)
+                            when (nextPermission.type) {
+                                PermissionType.OVERLAY -> {
+                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+                                    context.startActivity(intent)
+                                }
+                                PermissionType.USAGE_STATS -> {
+                                    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                                    context.startActivity(intent)
+                                }
+                                else -> {}
                             }
                         }
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                enabled = grantedCount < totalCount
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                enabled = !allPermissionsGranted && nextPermission != null
             ) {
                 Text(
                     text = if (nextPermission != null) {
-                        // 🔽 [수정] 버튼 텍스트의 카운터를 '시도 횟수'로 변경합니다.
                         "${nextPermission.title} 권한 설정하기 ($attemptedCount/$totalCount)"
                     } else {
-                        "모든 권한 허용됨"
+                        "모든 권한 설정 완료"
                     },
                     fontSize = 16.sp
                 )
@@ -140,21 +124,10 @@ fun PermissionScreen(vm: PomodoroViewModel) {
     }
 }
 
-/**
- * 개별 권한 항목을 표시하는 컴포저블
- */
 @Composable
 fun PermissionItem(permission: PermissionInfo, hasBeenAttempted: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = permission.title, fontWeight = FontWeight.Bold)
                 Text(text = permission.description, style = MaterialTheme.typography.bodySmall)

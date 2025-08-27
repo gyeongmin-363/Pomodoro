@@ -35,13 +35,12 @@ class PomodoroViewModel(
     private val _uiState = MutableStateFlow(PomodoroUiState())
     val uiState: StateFlow<PomodoroUiState> = _uiState.asStateFlow()
 
-    /** '현재 세션'에서 시도한 권한을 추적. 앱이 재시작되면 초기화됨. */
     private val _sessionAttemptedPermissions = MutableStateFlow<Set<PermissionType>>(emptySet())
     val sessionAttemptedPermissions: StateFlow<Set<PermissionType>> = _sessionAttemptedPermissions.asStateFlow()
 
-    /** 알림 권한의 영구 거부 상태를 관리. 앱을 재시작해도 유지됨. */
-    private val _notificationPermanentlyDenied = MutableStateFlow(false)
-    val notificationPermanentlyDenied: StateFlow<Boolean> = _notificationPermanentlyDenied.asStateFlow()
+    /** 알림 권한 '거부 횟수'를 관리하는 StateFlow */
+    private val _notificationDenialCount = MutableStateFlow(0)
+    val notificationDenialCount: StateFlow<Int> = _notificationDenialCount.asStateFlow()
 
     private val _editingWorkPreset = MutableStateFlow<WorkPreset?>(null)
     val editingWorkPreset: StateFlow<WorkPreset?> = _editingWorkPreset.asStateFlow()
@@ -51,8 +50,8 @@ class PomodoroViewModel(
 
     init {
         viewModelScope.launch {
-            // ViewModel이 생성될 때 저장소에서 영구 거부 상태를 불러옵니다.
-            _notificationPermanentlyDenied.value = repo.loadNotificationPermanentlyDenied()
+            // ViewModel 생성 시 저장소에서 거부 횟수를 불러옵니다.
+            _notificationDenialCount.value = repo.loadNotificationDenialCount()
 
             val seenIds = repo.loadSeenIds()
             val daily = repo.loadDailyStats()
@@ -88,35 +87,49 @@ class PomodoroViewModel(
     }
 
     /**
-     * '현재 세션'에서 특정 권한을 시도했음을 기록합니다.
-     * @param permissionType 사용자가 설정을 시도한 권한의 타입
+     * 권한 요청 후 화면으로 돌아왔을 때 호출되는 함수
+     * @param context 애플리케이션 컨텍스트
      */
+    fun onPermissionRequestResult(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            checkAndupdatePermissions(context)
+            return
+        }
+
+        val notificationPermissionInfo = uiState.value.permissions.find { it.type == PermissionType.NOTIFICATION }
+        // 알림 권한 정보가 없으면 일반 업데이트만 수행
+        if (notificationPermissionInfo == null) {
+            checkAndupdatePermissions(context)
+            return
+        }
+
+        val wasAttempted = sessionAttemptedPermissions.value.contains(PermissionType.NOTIFICATION)
+        val isGrantedNow = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        // 조건: 1. 이번 세션에서 시도했고, 2. 시도 전에도 허용되지 않았고, 3. 지금도 허용되지 않았다면 -> '새로운 거부'로 간주
+        if (wasAttempted && !notificationPermissionInfo.isGranted && !isGrantedNow) {
+            val newCount = _notificationDenialCount.value + 1
+            viewModelScope.launch {
+                repo.saveNotificationDenialCount(newCount)
+                _notificationDenialCount.value = newCount
+            }
+        }
+
+        // 최종적으로 권한 상태를 다시 확인하여 UI 전체를 업데이트
+        checkAndupdatePermissions(context)
+    }
+
+
     fun setPermissionAttemptedInSession(permissionType: PermissionType) {
         _sessionAttemptedPermissions.update { it + permissionType }
     }
 
-    /**
-     * 알림 권한이 영구적으로 거부되었음을 저장소에 기록합니다.
-     */
-    fun setNotificationPermanentlyDenied() {
-        // 이미 true이면 다시 저장할 필요 없음
-        if (!_notificationPermanentlyDenied.value) {
-            viewModelScope.launch {
-                repo.saveNotificationPermanentlyDenied(true)
-                _notificationPermanentlyDenied.value = true
-            }
-        }
-    }
-
-    /**
-     * ✅ 현재 필요한 모든 권한의 상태를 확인하고 UI 상태를 업데이트합니다.
-     * 모든 권한이 부여되었는지 여부를 반환합니다.
-     * @return 모든 권한이 부여되었다면 true, 아니면 false.
-     */
     fun checkAndupdatePermissions(context: Context): Boolean {
         val permissionList = mutableListOf<PermissionInfo>()
 
-        // 1. 알림 권한 (API 33+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissionList.add(
                 PermissionInfo(
@@ -130,7 +143,6 @@ class PomodoroViewModel(
             )
         }
 
-        // 2. 다른 앱 위에 표시 권한
         permissionList.add(
             PermissionInfo(
                 type = PermissionType.OVERLAY,
@@ -140,7 +152,6 @@ class PomodoroViewModel(
             )
         )
 
-        // 3. 사용 정보 접근 권한
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(
             AppOpsManager.OPSTR_GET_USAGE_STATS,
@@ -158,22 +169,17 @@ class PomodoroViewModel(
 
         _uiState.update { it.copy(permissions = permissionList) }
 
+        val alreadyGrantedTypes = permissionList.filter { it.isGranted }.map { it.type }
+        _sessionAttemptedPermissions.update { currentAttempts -> currentAttempts + alreadyGrantedTypes }
+
         return permissionList.all { it.isGranted }
     }
 
-
-    /**
-     * 설정 화면에 진입할 때, 현재 설정을 임시 설정으로 복사합니다.
-     */
     fun initializeDraftSettings() {
         val settingsToEdit = _editingWorkPreset.value?.settings ?: _uiState.value.settings
         _draftSettings.value = settingsToEdit
     }
 
-    /**
-     * 핵심 리셋 로직을 담고 있는 비공개 헬퍼 함수입니다.
-     * UI 상태 업데이트와 서비스 리셋을 담당합니다.
-     */
     private suspend fun performResetLogic(settings: Settings) {
         repo.saveActiveSprites(emptyList())
         _uiState.update {
@@ -191,9 +197,6 @@ class PomodoroViewModel(
         timerService.resetCompletely(settings)
     }
 
-    /**
-     * 메인 화면의 리셋 버튼을 위한 함수입니다. 현재 설정을 기준으로 리셋을 수행합니다.
-     */
     fun reset() {
         viewModelScope.launch {
             val currentSettings = _uiState.value.workPresets.find { it.id == _uiState.value.currentWorkId }?.settings ?: Settings()
@@ -201,15 +204,11 @@ class PomodoroViewModel(
         }
     }
 
-    /**
-     * 설정 화면에서 변경된 내용을 저장하고, 그 설정에 맞춰 타이머를 리셋합니다.
-     */
     fun saveSettingsAndReset() {
         viewModelScope.launch {
             val settingsToSave = _draftSettings.value ?: return@launch
             val editingId = _editingWorkPreset.value?.id
             val currentId = _uiState.value.currentWorkId
-
             val updatedPresets = _uiState.value.workPresets.map { preset ->
                 val presetIdToUpdate = editingId ?: currentId
                 if (preset.id == presetIdToUpdate) {
@@ -219,29 +218,21 @@ class PomodoroViewModel(
                 }
             }
             repo.saveWorkPresets(updatedPresets)
-
             val newMainUiSettings = if (currentId == (editingId ?: currentId)) {
                 settingsToSave
             } else {
                 _uiState.value.settings
             }
-
             performResetLogic(newMainUiSettings)
             clearDraftSettings()
         }
     }
 
-    /**
-     * 설정 변경을 취소하고 임시 데이터를 초기화합니다.
-     */
     fun clearDraftSettings() {
         _draftSettings.value = null
         _editingWorkPreset.value = null
     }
 
-    /**
-     * 임시 설정 값을 업데이트하는 내부 함수
-     */
     private fun updateDraftSettings(transform: Settings.() -> Settings) {
         _draftSettings.update { it?.transform() }
     }
@@ -264,7 +255,6 @@ class PomodoroViewModel(
 
     fun selectWorkPreset(presetId: String) {
         viewModelScope.launch {
-            val selectedPreset = _uiState.value.workPresets.find { it.id == presetId } ?: return@launch
             repo.saveCurrentWorkId(presetId)
             _uiState.update {
                 it.copy(currentWorkId = presetId)
@@ -287,7 +277,6 @@ class PomodoroViewModel(
             val updatedPresets = _uiState.value.workPresets.filterNot { it.id == id }
             repo.saveWorkPresets(updatedPresets)
             _uiState.update { it.copy(workPresets = updatedPresets) }
-
             if (_uiState.value.currentWorkId == id) {
                 selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "")
             }
@@ -349,7 +338,6 @@ class PomodoroViewModel(
         val nextMode: Mode
         val nextTime: Int
         var newTotalSessions = s.totalSessions
-
         if (s.currentMode == Mode.STUDY) {
             newTotalSessions++
             val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % s.settings.longBreakInterval == 0
@@ -359,7 +347,6 @@ class PomodoroViewModel(
             nextMode = Mode.STUDY
             nextTime = s.settings.studyTime
         }
-
         _uiState.update {
             it.copy(
                 currentMode = nextMode,
@@ -398,7 +385,6 @@ class PomodoroViewModel(
                 if (ny < margin) { ny = margin; vy = -vy }
                 if (nx > widthPx - margin) { nx = widthPx - margin; vx = -vx }
                 if (ny > heightPx - margin) { ny = heightPx - margin; vy = -vy }
-
                 val nextState = if (sp.spriteState == SpriteState.IDLE && Random.nextFloat() < 0.003f) {
                     SpriteState.JUMP
                 } else {

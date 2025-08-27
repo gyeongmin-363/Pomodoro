@@ -3,6 +3,7 @@ package com.malrang.pomodoro.localRepo
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -41,8 +42,8 @@ object DSKeys {
     /** ✅ 화이트리스트 앱 목록을 저장하기 위한 키 */
     val WHITELISTED_APPS = stringSetPreferencesKey("whitelisted_apps")
 
-    /** 🔽 [수정] 알림 권한이 영구적으로 거부되었는지 여부만 저장하기 위한 키 */
-    val NOTIFICATION_PERMISSION_PERMANENTLY_DENIED = booleanPreferencesKey("notification_permission_permanently_denied")
+    /** 🔽 [수정] 알림 권한 거부 '횟수'를 저장하기 위한 Int 키 */
+    val NOTIFICATION_PERMISSION_DENIAL_COUNT = intPreferencesKey("notification_permission_denial_count")
 }
 
 /**
@@ -175,19 +176,19 @@ class PomodoroRepository(private val context: Context) {
     }
 
     /**
-     * 🔽 [추가] DataStore에서 알림 권한 영구 거부 상태를 불러옵니다.
-     * @return 저장된 값이 없으면 false를 반환합니다.
+     * 🔽 [추가] DataStore에서 알림 권한 거부 횟수를 불러옵니다.
+     * @return 저장된 값이 없으면 0을 반환합니다.
      */
-    suspend fun loadNotificationPermanentlyDenied(): Boolean {
-        return context.dataStore.data.first()[DSKeys.NOTIFICATION_PERMISSION_PERMANENTLY_DENIED] ?: false
+    suspend fun loadNotificationDenialCount(): Int {
+        return context.dataStore.data.first()[DSKeys.NOTIFICATION_PERMISSION_DENIAL_COUNT] ?: 0
     }
 
     /**
-     * 🔽 [추가] 알림 권한 영구 거부 상태를 DataStore에 저장합니다.
-     * @param isDenied 영구적으로 거부되었는지 여부
+     * 🔽 [추가] 알림 권한 거부 횟수를 DataStore에 저장합니다.
+     * @param count 저장할 거부 횟수
      */
-    suspend fun saveNotificationPermanentlyDenied(isDenied: Boolean) {
-        context.dataStore.edit { it[DSKeys.NOTIFICATION_PERMISSION_PERMANENTLY_DENIED] = isDenied }
+    suspend fun saveNotificationDenialCount(count: Int) {
+        context.dataStore.edit { it[DSKeys.NOTIFICATION_PERMISSION_DENIAL_COUNT] = count }
     }
 
     private fun createDefaultPresets(): List<WorkPreset> {
