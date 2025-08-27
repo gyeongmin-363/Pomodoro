@@ -8,14 +8,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -25,7 +22,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.malrang.pomodoro.dataclass.ui.Mode
-import com.malrang.pomodoro.dataclass.ui.PermissionType
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.service.AppUsageMonitoringService
@@ -36,7 +32,6 @@ import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.withpet.BackPressExit
-import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
 
@@ -44,22 +39,29 @@ class MainActivity : ComponentActivity() {
 
     private val timerUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == TimerService.TIMER_TICK) {
-                val timeLeft = intent.getIntExtra("TIME_LEFT", 0)
-                val isRunning = intent.getBooleanExtra("IS_RUNNING", false)
+            // [수정] 여러 Action을 처리하기 위해 if문에서 when문으로 변경
+            when (intent?.action) {
+                TimerService.TIMER_TICK -> {
+                    val timeLeft = intent.getIntExtra("TIME_LEFT", 0)
+                    val isRunning = intent.getBooleanExtra("IS_RUNNING", false)
 
-                // [설명] 티라미수(API 33) 이상에서는 getSerializableExtra의 두 번째 인자로 클래스 타입을 넘겨야 합니다.
-                // 하위 버전과의 호환성을 위해 분기 처리했으며, 기존 코드가 올바르게 작성되었습니다.
-                val currentMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getSerializableExtra("CURRENT_MODE", Mode::class.java)
-                } else {
-                    // [설명] 하위 버전에서는 @Suppress("DEPRECATION")을 사용하여 이전 방식을 사용합니다.
-                    @Suppress("DEPRECATION")
-                    intent.getSerializableExtra("CURRENT_MODE") as? Mode
-                } ?: Mode.STUDY
+                    // [설명] 티라미수(API 33) 이상에서는 getSerializableExtra의 두 번째 인자로 클래스 타입을 넘겨야 합니다.
+                    // 하위 버전과의 호환성을 위해 분기 처리했으며, 기존 코드가 올바르게 작성되었습니다.
+                    val currentMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getSerializableExtra("CURRENT_MODE", Mode::class.java)
+                    } else {
+                        // [설명] 하위 버전에서는 @Suppress("DEPRECATION")을 사용하여 이전 방식을 사용합니다.
+                        @Suppress("DEPRECATION")
+                        intent.getSerializableExtra("CURRENT_MODE") as? Mode
+                    } ?: Mode.STUDY
 
-                val totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
-                vm.updateTimerStateFromService(timeLeft, isRunning, currentMode, totalSessions)
+                    val totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
+                    vm.updateTimerStateFromService(timeLeft, isRunning, currentMode, totalSessions)
+                }
+                // [추가] 새로운 동물이 추가되었다는 신호를 받으면 ViewModel의 새로고침 함수 호출
+                TimerService.NEW_ANIMAL_ADDED -> {
+                    vm.refreshActiveSprites()
+                }
             }
         }
     }
@@ -84,18 +86,19 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onResume() {
         super.onResume()
-        val timerFilter = IntentFilter(TimerService.TIMER_TICK)
+        // [수정] BroadcastReceiver가 두 가지 Action을 모두 수신하도록 필터에 추가
+        val timerFilter = IntentFilter().apply {
+            addAction(TimerService.TIMER_TICK)
+            addAction(TimerService.NEW_ANIMAL_ADDED)
+        }
 
-        // [설명] 티라미수(API 33) 이상에서는 리시버 등록 시 데이터 수신 가능 여부(exported)를 명시해야 합니다.
-        // RECEIVER_NOT_EXPORTED는 앱 내부에서만 브로드캐스트를 수신하겠다는 의미입니다.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(
                 timerUpdateReceiver,
                 timerFilter,
-                Context.RECEIVER_NOT_EXPORTED // 티라미수 이상에서 추가된 플래그
+                Context.RECEIVER_NOT_EXPORTED
             )
         } else {
-            // [설명] 하위 버전에서는 해당 플래그 없이, 이전 방식으로 리시버를 등록합니다.
             @Suppress("DEPRECATION")
             registerReceiver(timerUpdateReceiver, timerFilter)
         }
@@ -122,7 +125,6 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         if (TimerService.isServiceActive()) {
             var hasNotificationPermission = true
-            // [설명] POST_NOTIFICATIONS 권한은 티라미수(API 33) 이상에서만 필요합니다.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (ContextCompat.checkSelfPermission(
                         this,
@@ -132,9 +134,6 @@ class MainActivity : ComponentActivity() {
                     hasNotificationPermission = false
                 }
             }
-            // [설명] 티라미수 버전에서 알림 권한이 없다면 서비스를 종료합니다.
-            // 하위 버전에서는 hasNotificationPermission이 항상 true이므로, 이 조건에 걸리지 않고 서비스가 유지됩니다.
-            // 이는 올바른 동작입니다. (하위 버전은 앱 설치 시 알림 권한을 자동으로 획득)
             if (!hasNotificationPermission) {
                 val stopIntent = Intent(this, TimerService::class.java)
                 stopService(stopIntent)

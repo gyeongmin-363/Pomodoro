@@ -254,6 +254,8 @@ class TimerService : Service() {
                 val updatedSprites = repo.loadActiveSprites() + sprite
                 repo.saveSeenIds(updatedSeenIds)
                 repo.saveActiveSprites(updatedSprites)
+
+                sendBroadcast(Intent(NEW_ANIMAL_ADDED))
             }
         }
     }
@@ -385,6 +387,7 @@ class TimerService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 2022
         const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
+        const val NEW_ANIMAL_ADDED = "com.malrang.pomodoro.NEW_ANIMAL_ADDED"
         private var isServiceActive = false
         fun isServiceActive(): Boolean = isServiceActive
     }

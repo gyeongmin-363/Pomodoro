@@ -180,6 +180,15 @@ class PomodoroViewModel(
         _draftSettings.value = settingsToEdit
     }
 
+    // [추가] 저장소에서 활성 스프라이트 목록을 새로고침하는 함수
+    fun refreshActiveSprites() {
+        viewModelScope.launch {
+            val updatedSprites = repo.loadActiveSprites()
+            _uiState.update { it.copy(activeSprites = updatedSprites) }
+        }
+    }
+
+
     private suspend fun performResetLogic(settings: Settings) {
         repo.saveActiveSprites(emptyList())
         _uiState.update {
