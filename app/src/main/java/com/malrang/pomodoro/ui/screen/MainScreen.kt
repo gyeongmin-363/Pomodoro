@@ -272,20 +272,18 @@ fun PortraitMainScreen(
     highlightColor: Color
 ) {
     val context = LocalContext.current
+    val titleText = when (state.currentMode) {
+        Mode.STUDY -> "📖 공부 시간"
+        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
+    }
+    val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val titleText = when (state.currentMode) {
-            Mode.STUDY -> "📖 공부 시간"
-            Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
-        }
-        Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
-        Spacer(Modifier.height(16.dp))
-
-        val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
 
         TextButton(onClick = { onShowWorkManagerChange(!showWorkManager) }) {
             Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
@@ -307,6 +305,9 @@ fun PortraitMainScreen(
                 useGrassBackground = state.useGrassBackground
             )
         }
+        Spacer(Modifier.height(16.dp))
+
+        Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
 
         Spacer(Modifier.height(8.dp))
         Text(
@@ -321,7 +322,8 @@ fun PortraitMainScreen(
             currentMode = state.currentMode,
             totalSessions = state.totalSessions,
             longBreakInterval = state.settings.longBreakInterval,
-            borderColor = contentColor.copy(alpha = 0.5f)
+            borderColor = contentColor.copy(alpha = 0.5f),
+            itemsPerRow = 8
         )
         Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -386,6 +388,12 @@ fun LandscapeMainScreen(
     highlightColor: Color
 ) {
     val context = LocalContext.current
+    val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
+    val titleText = when (state.currentMode) {
+        Mode.STUDY -> "📖 공부 시간"
+        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
+    }
+
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -398,12 +406,20 @@ fun LandscapeMainScreen(
             modifier = Modifier.weight(1f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = secondaryTextColor)) { append("연속 완료 세션 : ") }
+                    withStyle(style = SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = highlightColor)) { append("${state.totalSessions} ") }
+                }
+            )
+            Spacer(Modifier.height(16.dp))
             CycleIndicator(
                 modifier = Modifier.fillMaxWidth(),
                 currentMode = state.currentMode,
                 totalSessions = state.totalSessions,
                 longBreakInterval = state.settings.longBreakInterval,
-                borderColor = contentColor.copy(alpha = 0.5f)
+                borderColor = contentColor.copy(alpha = 0.5f),
+                itemsPerRow = 6
             )
         }
 
@@ -413,14 +429,8 @@ fun LandscapeMainScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            val titleText = when (state.currentMode) {
-                Mode.STUDY -> "📖 공부 시간"
-                Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
-            }
-            Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
-            Spacer(Modifier.height(16.dp))
 
-            val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
+
 
             TextButton(onClick = { onShowWorkManagerChange(!showWorkManager) }) {
                 Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
@@ -442,6 +452,9 @@ fun LandscapeMainScreen(
                     useGrassBackground = state.useGrassBackground
                 )
             }
+            Spacer(Modifier.height(16.dp))
+
+            Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
 
             Spacer(Modifier.height(8.dp))
             Text(
@@ -449,13 +462,6 @@ fun LandscapeMainScreen(
                 fontSize = 60.sp,
                 fontWeight = FontWeight.Bold,
                 color = contentColor
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = secondaryTextColor)) { append("연속 완료 세션 : ") }
-                    withStyle(style = SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = highlightColor)) { append("${state.totalSessions} ") }
-                }
             )
         }
 
@@ -617,7 +623,8 @@ fun CycleIndicator(
     currentMode: Mode,
     totalSessions: Int,
     longBreakInterval: Int,
-    borderColor: Color
+    borderColor: Color,
+    itemsPerRow: Int
 ) {
     if (longBreakInterval <= 0) return
     val cycleSequence = remember(longBreakInterval) {
@@ -649,7 +656,7 @@ fun CycleIndicator(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        cycleSequence.withIndex().chunked(8).forEach { rowItems ->
+        cycleSequence.withIndex().chunked(itemsPerRow).forEach { rowItems ->
             Row(
                 modifier = Modifier.padding(vertical = 2.dp),
                 horizontalArrangement = Arrangement.Center,
