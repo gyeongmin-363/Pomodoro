@@ -64,17 +64,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) {
-        checkPermissionsAndNavigate()
-    }
-
-    private val settingsLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        checkPermissionsAndNavigate()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,7 +73,7 @@ class MainActivity : ComponentActivity() {
             PomodoroTheme {
                 Scaffold {
                     Box(modifier = Modifier.padding(it)) {
-                        PomodoroApp(vm, onRequestPermission = ::requestNextPermission)
+                        PomodoroApp(vm)
                         BackPressExit()
                     }
                 }
@@ -164,32 +153,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun requestNextPermission() {
-        val nextPermission = vm.uiState.value.permissions.firstOrNull { !it.isGranted }
-        when (nextPermission?.type) {
-            PermissionType.NOTIFICATION -> {
-                // [설명] POST_NOTIFICATIONS 권한 요청은 티라미수(API 33) 이상에서만 필요합니다.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-                // [설명] 하위 버전에서는 이 권한이 존재하지 않으므로, 아무런 동작을 하지 않는 것이 맞습니다.
-                // 따라서 'else' 블록이 없는 것이 올바른 구현입니다.
-            }
-            PermissionType.OVERLAY -> {
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    "package:$packageName".toUri()
-                )
-                settingsLauncher.launch(intent)
-            }
-            PermissionType.USAGE_STATS -> {
-                settingsLauncher.launch(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            }
-            else -> {
-                checkPermissionsAndNavigate()
-            }
-        }
-    }
 
     private fun startAppMonitoringService(
         whitelist: Set<String>,
