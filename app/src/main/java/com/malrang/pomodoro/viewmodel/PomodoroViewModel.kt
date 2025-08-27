@@ -75,7 +75,6 @@ class PomodoroViewModel(
             }
         }
     }
-
     /**
      * ✅ 현재 필요한 모든 권한의 상태를 확인하고 UI 상태를 업데이트합니다.
      * 모든 권한이 부여되었는지 여부를 반환합니다.
@@ -85,6 +84,8 @@ class PomodoroViewModel(
         val permissionList = mutableListOf<PermissionInfo>()
 
         // 1. 알림 권한 (API 33+)
+        // [설명] POST_NOTIFICATIONS 권한은 티라미수(API 33) 이상에서만 존재합니다.
+        // 따라서 해당 버전 이상일 경우에만 권한 목록에 추가하고 상태를 확인합니다.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissionList.add(
                 PermissionInfo(
@@ -97,6 +98,8 @@ class PomodoroViewModel(
                 )
             )
         }
+        // [설명] 티라미수 미만 버전에서는 이 권한이 없으므로, 권한 확인 목록에 추가하지 않습니다.
+        // 이것이 하위 버전에 대한 올바른 처리 방식입니다.
 
         // 2. 다른 앱 위에 표시 권한
         permissionList.add(

@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen
 
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
@@ -30,12 +31,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -211,104 +214,231 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            val titleText = when (state.currentMode) {
-                Mode.STUDY -> "📖 공부 시간"
-                Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
-            }
-            Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
-            Spacer(Modifier.height(16.dp))
-
-            val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
-
-            TextButton(onClick = { showWorkManager = !showWorkManager }) {
-                Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
-            }
-
-            AnimatedVisibility(visible = showWorkManager) {
-                WorkPresetsManager(
-                    presets = state.workPresets,
-                    currentPresetId = state.currentWorkId,
-                    onPresetSelected = { viewModel.selectWorkPreset(it) },
-                    onAddPreset = { viewModel.addWorkPreset() },
-                    onDeletePreset = { preset -> presetToDelete = preset },
-                    onRenamePreset = { preset ->
-                        newPresetName = preset.name
-                        presetToRename = preset
-                    },
-                    onEditSettings = { presetId ->
-                        viewModel.startEditingWorkPreset(presetId)
-                        viewModel.showScreen(Screen.Settings)
-                    },
-                    useGrassBackground = state.useGrassBackground
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
-                fontSize = 60.sp,
-                fontWeight = FontWeight.Bold,
-                color = contentColor
-            )
-            Spacer(Modifier.height(16.dp))
-            CycleIndicator(
-                modifier = Modifier.fillMaxWidth(),
-                currentMode = state.currentMode,
-                totalSessions = state.totalSessions,
-                longBreakInterval = state.settings.longBreakInterval,
-                borderColor = contentColor.copy(alpha = 0.5f)
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!state.isRunning) {
-                    IconButton(onClick = { viewModel.startTimer() }) {
-                        Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = contentColor)
+        // 화면 방향 감지
+        val configuration = LocalConfiguration.current
+        when (configuration.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> {
+                // --- 가로 모드 레이아웃 ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // 왼쪽: CycleIndicator
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CycleIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            currentMode = state.currentMode,
+                            totalSessions = state.totalSessions,
+                            longBreakInterval = state.settings.longBreakInterval,
+                            borderColor = contentColor.copy(alpha = 0.5f)
+                        )
                     }
-                } else {
-                    IconButton(onClick = { viewModel.pauseTimer() }) {
-                        Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = contentColor)
+
+                    // 중앙: 타이머 및 정보
+                    Column(
+                        modifier = Modifier.weight(2f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        val titleText = when (state.currentMode) {
+                            Mode.STUDY -> "📖 공부 시간"
+                            Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
+                        }
+                        Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
+                        Spacer(Modifier.height(16.dp))
+
+                        val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
+
+                        TextButton(onClick = { showWorkManager = !showWorkManager }) {
+                            Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
+                        }
+
+                        AnimatedVisibility(visible = showWorkManager) {
+                            WorkPresetsManager(
+                                presets = state.workPresets,
+                                currentPresetId = state.currentWorkId,
+                                onPresetSelected = { viewModel.selectWorkPreset(it) },
+                                onAddPreset = { viewModel.addWorkPreset() },
+                                onDeletePreset = { preset -> presetToDelete = preset },
+                                onRenamePreset = { preset ->
+                                    newPresetName = preset.name
+                                    presetToRename = preset
+                                },
+                                onEditSettings = { presetId ->
+                                    viewModel.startEditingWorkPreset(presetId)
+                                    viewModel.showScreen(Screen.Settings)
+                                },
+                                useGrassBackground = state.useGrassBackground
+                            )
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
+                            fontSize = 60.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = contentColor
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            buildAnnotatedString {
+                                withStyle(style = SpanStyle(color = secondaryTextColor)) { append("연속 완료 세션 : ") }
+                                withStyle(style = SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = highlightColor)) { append("${state.totalSessions} ") }
+                            }
+                        )
+                    }
+
+                    // 오른쪽: 컨트롤 버튼
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (!state.isRunning) {
+                                IconButton(onClick = { viewModel.startTimer() }) {
+                                    Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = contentColor)
+                                }
+                            } else {
+                                IconButton(onClick = { viewModel.pauseTimer() }) {
+                                    Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = contentColor)
+                                }
+                            }
+                            IconButton(onClick = { showResetConfirm = true }) {
+                                Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = contentColor)
+                            }
+                            IconButton(onClick = { showSkipConfirm = true }) {
+                                Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = contentColor)
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
+                                Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = contentColor)
+                            }
+                            IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
+                                Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = contentColor)
+                            }
+                            IconButton(onClick = {
+                                if (state.useGrassBackground) {
+                                    Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
+                                }
+                                viewModel.toggleBackground()
+                            }) {
+                                Icon(painterResource(R.drawable.light_night), contentDescription = "배경 변경", tint = contentColor)
+                            }
+                        }
                     }
                 }
-                Spacer(Modifier.width(8.dp))
-                IconButton(onClick = { showResetConfirm = true }) {
-                    Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = contentColor)
-                }
-                Spacer(Modifier.width(8.dp))
-                IconButton(onClick = { showSkipConfirm = true }) {
-                    Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = contentColor)
-                }
-
             }
-            Spacer(Modifier.height(24.dp))
-            Text(
-                buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = secondaryTextColor)) { append("연속 완료 세션 : ") }
-                    withStyle(style = SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = highlightColor)) { append("${state.totalSessions} ") }
-                }
-            )
-            Spacer(Modifier.height(24.dp))
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
-                    Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = contentColor)
-                }
-                IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
-                    Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = contentColor)
-                }
-                IconButton(onClick = {
-                    if (state.useGrassBackground) {
-                        Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
+            else -> {
+                // --- 세로 모드 레이아웃 (기존 코드) ---
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val titleText = when (state.currentMode) {
+                        Mode.STUDY -> "📖 공부 시간"
+                        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
                     }
-                    viewModel.toggleBackground()
-                }) {
-                    Icon(painterResource(R.drawable.light_night), contentDescription = "배경 변경", tint = contentColor)
+                    Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
+                    Spacer(Modifier.height(16.dp))
+
+                    val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
+
+                    TextButton(onClick = { showWorkManager = !showWorkManager }) {
+                        Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
+                    }
+
+                    AnimatedVisibility(visible = showWorkManager) {
+                        WorkPresetsManager(
+                            presets = state.workPresets,
+                            currentPresetId = state.currentWorkId,
+                            onPresetSelected = { viewModel.selectWorkPreset(it) },
+                            onAddPreset = { viewModel.addWorkPreset() },
+                            onDeletePreset = { preset -> presetToDelete = preset },
+                            onRenamePreset = { preset ->
+                                newPresetName = preset.name
+                                presetToRename = preset
+                            },
+                            onEditSettings = { presetId ->
+                                viewModel.startEditingWorkPreset(presetId)
+                                viewModel.showScreen(Screen.Settings)
+                            },
+                            useGrassBackground = state.useGrassBackground
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
+                        fontSize = 60.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    CycleIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        currentMode = state.currentMode,
+                        totalSessions = state.totalSessions,
+                        longBreakInterval = state.settings.longBreakInterval,
+                        borderColor = contentColor.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!state.isRunning) {
+                            IconButton(onClick = { viewModel.startTimer() }) {
+                                Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = contentColor)
+                            }
+                        } else {
+                            IconButton(onClick = { viewModel.pauseTimer() }) {
+                                Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = contentColor)
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(onClick = { showResetConfirm = true }) {
+                            Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = contentColor)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(onClick = { showSkipConfirm = true }) {
+                            Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = contentColor)
+                        }
+
+                    }
+                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        buildAnnotatedString {
+                            withStyle(style = SpanStyle(color = secondaryTextColor)) { append("연속 완료 세션 : ") }
+                            withStyle(style = SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = highlightColor)) { append("${state.totalSessions} ") }
+                        }
+                    )
+                    Spacer(Modifier.height(24.dp))
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
+                            Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = contentColor)
+                        }
+                        IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
+                            Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = contentColor)
+                        }
+                        IconButton(onClick = {
+                            if (state.useGrassBackground) {
+                                Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
+                            }
+                            viewModel.toggleBackground()
+                        }) {
+                            Icon(painterResource(R.drawable.light_night), contentDescription = "배경 변경", tint = contentColor)
+                        }
+                    }
                 }
             }
         }
