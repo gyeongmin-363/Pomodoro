@@ -103,7 +103,39 @@ class TimerService : Service() {
                 })
             }
             "SKIP" -> {
-                // (기존 코드 생략)
+                job?.cancel()
+                if (wakeLock.isHeld) {
+                    wakeLock.release()
+                }
+                val currentSettings = settings ?: return START_STICKY
+
+                var nextMode = Mode.STUDY
+                var nextTime = 0
+                var newTotalSessions = totalSessions
+
+                if (currentMode == Mode.STUDY) {
+                    newTotalSessions++
+                    val isLongBreakTime = newTotalSessions > 0 &&
+                            newTotalSessions % currentSettings.longBreakInterval == 0
+                    nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
+                    nextTime = if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime
+                } else {
+                    nextMode = Mode.STUDY
+                    nextTime = currentSettings.studyTime
+                }
+
+                currentMode = nextMode
+                totalSessions = newTotalSessions
+                timeLeft = nextTime * 60
+                isRunning = false
+
+                updateNotification()
+                sendBroadcast(Intent(TIMER_TICK).apply {
+                    putExtra("TIME_LEFT", timeLeft)
+                    putExtra("IS_RUNNING", isRunning)
+                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
+                    putExtra("TOTAL_SESSIONS", totalSessions)
+                })
             }
             "RESET" -> {
                 job?.cancel()
