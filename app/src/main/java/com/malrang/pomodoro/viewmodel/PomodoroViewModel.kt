@@ -209,21 +209,31 @@ class PomodoroViewModel(
             val settingsToSave = _draftSettings.value ?: return@launch
             val editingId = _editingWorkPreset.value?.id
             val currentId = _uiState.value.currentWorkId
+
+            // 1. 수정 중인 프리셋 ID 또는 현재 프리셋 ID를 기준으로 설정 값을 업데이트합니다.
+            val presetIdToUpdate = editingId ?: currentId
             val updatedPresets = _uiState.value.workPresets.map { preset ->
-                val presetIdToUpdate = editingId ?: currentId
                 if (preset.id == presetIdToUpdate) {
                     preset.copy(settings = settingsToSave)
                 } else {
                     preset
                 }
             }
+
+            // 2. 업데이트된 프리셋 목록 전체를 저장소에 저장합니다.
             repo.saveWorkPresets(updatedPresets)
-            val newMainUiSettings = if (currentId == (editingId ?: currentId)) {
-                settingsToSave
-            } else {
-                _uiState.value.settings
-            }
-            performResetLogic(newMainUiSettings)
+
+            // 3. UI 상태의 프리셋 목록도 최신 버전으로 업데이트합니다.
+            _uiState.update { it.copy(workPresets = updatedPresets) }
+
+            // 4. '현재 활성화된' 프리셋의 최신 설정을 가져옵니다.
+            //    (다른 프리셋을 수정했더라도, 메인 화면의 타이머는 활성 프리셋 설정을 따라야 합니다.)
+            val newActiveSettings = updatedPresets.find { it.id == currentId }?.settings ?: Settings()
+
+            // 5. 최신 활성 설정으로 타이머와 UI 상태를 리셋합니다.
+            performResetLogic(newActiveSettings)
+
+            // 6. 임시 설정 값을 초기화합니다.
             clearDraftSettings()
         }
     }
