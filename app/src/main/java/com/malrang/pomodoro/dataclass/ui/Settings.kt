@@ -17,5 +17,5 @@ data class Settings(
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val autoStart: Boolean = true,   // ✅ 기본값은 자동 시작
-    val blockMode: BlockMode = BlockMode.PARTIAL
+    val blockMode: BlockMode = BlockMode.NONE
 ) : Serializable
