@@ -189,6 +189,13 @@ class PomodoroViewModel(
     }
 
 
+    // [추가] 서비스에 현재 타이머 상태를 요청하는 함수
+    fun requestTimerStatus() {
+        if (TimerService.isServiceActive()) {
+            timerService.requestStatus()
+        }
+    }
+
     private suspend fun performResetLogic(settings: Settings) {
         repo.saveActiveSprites(emptyList())
         _uiState.update {

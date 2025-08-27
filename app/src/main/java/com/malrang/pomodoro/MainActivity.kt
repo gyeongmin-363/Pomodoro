@@ -103,6 +103,10 @@ class MainActivity : ComponentActivity() {
             registerReceiver(timerUpdateReceiver, timerFilter)
         }
 
+        // [수정] 앱이 포그라운드로 돌아올 때 서비스의 최신 상태를 요청하고, 동물 목록을 새로고침합니다.
+        vm.requestTimerStatus()
+        vm.refreshActiveSprites()
+
         checkPermissionsAndNavigate()
         stopAppMonitoringService()
         stopWarningOverlay()
