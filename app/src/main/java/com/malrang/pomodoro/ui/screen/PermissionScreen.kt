@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -22,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import com.malrang.pomodoro.dataclass.ui.PermissionInfo
+import com.malrang.pomodoro.dataclass.ui.PermissionType
+import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -30,11 +33,28 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 @Composable
 fun PermissionScreen(vm: PomodoroViewModel) {
     val uiState by vm.uiState.collectAsState()
+    val sessionAttemptedPermissions by vm.sessionAttemptedPermissions.collectAsState()
+    val notificationPermanentlyDenied by vm.notificationPermanentlyDenied.collectAsState()
+
     val permissions = uiState.permissions
     val context = LocalContext.current
+    val activity = context as Activity
 
-    val grantedCount = permissions.count { it.isGranted }
+    // 🔽 [수정] '시도 횟수'와 '총 권한 수'를 계산합니다.
+    val attemptedCount = sessionAttemptedPermissions.size
     val totalCount = permissions.size
+    val grantedCount = permissions.count { it.isGranted }
+
+    val nextPermissionToAttempt = permissions.firstOrNull { !sessionAttemptedPermissions.contains(it.type) }
+    val nextPermission = nextPermissionToAttempt ?: permissions.firstOrNull { !it.isGranted }
+
+    // 🔽 [추가] 시도 횟수가 총 권한 수와 같아지면 메인 화면으로 자동 이동하는 효과
+    LaunchedEffect(attemptedCount, totalCount) {
+        // 요청할 권한이 있고, 모든 권한에 대한 시도가 완료되었다면 이동
+        if (totalCount > 0 && attemptedCount == totalCount) {
+            vm.showScreen(Screen.Main)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -56,36 +76,45 @@ fun PermissionScreen(vm: PomodoroViewModel) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(permissions) { permission ->
-                    PermissionItem(permission = permission)
+                    PermissionItem(
+                        permission = permission,
+                        hasBeenAttempted = sessionAttemptedPermissions.contains(permission.type)
+                    )
                 }
             }
 
             Button(
                 onClick = {
-                    // 🔑 아직 허용되지 않은 권한을 하나씩만 처리
-                    val nextPermission = permissions.firstOrNull { !it.isGranted }
-
                     if (nextPermission != null) {
+                        vm.setPermissionAttemptedInSession(nextPermission.type)
                         when (nextPermission.type) {
-                            com.malrang.pomodoro.dataclass.ui.PermissionType.NOTIFICATION -> {
+                            PermissionType.NOTIFICATION -> {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    ActivityCompat.requestPermissions(
-                                        context as Activity,
-                                        arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                                        1001
-                                    )
+                                    val permissionString = Manifest.permission.POST_NOTIFICATIONS
+                                    val wasAlreadyAttemptedInSession = sessionAttemptedPermissions.contains(PermissionType.NOTIFICATION)
+                                    val shouldGoToSettings = notificationPermanentlyDenied ||
+                                            (wasAlreadyAttemptedInSession &&
+                                                    !ActivityCompat.shouldShowRequestPermissionRationale(activity, permissionString))
+
+                                    if (shouldGoToSettings) {
+                                        vm.setNotificationPermanentlyDenied()
+                                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                        }
+                                        context.startActivity(intent)
+                                    } else {
+                                        ActivityCompat.requestPermissions(activity, arrayOf(permissionString), 1001)
+                                    }
                                 }
                             }
-                            com.malrang.pomodoro.dataclass.ui.PermissionType.OVERLAY -> {
-                                if (!Settings.canDrawOverlays(context)) {
-                                    val intent = Intent(
-                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                        Uri.parse("package:${context.packageName}")
-                                    )
-                                    context.startActivity(intent)
-                                }
+                            PermissionType.OVERLAY -> {
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                                context.startActivity(intent)
                             }
-                            com.malrang.pomodoro.dataclass.ui.PermissionType.USAGE_STATS -> {
+                            PermissionType.USAGE_STATS -> {
                                 val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
                                 context.startActivity(intent)
                             }
@@ -95,20 +124,18 @@ fun PermissionScreen(vm: PomodoroViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp),
-                enabled = grantedCount < totalCount // 모든 권한이 허용되면 버튼 비활성화
+                enabled = grantedCount < totalCount
             ) {
-                val nextPermission = permissions.firstOrNull { !it.isGranted }
                 Text(
                     text = if (nextPermission != null) {
-                        // 어떤 권한을 요청할 차례인지 표시
-                        "${nextPermission.title} 권한 설정하기 ($grantedCount/$totalCount)"
+                        // 🔽 [수정] 버튼 텍스트의 카운터를 '시도 횟수'로 변경합니다.
+                        "${nextPermission.title} 권한 설정하기 ($attemptedCount/$totalCount)"
                     } else {
                         "모든 권한 허용됨"
                     },
                     fontSize = 16.sp
                 )
             }
-
         }
     }
 }
@@ -117,7 +144,7 @@ fun PermissionScreen(vm: PomodoroViewModel) {
  * 개별 권한 항목을 표시하는 컴포저블
  */
 @Composable
-fun PermissionItem(permission: PermissionInfo) {
+fun PermissionItem(permission: PermissionInfo, hasBeenAttempted: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -133,12 +160,14 @@ fun PermissionItem(permission: PermissionInfo) {
                 Text(text = permission.description, style = MaterialTheme.typography.bodySmall)
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = if (permission.isGranted) "O" else "X",
-                color = if (permission.isGranted) Color(0xFF4CAF50) else Color(0xFFF44336),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            if (hasBeenAttempted) {
+                Text(
+                    text = if (permission.isGranted) "O" else "X",
+                    color = if (permission.isGranted) Color(0xFF4CAF50) else Color(0xFFF44336),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

@@ -40,6 +40,9 @@ object DSKeys {
     val USE_GRASS_BACKGROUND = booleanPreferencesKey("use_grass_background")
     /** ✅ 화이트리스트 앱 목록을 저장하기 위한 키 */
     val WHITELISTED_APPS = stringSetPreferencesKey("whitelisted_apps")
+
+    /** 🔽 [수정] 알림 권한이 영구적으로 거부되었는지 여부만 저장하기 위한 키 */
+    val NOTIFICATION_PERMISSION_PERMANENTLY_DENIED = booleanPreferencesKey("notification_permission_permanently_denied")
 }
 
 /**
@@ -49,10 +52,7 @@ object DSKeys {
 class PomodoroRepository(private val context: Context) {
     private val gson = Gson()
 
-    /**
-     * DataStore에서 확인한 동물의 ID 목록을 불러옵니다.
-     * @return 저장된 ID가 없으면 빈 집합(Set)을 반환합니다.
-     */
+    // ... (loadSeenIds, saveSeenIds, loadDailyStats, saveDailyStats 등 기존 함수는 동일) ...
     suspend fun loadSeenIds(): Set<String> =
         context.dataStore.data.first()[DSKeys.SEEN_IDS] ?: emptySet()
 
@@ -175,9 +175,21 @@ class PomodoroRepository(private val context: Context) {
     }
 
     /**
-     * 기본 작업 프리셋 목록을 생성합니다.
-     * @return 기본값으로 설정된 WorkPreset 객체의 리스트
+     * 🔽 [추가] DataStore에서 알림 권한 영구 거부 상태를 불러옵니다.
+     * @return 저장된 값이 없으면 false를 반환합니다.
      */
+    suspend fun loadNotificationPermanentlyDenied(): Boolean {
+        return context.dataStore.data.first()[DSKeys.NOTIFICATION_PERMISSION_PERMANENTLY_DENIED] ?: false
+    }
+
+    /**
+     * 🔽 [추가] 알림 권한 영구 거부 상태를 DataStore에 저장합니다.
+     * @param isDenied 영구적으로 거부되었는지 여부
+     */
+    suspend fun saveNotificationPermanentlyDenied(isDenied: Boolean) {
+        context.dataStore.edit { it[DSKeys.NOTIFICATION_PERMISSION_PERMANENTLY_DENIED] = isDenied }
+    }
+
     private fun createDefaultPresets(): List<WorkPreset> {
         return listOf(
             WorkPreset(

@@ -35,6 +35,14 @@ class PomodoroViewModel(
     private val _uiState = MutableStateFlow(PomodoroUiState())
     val uiState: StateFlow<PomodoroUiState> = _uiState.asStateFlow()
 
+    /** '현재 세션'에서 시도한 권한을 추적. 앱이 재시작되면 초기화됨. */
+    private val _sessionAttemptedPermissions = MutableStateFlow<Set<PermissionType>>(emptySet())
+    val sessionAttemptedPermissions: StateFlow<Set<PermissionType>> = _sessionAttemptedPermissions.asStateFlow()
+
+    /** 알림 권한의 영구 거부 상태를 관리. 앱을 재시작해도 유지됨. */
+    private val _notificationPermanentlyDenied = MutableStateFlow(false)
+    val notificationPermanentlyDenied: StateFlow<Boolean> = _notificationPermanentlyDenied.asStateFlow()
+
     private val _editingWorkPreset = MutableStateFlow<WorkPreset?>(null)
     val editingWorkPreset: StateFlow<WorkPreset?> = _editingWorkPreset.asStateFlow()
 
@@ -43,6 +51,9 @@ class PomodoroViewModel(
 
     init {
         viewModelScope.launch {
+            // ViewModel이 생성될 때 저장소에서 영구 거부 상태를 불러옵니다.
+            _notificationPermanentlyDenied.value = repo.loadNotificationPermanentlyDenied()
+
             val seenIds = repo.loadSeenIds()
             val daily = repo.loadDailyStats()
             val presets = repo.loadWorkPresets()
@@ -75,6 +86,28 @@ class PomodoroViewModel(
             }
         }
     }
+
+    /**
+     * '현재 세션'에서 특정 권한을 시도했음을 기록합니다.
+     * @param permissionType 사용자가 설정을 시도한 권한의 타입
+     */
+    fun setPermissionAttemptedInSession(permissionType: PermissionType) {
+        _sessionAttemptedPermissions.update { it + permissionType }
+    }
+
+    /**
+     * 알림 권한이 영구적으로 거부되었음을 저장소에 기록합니다.
+     */
+    fun setNotificationPermanentlyDenied() {
+        // 이미 true이면 다시 저장할 필요 없음
+        if (!_notificationPermanentlyDenied.value) {
+            viewModelScope.launch {
+                repo.saveNotificationPermanentlyDenied(true)
+                _notificationPermanentlyDenied.value = true
+            }
+        }
+    }
+
     /**
      * ✅ 현재 필요한 모든 권한의 상태를 확인하고 UI 상태를 업데이트합니다.
      * 모든 권한이 부여되었는지 여부를 반환합니다.
@@ -84,8 +117,6 @@ class PomodoroViewModel(
         val permissionList = mutableListOf<PermissionInfo>()
 
         // 1. 알림 권한 (API 33+)
-        // [설명] POST_NOTIFICATIONS 권한은 티라미수(API 33) 이상에서만 존재합니다.
-        // 따라서 해당 버전 이상일 경우에만 권한 목록에 추가하고 상태를 확인합니다.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissionList.add(
                 PermissionInfo(
@@ -98,8 +129,6 @@ class PomodoroViewModel(
                 )
             )
         }
-        // [설명] 티라미수 미만 버전에서는 이 권한이 없으므로, 권한 확인 목록에 추가하지 않습니다.
-        // 이것이 하위 버전에 대한 올바른 처리 방식입니다.
 
         // 2. 다른 앱 위에 표시 권한
         permissionList.add(
@@ -197,10 +226,7 @@ class PomodoroViewModel(
                 _uiState.value.settings
             }
 
-            // 리셋 로직을 직접 작성하는 대신, 헬퍼 함수 호출로 대체합니다.
             performResetLogic(newMainUiSettings)
-
-            // 작업이 완료되었으므로 임시 설정(draft)을 초기화합니다.
             clearDraftSettings()
         }
     }
@@ -240,7 +266,6 @@ class PomodoroViewModel(
         viewModelScope.launch {
             val selectedPreset = _uiState.value.workPresets.find { it.id == presetId } ?: return@launch
             repo.saveCurrentWorkId(presetId)
-            // settings 객체를 직접 업데이트하는 대신 reset()을 호출하여 일관성을 유지합니다.
             _uiState.update {
                 it.copy(currentWorkId = presetId)
             }
