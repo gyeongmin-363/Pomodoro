@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -68,13 +67,9 @@ class TimerService : Service() {
             "START" -> {
                 if (!isRunning) {
                     timeLeft = intent.getIntExtra("TIME_LEFT", 0)
-
-                    // [설명] 티라미수(API 33) 이상에서는 getSerializableExtra 호출 시 Class 타입을 명시해야 합니다.
-                    // 하위 버전과의 호환성을 위해 분기 처리합니다.
                     settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         intent.getSerializableExtra("SETTINGS", Settings::class.java)
                     } else {
-                        // [설명] 하위 버전에서는 @Suppress("DEPRECATION") 어노테이션과 함께 이전 방식을 사용합니다.
                         @Suppress("DEPRECATION")
                         intent.getSerializableExtra("SETTINGS") as? Settings
                     }
@@ -143,8 +138,9 @@ class TimerService : Service() {
                 if (wakeLock.isHeld) {
                     wakeLock.release()
                 }
-
-                // [설명] 여기도 마찬가지로 티라미수 버전 분기 처리를 합니다.
+                CoroutineScope(Dispatchers.IO).launch {
+                    repo.clearTimerState()
+                }
                 val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getSerializableExtra("SETTINGS", Settings::class.java)
                 } else {
@@ -168,6 +164,10 @@ class TimerService : Service() {
                 })
 
                 updateNotification()
+            }
+            // [추가] 알림이 지워졌을 때 호출될 액션
+            "STOP_SERVICE_ACTION" -> {
+                stopSelf() // 서비스 종료
             }
         }
         return START_STICKY
@@ -234,6 +234,9 @@ class TimerService : Service() {
         if (wakeLock.isHeld) {
             wakeLock.release()
         }
+        CoroutineScope(Dispatchers.IO).launch {
+            repo.saveTimerState(timeLeft, currentMode, totalSessions)
+        }
         updateNotification()
         sendBroadcast(Intent(TIMER_TICK).apply {
             putExtra("TIME_LEFT", timeLeft)
@@ -278,16 +281,11 @@ class TimerService : Service() {
                 newStudyTimeMap[currentWorkName] = currentWorkTime + currentSettings.studyTime
                 todayStat.copy(studyTimeByWork = newStudyTimeMap)
             }
-            Mode.SHORT_BREAK -> {
+            Mode.SHORT_BREAK, Mode.LONG_BREAK -> {
+                val breakTime = if(finishedMode == Mode.SHORT_BREAK) currentSettings.shortBreakTime else currentSettings.longBreakTime
                 val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
                 val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
-                newBreakTimeMap[currentWorkName] = currentWorkTime + currentSettings.shortBreakTime
-                todayStat.copy(breakTimeByWork = newBreakTimeMap)
-            }
-            Mode.LONG_BREAK -> {
-                val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
-                val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
-                newBreakTimeMap[currentWorkName] = currentWorkTime + currentSettings.longBreakTime
+                newBreakTimeMap[currentWorkName] = currentWorkTime + breakTime
                 todayStat.copy(breakTimeByWork = newBreakTimeMap)
             }
         }
@@ -341,6 +339,16 @@ class TimerService : Service() {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
+        // [추가] 알림이 지워졌을 때 서비스를 종료시키기 위한 PendingIntent 생성
+        val stopServiceIntent = Intent(this, TimerService::class.java).apply {
+            action = "STOP_SERVICE_ACTION"
+        }
+        val stopServicePendingIntent = PendingIntent.getService(
+            this, 0, stopServiceIntent,
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+
         val modeText = when (currentMode) {
             Mode.STUDY -> "공부 시간"
             Mode.SHORT_BREAK -> "짧은 휴식"
@@ -361,13 +369,14 @@ class TimerService : Service() {
 
         val sessionText = if (currentMode == Mode.STUDY) " | 세션: ${totalSessions + 1}" else ""
         val contentText = "$statusText$sessionText"
-        
+
         return NotificationCompat.Builder(this, "pomodoro_timer")
             .setContentTitle("뽀모도로 타이머: $modeText")
             .setContentText(contentText)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
-            .setOngoing(isRunning)
+            .setOngoing(isRunning) // isRunning이 true일 때 (타이머 작동 중) 알림을 못 지우게 설정
+            .setDeleteIntent(stopServicePendingIntent) // [추가] 알림을 지웠을 때 stopServicePendingIntent 실행
             .build()
     }
 
