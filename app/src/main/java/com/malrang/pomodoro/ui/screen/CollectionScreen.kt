@@ -73,7 +73,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("🐾 움직이는 동물 도감", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("🐾 동물 도감", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
             IconButton(onClick = { viewModel.showScreen(Screen.Main) }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
