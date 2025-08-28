@@ -1,11 +1,8 @@
 package com.malrang.pomodoro.ui.screen
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,14 +22,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -56,18 +52,15 @@ import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import ir.ehsannarmani.compose_charts.ColumnChart
-import ir.ehsannarmani.compose_charts.LineChart
 import ir.ehsannarmani.compose_charts.extensions.format
 import ir.ehsannarmani.compose_charts.models.AnimationMode
 import ir.ehsannarmani.compose_charts.models.BarProperties
 import ir.ehsannarmani.compose_charts.models.Bars
-import ir.ehsannarmani.compose_charts.models.DotProperties
-import ir.ehsannarmani.compose_charts.models.DrawStyle
 import ir.ehsannarmani.compose_charts.models.GridProperties
 import ir.ehsannarmani.compose_charts.models.HorizontalIndicatorProperties
 import ir.ehsannarmani.compose_charts.models.IndicatorCount
+import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
 import ir.ehsannarmani.compose_charts.models.LabelProperties
-import ir.ehsannarmani.compose_charts.models.Line
 import ir.ehsannarmani.compose_charts.models.PopupProperties
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -75,7 +68,6 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 @Composable
@@ -165,7 +157,7 @@ fun ExpandableCalendarView(
                     val newDate = if (isExpanded) selectedDate.minusMonths(1) else selectedDate.minusWeeks(1)
                     onDateSelected(newDate)
                 }) {
-                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "이전", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "이전", tint = Color.White)
                 }
                 Text(
                     text = headerText,
@@ -218,7 +210,6 @@ fun ExpandableCalendarView(
                 WeeklyCalendarGrid(selectedDate = selectedDate, dailyStats = dailyStats)
             }
 
-            // --- ▼▼▼ 수정된 부분: Work별 기록 표시 UI ▼▼▼ ---
             AnimatedVisibility(visible = isExpanded && tappedDate != null) {
                 val stats = tappedDate?.let { dailyStats[it.toString()] }
 
@@ -266,7 +257,11 @@ fun ExpandableCalendarView(
                             }
                         }
 
-                        Divider(color = Color.White.copy(alpha = 0.2f), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            thickness = 1.dp,
+                            color = Color.White.copy(alpha = 0.2f)
+                        )
 
                         Text(
                             text = "총 공부: ${stats?.totalStudyTimeInMinutes ?: 0}분",
@@ -283,9 +278,12 @@ fun ExpandableCalendarView(
                     }
                 }
             }
-            // --- ▲▲▲ 수정된 부분 ---
 
-            Divider(color = Color.White.copy(alpha = 0.2f), thickness = 1.dp, modifier = Modifier.padding(top = 8.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(top = 8.dp),
+                thickness = 1.dp,
+                color = Color.White.copy(alpha = 0.2f)
+            )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -419,7 +417,6 @@ fun DayCell(
 
 @Composable
 fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) {
-    val weekLabels = listOf("월", "화", "수", "목", "금", "토", "일")
     // 주의 시작을 일요일로 변경
     val firstDayOfWeek = displayDate.with(DayOfWeek.MONDAY)
 
@@ -467,6 +464,10 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
 //        Bars.Data(id = 1, label = "쉬는 시간", value = 50.0, color = SolidColor(Color.Blue)),
 //    )
 
+    val labelTextStyle = androidx.compose.ui.text.TextStyle.Default.copy(
+        color = Color.White,
+        fontSize = 12.sp,
+    )
 
 
     Card(
@@ -478,7 +479,7 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
             val endDay = firstDayOfWeek.plusDays(6).dayOfMonth
             val month = firstDayOfWeek.monthValue
             Text(
-                "주간 학습 시간 (${month}월 ${startDay}일 ~ ${endDay}일)",
+                "주간 학습 시간\n(${month}월 ${startDay}일 ~ ${endDay}일)",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
@@ -487,14 +488,16 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
             ColumnChart(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .height(300.dp),
                 indicatorProperties = HorizontalIndicatorProperties(
                     contentBuilder = { minute -> minute.toInt().toString() + "분" },
-                    count = IndicatorCount.CountBased(4)
+                    count = IndicatorCount.CountBased(4),
+                    textStyle = labelTextStyle
                 ),
                 popupProperties = PopupProperties(
                     contentBuilder = { _, _, value -> if(value >= 0.0) value.roundToInt().toString() + "분" else value.format(1)},
-                    mode = PopupProperties.Mode.PointMode(10.dp)
+                    mode = PopupProperties.Mode.PointMode(10.dp),
+                    textStyle = labelTextStyle
                 ),
                 gridProperties = GridProperties(
                     xAxisProperties = GridProperties.AxisProperties(
@@ -504,10 +507,15 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
                         enabled = false
                     )
                 ),
-//                labelProperties = LabelProperties(
-//                    enabled = true,
-//                    labels = weekLabels
-//                ),
+                labelProperties = LabelProperties(
+                    enabled = true,
+                    textStyle = labelTextStyle.copy(fontSize = 10.sp)
+                ),
+                labelHelperProperties = LabelHelperProperties(
+                    enabled = true,
+                    textStyle = labelTextStyle,
+                    labelCountPerLine = 2
+                ),
                 data = remember(
                     mondayBars,
                     tuesdayBars,
