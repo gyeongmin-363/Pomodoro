@@ -296,9 +296,9 @@ class TimerService : Service() {
     private fun getRandomAnimal(): Animal {
         val roll = Random.nextInt(100)
         val rarity = when {
-            roll < 60 -> Rarity.COMMON
-            roll < 85 -> Rarity.RARE
-            roll < 97 -> Rarity.EPIC
+            roll < 40 -> Rarity.COMMON
+            roll < 70 -> Rarity.RARE
+            roll < 90 -> Rarity.EPIC
             else -> Rarity.LEGENDARY
         }
         return AnimalsTable.randomByRarity(rarity)
