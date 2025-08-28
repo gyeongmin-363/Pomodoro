@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,23 +23,23 @@ import com.malrang.withpet.BackPressMove
 + * @param onRequestPermission 권한 설정 버튼 클릭 시 호출될 함수입니다.
  */
 @Composable
-fun PomodoroApp(vm: PomodoroViewModel = viewModel(), onRequestPermission: () -> Unit) {
-        val s by vm.uiState.collectAsState()
+fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
+    val s by vm.uiState.collectAsState()
 
-        // ✅ MainScreen이 아닐 경우 뒤로가기 버튼을 누르면 Main으로 이동
-        if (s.currentScreen != Screen.Main && s.currentScreen != Screen.Whitelist ) {
-            BackPressMove {
-                vm.showScreen(Screen.Main)
-            }
-        }
-
-        when (s.currentScreen) {
-            Screen.Main -> MainScreen(vm)
-            Screen.Collection -> CollectionScreen(vm)
-            Screen.Settings -> SettingsScreen(vm)
-            Screen.Stats -> StatsScreen(vm)
-            Screen.Whitelist -> WhitelistScreen(vm)
-            Screen.Permission -> PermissionScreen(vm)
-            else -> MainScreen(vm)
+    // ✅ MainScreen이 아닐 경우 뒤로가기 버튼을 누르면 Main으로 이동
+    if (s.currentScreen != Screen.Main && s.currentScreen != Screen.Whitelist ) {
+        BackPressMove {
+            vm.showScreen(Screen.Main)
         }
     }
+
+    when (s.currentScreen) {
+        Screen.Main -> MainScreen(vm)
+        Screen.Collection -> CollectionScreen(vm)
+        Screen.Settings -> SettingsScreen(vm)
+        Screen.Stats -> StatsScreen(vm)
+        Screen.Whitelist -> WhitelistScreen(vm)
+        Screen.Permission -> PermissionScreen(vm)
+        else -> MainScreen(vm)
+    }
+}
