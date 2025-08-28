@@ -37,20 +37,15 @@ class PomodoroViewModel(
 
     private val _sessionAttemptedPermissions = MutableStateFlow<Set<PermissionType>>(emptySet())
     val sessionAttemptedPermissions: StateFlow<Set<PermissionType>> = _sessionAttemptedPermissions.asStateFlow()
-
-    /** 알림 권한 '거부 횟수'를 관리하는 StateFlow */
     private val _notificationDenialCount = MutableStateFlow(0)
     val notificationDenialCount: StateFlow<Int> = _notificationDenialCount.asStateFlow()
-
     private val _editingWorkPreset = MutableStateFlow<WorkPreset?>(null)
     val editingWorkPreset: StateFlow<WorkPreset?> = _editingWorkPreset.asStateFlow()
-
     private val _draftSettings = MutableStateFlow<Settings?>(null)
     val draftSettings: StateFlow<Settings?> = _draftSettings.asStateFlow()
 
     init {
         viewModelScope.launch {
-            // ViewModel 생성 시 저장소에서 거부 횟수를 불러옵니다.
             _notificationDenialCount.value = repo.loadNotificationDenialCount()
 
             val seenIds = repo.loadSeenIds()
@@ -81,15 +76,28 @@ class PomodoroViewModel(
             if (TimerService.isServiceActive()) {
                 timerService.requestStatus()
             } else {
-                reset()
+                // [수정] 서비스가 비활성 상태일 때, 저장된 타이머 상태를 불러옵니다.
+                val savedState = repo.loadTimerState()
+                if (savedState != null) {
+                    _uiState.update {
+                        it.copy(
+                            timeLeft = savedState.timeLeft,
+                            currentMode = savedState.currentMode,
+                            totalSessions = savedState.totalSessions,
+                            isRunning = false,
+                            isPaused = true, // 저장된 상태는 항상 '일시정지' 상태로 로드
+                            isTimerStartedOnce = savedState.timeLeft < (it.settings.studyTime * 60)
+                        )
+                    }
+                } else {
+                    // 저장된 상태가 없으면 초기화
+                    reset()
+                }
             }
         }
     }
 
-    /**
-     * 권한 요청 후 화면으로 돌아왔을 때 호출되는 함수
-     * @param context 애플리케이션 컨텍스트
-     */
+    // ... (onPermissionRequestResult, setPermissionAttemptedInSession, checkAndupdatePermissions 등 중간 함수 생략) ...
     fun onPermissionRequestResult(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             checkAndupdatePermissions(context)
@@ -97,7 +105,6 @@ class PomodoroViewModel(
         }
 
         val notificationPermissionInfo = uiState.value.permissions.find { it.type == PermissionType.NOTIFICATION }
-        // 알림 권한 정보가 없으면 일반 업데이트만 수행
         if (notificationPermissionInfo == null) {
             checkAndupdatePermissions(context)
             return
@@ -109,7 +116,6 @@ class PomodoroViewModel(
             Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
 
-        // 조건: 1. 이번 세션에서 시도했고, 2. 시도 전에도 허용되지 않았고, 3. 지금도 허용되지 않았다면 -> '새로운 거부'로 간주
         if (wasAttempted && !notificationPermissionInfo.isGranted && !isGrantedNow) {
             val newCount = _notificationDenialCount.value + 1
             viewModelScope.launch {
@@ -117,24 +123,17 @@ class PomodoroViewModel(
                 _notificationDenialCount.value = newCount
             }
         }
-
-        // 최종적으로 권한 상태를 다시 확인하여 UI 전체를 업데이트
         checkAndupdatePermissions(context)
     }
-
-
     fun setPermissionAttemptedInSession(permissionType: PermissionType) {
         _sessionAttemptedPermissions.update { it + permissionType }
     }
-
     fun checkAndupdatePermissions(context: Context): Boolean {
         val permissionList = mutableListOf<PermissionInfo>()
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissionList.add(
                 PermissionInfo(
-                    type = PermissionType.NOTIFICATION,
-                    title = "알림",
+                    type = PermissionType.NOTIFICATION, title = "알림",
                     description = "타이머 진행 상황을 알림으로 표시하기 위해 필요합니다.",
                     isGranted = ContextCompat.checkSelfPermission(
                         context, Manifest.permission.POST_NOTIFICATIONS
@@ -142,16 +141,13 @@ class PomodoroViewModel(
                 )
             )
         }
-
         permissionList.add(
             PermissionInfo(
-                type = PermissionType.OVERLAY,
-                title = "다른 앱 위에 표시",
+                type = PermissionType.OVERLAY, title = "다른 앱 위에 표시",
                 description = "공부 중 다른 앱 사용 시 경고창을 띄우기 위해 필요합니다.",
                 isGranted = android.provider.Settings.canDrawOverlays(context)
             )
         )
-
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(
             AppOpsManager.OPSTR_GET_USAGE_STATS,
@@ -160,28 +156,38 @@ class PomodoroViewModel(
         )
         permissionList.add(
             PermissionInfo(
-                type = PermissionType.USAGE_STATS,
-                title = "사용 정보 접근",
+                type = PermissionType.USAGE_STATS, title = "사용 정보 접근",
                 description = "공부에 방해되는 앱 사용을 감지하기 위해 필요합니다.",
                 isGranted = mode == AppOpsManager.MODE_ALLOWED
             )
         )
-
         _uiState.update { it.copy(permissions = permissionList) }
-
         val alreadyGrantedTypes = permissionList.filter { it.isGranted }.map { it.type }
         _sessionAttemptedPermissions.update { currentAttempts -> currentAttempts + alreadyGrantedTypes }
-
         return permissionList.all { it.isGranted }
     }
-
     fun initializeDraftSettings() {
         val settingsToEdit = _editingWorkPreset.value?.settings ?: _uiState.value.settings
         _draftSettings.value = settingsToEdit
     }
+    fun refreshActiveSprites() {
+        viewModelScope.launch {
+            val updatedSprites = repo.loadActiveSprites()
+            _uiState.update { it.copy(activeSprites = updatedSprites) }
+        }
+    }
+    fun requestTimerStatus() {
+        if (TimerService.isServiceActive()) {
+            timerService.requestStatus()
+        }
+    }
+
 
     private suspend fun performResetLogic(settings: Settings) {
+        // [수정] 저장된 타이머 상태와 활성 스프라이트를 모두 삭제합니다.
+        repo.clearTimerState()
         repo.saveActiveSprites(emptyList())
+
         _uiState.update {
             it.copy(
                 timeLeft = settings.studyTime * 60,
@@ -204,13 +210,32 @@ class PomodoroViewModel(
         }
     }
 
+    // ... (saveSettingsAndReset 이하 나머지 코드는 동일) ...
+
+    fun startTimer() {
+        if (_uiState.value.isRunning) return
+        val s = _uiState.value
+        _uiState.update { it.copy(isRunning = true, isPaused = false, isTimerStartedOnce = true) }
+        timerService.start(s.timeLeft, s.settings, s.currentMode, s.totalSessions)
+    }
+
+    fun pauseTimer() {
+        // [수정] 일시정지 시 동물들의 현재 상태(위치 등)를 저장합니다.
+        viewModelScope.launch {
+            repo.saveActiveSprites(uiState.value.activeSprites)
+        }
+        _uiState.update { it.copy(isRunning = false, isPaused = true) }
+        timerService.pause()
+    }
+
+    // ... (이하 나머지 코드는 동일하여 생략) ...
     fun saveSettingsAndReset() {
         viewModelScope.launch {
             val settingsToSave = _draftSettings.value ?: return@launch
             val editingId = _editingWorkPreset.value?.id
             val currentId = _uiState.value.currentWorkId
+            val presetIdToUpdate = editingId ?: currentId
             val updatedPresets = _uiState.value.workPresets.map { preset ->
-                val presetIdToUpdate = editingId ?: currentId
                 if (preset.id == presetIdToUpdate) {
                     preset.copy(settings = settingsToSave)
                 } else {
@@ -218,25 +243,19 @@ class PomodoroViewModel(
                 }
             }
             repo.saveWorkPresets(updatedPresets)
-            val newMainUiSettings = if (currentId == (editingId ?: currentId)) {
-                settingsToSave
-            } else {
-                _uiState.value.settings
-            }
-            performResetLogic(newMainUiSettings)
+            _uiState.update { it.copy(workPresets = updatedPresets) }
+            val newActiveSettings = updatedPresets.find { it.id == currentId }?.settings ?: Settings()
+            performResetLogic(newActiveSettings)
             clearDraftSettings()
         }
     }
-
     fun clearDraftSettings() {
         _draftSettings.value = null
         _editingWorkPreset.value = null
     }
-
     private fun updateDraftSettings(transform: Settings.() -> Settings) {
         _draftSettings.update { it?.transform() }
     }
-
     fun addToWhitelist(packageName: String) {
         viewModelScope.launch {
             val updatedWhitelist = _uiState.value.whitelistedApps + packageName
@@ -244,7 +263,6 @@ class PomodoroViewModel(
             _uiState.update { it.copy(whitelistedApps = updatedWhitelist) }
         }
     }
-
     fun removeFromWhitelist(packageName: String) {
         viewModelScope.launch {
             val updatedWhitelist = _uiState.value.whitelistedApps - packageName
@@ -252,7 +270,6 @@ class PomodoroViewModel(
             _uiState.update { it.copy(whitelistedApps = updatedWhitelist) }
         }
     }
-
     fun selectWorkPreset(presetId: String) {
         viewModelScope.launch {
             repo.saveCurrentWorkId(presetId)
@@ -262,7 +279,6 @@ class PomodoroViewModel(
             reset()
         }
     }
-
     fun addWorkPreset() {
         viewModelScope.launch {
             val newPreset = WorkPreset(name = "새 Work", settings = Settings())
@@ -271,7 +287,6 @@ class PomodoroViewModel(
             _uiState.update { it.copy(workPresets = updatedPresets) }
         }
     }
-
     fun deleteWorkPreset(id: String) {
         viewModelScope.launch {
             val updatedPresets = _uiState.value.workPresets.filterNot { it.id == id }
@@ -282,7 +297,6 @@ class PomodoroViewModel(
             }
         }
     }
-
     fun updateWorkPresetName(id: String, newName: String) {
         viewModelScope.launch {
             val updatedPresets = _uiState.value.workPresets.map {
@@ -292,18 +306,15 @@ class PomodoroViewModel(
             _uiState.update { it.copy(workPresets = updatedPresets) }
         }
     }
-
     fun startEditingWorkPreset(id: String) {
         val preset = _uiState.value.workPresets.find { it.id == id }
         _editingWorkPreset.value = preset
     }
-
     fun stopEditingWorkPreset() {
         _editingWorkPreset.value = null
         val currentSettings = _uiState.value.workPresets.find { it.id == _uiState.value.currentWorkId }?.settings ?: Settings()
         _uiState.update { it.copy(settings = currentSettings) }
     }
-
     fun updateBlockMode(mode: com.malrang.pomodoro.dataclass.ui.BlockMode) = updateDraftSettings { copy(blockMode = mode) }
     fun updateStudyTime(v: Int) = updateDraftSettings { copy(studyTime = v) }
     fun updateShortBreakTime(v: Int) = updateDraftSettings { copy(shortBreakTime = v) }
@@ -312,7 +323,6 @@ class PomodoroViewModel(
     fun toggleSound(b: Boolean) = updateDraftSettings { copy(soundEnabled = b) }
     fun toggleVibration(b: Boolean) = updateDraftSettings { copy(vibrationEnabled = b) }
     fun toggleAutoStart(b: Boolean) = updateDraftSettings { copy(autoStart = b) }
-
     fun toggleBackground() {
         viewModelScope.launch {
             val newPreference = !_uiState.value.useGrassBackground
@@ -320,19 +330,6 @@ class PomodoroViewModel(
             _uiState.update { it.copy(useGrassBackground = newPreference) }
         }
     }
-
-    fun startTimer() {
-        if (_uiState.value.isRunning) return
-        val s = _uiState.value
-        _uiState.update { it.copy(isRunning = true, isPaused = false, isTimerStartedOnce = true) }
-        timerService.start(s.timeLeft, s.settings, s.currentMode, s.totalSessions)
-    }
-
-    fun pauseTimer() {
-        _uiState.update { it.copy(isRunning = false, isPaused = true) }
-        timerService.pause()
-    }
-
     fun skipSession() {
         val s = _uiState.value
         val nextMode: Mode
@@ -349,30 +346,21 @@ class PomodoroViewModel(
         }
         _uiState.update {
             it.copy(
-                currentMode = nextMode,
-                totalSessions = newTotalSessions,
-                timeLeft = nextTime * 60,
-                isRunning = false,
-                isPaused = false
+                currentMode = nextMode, totalSessions = newTotalSessions, timeLeft = nextTime * 60,
+                isRunning = false, isPaused = false
             )
         }
         timerService.skip(s.currentMode, newTotalSessions)
     }
-
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
         _uiState.update {
             it.copy(
-                timeLeft = timeLeft,
-                isRunning = isRunning,
-                isPaused = !isRunning && timeLeft > 0,
-                currentMode = currentMode,
-                totalSessions = totalSessions
+                timeLeft = timeLeft, isRunning = isRunning, isPaused = !isRunning && timeLeft > 0,
+                currentMode = currentMode, totalSessions = totalSessions
             )
         }
     }
-
     fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
-
     fun updateSprites(deltaSec: Float, widthPx: Int, heightPx: Int) {
         _uiState.update { s ->
             val updated = s.activeSprites.map { sp ->
@@ -395,7 +383,6 @@ class PomodoroViewModel(
             s.copy(activeSprites = updated)
         }
     }
-
     fun onJumpFinished(spriteId: String) {
         _uiState.update { s ->
             val updated = s.activeSprites.map { sp ->
