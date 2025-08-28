@@ -433,20 +433,20 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
                 id = index, // 0:월, 1:화, ...
                 label = "공부 시간",
                 value = dailyStat.totalStudyTimeInMinutes.toDouble(),
-                color = SolidColor(Color.Red) // 원하는 색상으로 변경
+                color = SolidColor(Color(0xFFFD8584)) // 원하는 색상으로 변경
             ),
             // 쉬는 시간 데이터
             Bars.Data(
                 id = index,
                 label = "쉬는 시간",
                 value = dailyStat.totalBreakTimeInMinutes.toDouble(), // 이 부분을 실제 쉬는 시간 데이터 속성으로 변경
-                color = SolidColor(Color.Blue) // 원하는 색상으로 변경
+                color = SolidColor(Color(0xFF7AD2E9)) // 원하는 색상으로 변경
             )
         )
     }
 
     // 이제 allWeekBars 리스트에서 각 요일 데이터를 인덱스로 접근할 수 있습니다.
-//    val mondayBars = allWeekBars[0]    // 월요일
+    val mondayBars = allWeekBars[0]    // 월요일
     val tuesdayBars = allWeekBars[1]   // 화요일
     val wednesdayBars = allWeekBars[2] // 수요일
     val thursdayBars = allWeekBars[3]  // 목요일
@@ -455,13 +455,9 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
     val sundayBars = allWeekBars[6]    // 일요일
 
 
-    val mondayBars = listOf(
-        Bars.Data(id = 0, label = "공부 시간", value = 50.0, color = SolidColor(Color.Red)),
-        Bars.Data(id = 0, label = "쉬는 시간", value = 10.0, color = SolidColor(Color.Blue)),
-    )
-//    val tuesdayBars = listOf(
-//        Bars.Data(id = 1, label = "공부 시간", value = 50.0, color = SolidColor(Color.Red)),
-//        Bars.Data(id = 1, label = "쉬는 시간", value = 50.0, color = SolidColor(Color.Blue)),
+//    val mondayBars = listOf(
+//        Bars.Data(id = 0, label = "공부 시간", value = 50.0, color = SolidColor(Color.Red)),
+//        Bars.Data(id = 0, label = "쉬는 시간", value = 10.0, color = SolidColor(Color.Blue)),
 //    )
 
     val labelTextStyle = androidx.compose.ui.text.TextStyle.Default.copy(
@@ -556,7 +552,7 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
                         )
                     )
                 },
-                animationMode = AnimationMode.OneByOne,
+                animationMode = AnimationMode.Together(),
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessLow
