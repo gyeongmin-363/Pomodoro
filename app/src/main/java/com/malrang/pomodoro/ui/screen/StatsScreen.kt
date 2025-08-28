@@ -3,6 +3,8 @@ package com.malrang.pomodoro.ui.screen
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOutCubic
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -52,9 +55,12 @@ import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import ir.ehsannarmani.compose_charts.ColumnChart
 import ir.ehsannarmani.compose_charts.LineChart
 import ir.ehsannarmani.compose_charts.extensions.format
 import ir.ehsannarmani.compose_charts.models.AnimationMode
+import ir.ehsannarmani.compose_charts.models.BarProperties
+import ir.ehsannarmani.compose_charts.models.Bars
 import ir.ehsannarmani.compose_charts.models.DotProperties
 import ir.ehsannarmani.compose_charts.models.DrawStyle
 import ir.ehsannarmani.compose_charts.models.GridProperties
@@ -171,7 +177,7 @@ fun ExpandableCalendarView(
                     val newDate = if (isExpanded) selectedDate.plusMonths(1) else selectedDate.plusWeeks(1)
                     onDateSelected(newDate)
                 }) {
-                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = "다음", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "다음", tint = Color.White)
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -422,23 +428,46 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
         dailyStats[date.toString()] ?: DailyStat(date.toString())
     }
 
-    // DailyStat 구조 변경에 따라 total... 속성 사용
-    val studyData = weeklyData.map { it.totalStudyTimeInMinutes.toDouble() }
-    val breakData = weeklyData.map { it.totalBreakTimeInMinutes.toDouble() }
-
-    val max = max(studyData.maxOrNull() ?: 0.0, breakData.maxOrNull() ?: 0.0)
-
-    val indicatorProperties = if (max > 0) {
-        HorizontalIndicatorProperties(
-            contentBuilder = { minute -> minute.toInt().toString() + "분" },
-            count = IndicatorCount.StepBased(stepBy = 30.0)
-        )
-    } else {
-        HorizontalIndicatorProperties(
-            contentBuilder = { minute -> minute.toInt().toString() + "분" },
-            count = IndicatorCount.CountBased(count = 2)
+    // 월요일부터 일요일까지의 모든 막대 데이터를 담는 리스트
+    val allWeekBars = weeklyData.mapIndexed { index, dailyStat ->
+        listOf(
+            // 공부 시간 데이터
+            Bars.Data(
+                id = index, // 0:월, 1:화, ...
+                label = "공부 시간",
+                value = dailyStat.totalStudyTimeInMinutes.toDouble(),
+                color = SolidColor(Color.Red) // 원하는 색상으로 변경
+            ),
+            // 쉬는 시간 데이터
+            Bars.Data(
+                id = index,
+                label = "쉬는 시간",
+                value = dailyStat.totalBreakTimeInMinutes.toDouble(), // 이 부분을 실제 쉬는 시간 데이터 속성으로 변경
+                color = SolidColor(Color.Blue) // 원하는 색상으로 변경
+            )
         )
     }
+
+    // 이제 allWeekBars 리스트에서 각 요일 데이터를 인덱스로 접근할 수 있습니다.
+//    val mondayBars = allWeekBars[0]    // 월요일
+    val tuesdayBars = allWeekBars[1]   // 화요일
+    val wednesdayBars = allWeekBars[2] // 수요일
+    val thursdayBars = allWeekBars[3]  // 목요일
+    val fridayBars = allWeekBars[4]    // 금요일
+    val saturdayBars = allWeekBars[5]  // 토요일
+    val sundayBars = allWeekBars[6]    // 일요일
+
+
+    val mondayBars = listOf(
+        Bars.Data(id = 0, label = "공부 시간", value = 50.0, color = SolidColor(Color.Red)),
+        Bars.Data(id = 0, label = "쉬는 시간", value = 10.0, color = SolidColor(Color.Blue)),
+    )
+//    val tuesdayBars = listOf(
+//        Bars.Data(id = 1, label = "공부 시간", value = 50.0, color = SolidColor(Color.Red)),
+//        Bars.Data(id = 1, label = "쉬는 시간", value = 50.0, color = SolidColor(Color.Blue)),
+//    )
+
+
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -455,65 +484,80 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
                 color = Color.White
             )
             Spacer(Modifier.height(16.dp))
-            LineChart(
+            ColumnChart(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
-                indicatorProperties = indicatorProperties,
+                indicatorProperties = HorizontalIndicatorProperties(
+                    contentBuilder = { minute -> minute.toInt().toString() + "분" },
+                    count = IndicatorCount.CountBased(4)
+                ),
                 popupProperties = PopupProperties(
                     contentBuilder = { _, _, value -> if(value >= 0.0) value.roundToInt().toString() + "분" else value.format(1)},
                     mode = PopupProperties.Mode.PointMode(10.dp)
                 ),
                 gridProperties = GridProperties(
                     xAxisProperties = GridProperties.AxisProperties(
-                        lineCount = if (max > 0) (max / 30.0).toInt() + 1 else 1
+                        lineCount = 4
+                    ),
+                    yAxisProperties = GridProperties.AxisProperties(
+                        enabled = false
                     )
                 ),
-                labelProperties = LabelProperties(
-                    enabled = true,
-                    labels = weekLabels
-                ),
-                data = remember(studyData, breakData) {
+//                labelProperties = LabelProperties(
+//                    enabled = true,
+//                    labels = weekLabels
+//                ),
+                data = remember(
+                    mondayBars,
+                    tuesdayBars,
+                    wednesdayBars,
+                    thursdayBars,
+                    fridayBars,
+                    saturdayBars,
+                    sundayBars
+                ) {
                     listOf(
-                        Line(
-                            label = "공부 시간",
-                            values = studyData,
-                            color = SolidColor(Color.Green),
-                            firstGradientFillColor = Color.Green.copy(alpha = .5f),
-                            secondGradientFillColor = Color.Transparent,
-                            curvedEdges = true,
-                            strokeAnimationSpec = tween(2000, easing = EaseInOutCubic),
-                            gradientAnimationDelay = 1000,
-                            drawStyle = DrawStyle.Stroke(width = 2.dp),
-                            dotProperties = DotProperties(
-                                enabled = true,
-                                color = SolidColor(Color.White),
-                                strokeWidth = 2.dp,
-                                radius = 2.dp,
-                                strokeColor = SolidColor(Color.Green),
-                            )
+                        Bars(
+                            label = "월",
+                            values = mondayBars
                         ),
-                        Line(
-                            label = "휴식 시간",
-                            values = breakData,
-                            color = SolidColor(Color.Blue),
-                            firstGradientFillColor = Color.Blue.copy(alpha = .5f),
-                            secondGradientFillColor = Color.Transparent,
-                            curvedEdges = true,
-                            strokeAnimationSpec = tween(2000, easing = EaseInOutCubic),
-                            gradientAnimationDelay = 1000,
-                            drawStyle = DrawStyle.Stroke(width = 2.dp),
-                            dotProperties = DotProperties(
-                                enabled = true,
-                                color = SolidColor(Color.White),
-                                strokeWidth = 2.dp,
-                                radius = 2.dp,
-                                strokeColor = SolidColor(Color.Blue),
-                            )
+                        Bars(
+                            label = "화",
+                            values = tuesdayBars
                         ),
+                        Bars(
+                            label = "수",
+                            values = wednesdayBars
+                        ),
+                        Bars(
+                            label = "목",
+                            values = thursdayBars
+                        ),
+                        Bars(
+                            label = "금",
+                            values = fridayBars
+                        ),
+                        Bars(
+                            label = "토",
+                            values = saturdayBars
+                        ),
+                        Bars(
+                            label = "일",
+                            values = sundayBars
+                        )
                     )
                 },
-                animationMode = AnimationMode.Together(),
+                animationMode = AnimationMode.OneByOne,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                barProperties = BarProperties(
+                    cornerRadius = Bars.Data.Radius.Rectangle(topRight = 6.dp, topLeft = 6.dp),
+                    spacing = 0.dp,
+                    thickness = 10.dp
+                ),
             )
         }
     }

@@ -67,6 +67,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
     implementation(libs.firebase.crashlytics)
     implementation("androidx.fragment:fragment-ktx:1.8.9")
+    implementation(libs.androidx.animation.core)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
