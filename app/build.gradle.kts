@@ -96,6 +96,7 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp:3.2.2")
     implementation("io.ktor:ktor-client-core:3.2.2")
     implementation("io.ktor:ktor-client-android:3.2.2")
+    implementation(libs.androidx.foundation)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
