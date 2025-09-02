@@ -7,12 +7,14 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.CollectionScreen
+import com.malrang.pomodoro.ui.screen.LoginScreen
 import com.malrang.pomodoro.ui.screen.MainScreen
 import com.malrang.pomodoro.ui.screen.PermissionScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen
 import com.malrang.pomodoro.ui.screen.StatsScreen
 import com.malrang.pomodoro.ui.screen.UserScreen
 import com.malrang.pomodoro.ui.screen.WhitelistScreen
+import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.withpet.BackPressMove
 
@@ -24,7 +26,7 @@ import com.malrang.withpet.BackPressMove
 + * @param onRequestPermission 권한 설정 버튼 클릭 시 호출될 함수입니다.
  */
 @Composable
-fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
+fun PomodoroApp(vm: PomodoroViewModel = viewModel(), authVm : AuthViewModel = viewModel()) {
     val s by vm.uiState.collectAsState()
 
     // ✅ MainScreen이 아닐 경우 뒤로가기 버튼을 누르면 Main으로 이동
@@ -35,6 +37,7 @@ fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
     }
 
     when (s.currentScreen) {
+        Screen.Login -> LoginScreen(authVm)
         Screen.Main -> MainScreen(vm)
         Screen.Collection -> CollectionScreen(vm)
         Screen.Settings -> SettingsScreen(vm)
