@@ -383,7 +383,7 @@ fun PortraitMainScreen(
             IconButton(onClick = {
                 viewModel.showScreen(Screen.StudyRoom)
             }) {
-                Icon(painterResource(Icons.Default.ThumbUp), contentDescription = "스터디룸", tint = contentColor)
+                Icon(Icons.Default.ThumbUp, contentDescription = "스터디룸", tint = contentColor)
             }
         }
     }
