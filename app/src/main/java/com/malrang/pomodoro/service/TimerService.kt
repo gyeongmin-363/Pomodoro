@@ -95,6 +95,7 @@ class TimerService : Service() {
                     putExtra("IS_RUNNING", isRunning)
                     putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
                     putExtra("TOTAL_SESSIONS", totalSessions)
+                    setPackage("com.malrang.pomodoro")
                 })
             }
             "SKIP" -> {
@@ -130,6 +131,8 @@ class TimerService : Service() {
                     putExtra("IS_RUNNING", isRunning)
                     putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
                     putExtra("TOTAL_SESSIONS", totalSessions)
+                    setPackage("com.malrang.pomodoro")
+
                 })
             }
             "RESET" -> {
@@ -161,6 +164,8 @@ class TimerService : Service() {
                     putExtra("IS_RUNNING", false)
                     putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
                     putExtra("TOTAL_SESSIONS", totalSessions)
+                    setPackage("com.malrang.pomodoro")
+
                 })
 
                 updateNotification()
@@ -186,6 +191,8 @@ class TimerService : Service() {
                     putExtra("IS_RUNNING", true)
                     putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
                     putExtra("TOTAL_SESSIONS", totalSessions)
+                    setPackage("com.malrang.pomodoro")
+
                 })
             }
             if (wakeLock.isHeld) {
@@ -243,6 +250,8 @@ class TimerService : Service() {
             putExtra("IS_RUNNING", false)
             putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
             putExtra("TOTAL_SESSIONS", totalSessions)
+            setPackage("com.malrang.pomodoro")
+
         })
     }
 
@@ -258,7 +267,7 @@ class TimerService : Service() {
                 repo.saveSeenIds(updatedSeenIds)
                 repo.saveActiveSprites(updatedSprites)
 
-                sendBroadcast(Intent(NEW_ANIMAL_ADDED))
+                sendBroadcast(Intent(NEW_ANIMAL_ADDED).apply { setPackage("com.malrang.pomodoro") })
             }
         }
     }

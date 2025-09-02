@@ -11,6 +11,7 @@ import com.malrang.pomodoro.ui.screen.MainScreen
 import com.malrang.pomodoro.ui.screen.PermissionScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen
 import com.malrang.pomodoro.ui.screen.StatsScreen
+import com.malrang.pomodoro.ui.screen.UserScreen
 import com.malrang.pomodoro.ui.screen.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.withpet.BackPressMove
@@ -40,6 +41,7 @@ fun PomodoroApp(vm: PomodoroViewModel = viewModel()) {
         Screen.Stats -> StatsScreen(vm)
         Screen.Whitelist -> WhitelistScreen(vm)
         Screen.Permission -> PermissionScreen(vm)
+        Screen.StudyRoom -> UserScreen(vm)
         else -> MainScreen(vm)
     }
 }
