@@ -33,14 +33,17 @@ import com.malrang.pomodoro.service.TimerServiceProvider
 import com.malrang.pomodoro.service.WarningOverlayService
 import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
+import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.withpet.BackPressExit
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.handleDeeplinks
 import io.github.jan.supabase.postgrest.postgrest
 
 class MainActivity : ComponentActivity() {
 
     private val vm: PomodoroViewModel by viewModels { PomodoroVMFactory(application) }
-
+    private val authVm: AuthViewModel by viewModels { AuthViewModelFactory(SupabaseProvider.client) }
     private val timerUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             // [수정] 여러 Action을 처리하기 위해 if문에서 when문으로 변경
@@ -73,18 +76,31 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
+        // ✅ 딥링크 처리 추가
+        SupabaseProvider.client.handleDeeplinks(intent)
+        // ✅ ViewModel에게 즉시 세션을 다시 확인하라고 명령합니다.
+        authVm.checkSession()
+
+        enableEdgeToEdge()
         setContent {
             PomodoroTheme {
                 Scaffold {
                     Box(modifier = Modifier.padding(it)) {
-                        PomodoroApp(vm)
+                        PomodoroApp(vm, authVm)
                         BackPressExit()
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // 앱이 이미 실행 중일 때에도 딥링크를 처리하고,
+        SupabaseProvider.client.handleDeeplinks(intent)
+        // ✅ ViewModel에게 즉시 세션을 다시 확인하라고 명령합니다.
+        authVm.checkSession()
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -198,5 +214,17 @@ class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factor
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class AuthViewModelFactory(
+    private val supabase: SupabaseClient
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return AuthViewModel(supabase) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
     }
 }
