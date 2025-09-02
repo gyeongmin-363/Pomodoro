@@ -2,6 +2,7 @@ package com.malrang.pomodoro.networkRepo
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.util.UUID
 
 /**
  * public.users 테이블에 매핑되는 데이터 클래스
@@ -31,13 +32,14 @@ data class Animal(
     val imageUrl: String? = null
 )
 
+
 /**
  * public.study_rooms 테이블에 매핑되는 데이터 클래스
  */
 @Serializable
 data class StudyRoom(
     @SerialName("id")
-    val id: String,
+    val id: String = UUID.randomUUID().toString(),
     @SerialName("name")
     val name: String,
     @SerialName("habit_days")
@@ -52,7 +54,7 @@ data class StudyRoom(
 @Serializable
 data class StudyRoomMember(
     @SerialName("id")
-    val id: String,
+    val id: String = UUID.randomUUID().toString(),
     @SerialName("study_room_id")
     val studyRoomId: String? = null,
     @SerialName("user_id")
@@ -60,7 +62,7 @@ data class StudyRoomMember(
     @SerialName("nickname")
     val nickname: String,
     @SerialName("animal")
-    val animal: Long, // animals.id 외래 키
+    val animal: Long? = null, // [수정] 동물 선택은 선택사항이므로 nullable로 변경
     @SerialName("is_admin")
     val isAdmin: Boolean = false
 )
