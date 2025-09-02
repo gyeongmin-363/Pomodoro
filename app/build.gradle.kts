@@ -1,4 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.FileInputStream
+import java.util.Properties
+import kotlin.apply
 
 plugins {
     alias(libs.plugins.android.application)
@@ -6,7 +9,19 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.google.firebase.crashlytics)
+    kotlin("plugin.serialization") version "2.2.10"
 }
+
+
+val properties = Properties().apply {
+    load(FileInputStream(rootProject.file("local.properties")))
+}
+// 안전하게 키 읽기 (값이 없으면 에러를 띄우도록 하거나 기본값 설정)
+val SUPABASE_ANON_KEY: String = properties.getProperty("SUPABASE_ANON_KEY")
+    ?: throw GradleException("SUPABASE_ANON_KEY is not defined in local.properties")
+val SUPABASE_URL: String = properties.getProperty("SUPABASE_URL")
+    ?: throw GradleException("SUPABASE_URL is not defined in local.properties")
+
 
 android {
     namespace = "com.malrang.pomodoro"
@@ -20,6 +35,10 @@ android {
         versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "SUPABASE_ANON_KEY", SUPABASE_ANON_KEY)
+        buildConfigField("String", "SUPABASE_URL", SUPABASE_URL)
+
     }
 
     buildTypes {
@@ -43,6 +62,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -68,6 +88,14 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation(libs.androidx.animation.core)
+
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.2.2"))
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:serializer-jackson-android:3.2.2")
+
+    implementation("io.ktor:ktor-client-okhttp:3.2.2")
+    implementation("io.ktor:ktor-client-core:3.2.2")
+    implementation("io.ktor:ktor-client-android:3.2.2")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

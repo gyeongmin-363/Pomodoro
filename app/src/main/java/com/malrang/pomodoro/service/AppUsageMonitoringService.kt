@@ -37,12 +37,7 @@ class AppUsageMonitoringService : Service() {
         usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         fetchLauncherPackageNames()
         // 브로드캐스트 리시버 등록
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(tempPassReceiver, IntentFilter("com.malrang.pomodoro.ACTION_TEMP_PASS"), RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("DEPRECATION")
-            registerReceiver(tempPassReceiver, IntentFilter("com.malrang.pomodoro.ACTION_TEMP_PASS"))
-        }
+        registerReceiver(tempPassReceiver, IntentFilter("com.malrang.pomodoro.ACTION_TEMP_PASS"), RECEIVER_NOT_EXPORTED)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -99,6 +94,8 @@ class AppUsageMonitoringService : Service() {
     private fun fetchLauncherPackageNames() {
         val intent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
+            setPackage("com.malrang.pomodoro")
+
         }
         val resolveInfoList = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
         for (resolveInfo in resolveInfoList) {
@@ -124,6 +121,8 @@ class AppUsageMonitoringService : Service() {
         // WarningOverlayService에 현재 차단 모드를 전달
         val intent = Intent(this, WarningOverlayService::class.java).apply {
             putExtra("BLOCK_MODE", currentBlockMode.name)
+            setPackage("com.malrang.pomodoro")
+
         }
         startService(intent)
     }
