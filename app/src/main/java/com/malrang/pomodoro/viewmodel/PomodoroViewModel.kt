@@ -18,6 +18,8 @@ import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.localRepo.PomodoroRepository
+import com.malrang.pomodoro.networkRepo.StudyRoomRepository
+import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,8 +30,9 @@ import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 class PomodoroViewModel(
-    private val repo: PomodoroRepository,
-    private val timerService: TimerServiceProvider
+    private val localRepo: PomodoroRepository,
+    private val timerService: TimerServiceProvider,
+    private val networkRepo: StudyRoomRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PomodoroUiState())
@@ -46,15 +49,15 @@ class PomodoroViewModel(
 
     init {
         viewModelScope.launch {
-            _notificationDenialCount.value = repo.loadNotificationDenialCount()
+            _notificationDenialCount.value = localRepo.loadNotificationDenialCount()
 
-            val seenIds = repo.loadSeenIds()
-            val daily = repo.loadDailyStats()
-            val presets = repo.loadWorkPresets()
-            val whitelistedApps = repo.loadWhitelistedApps()
-            val currentWorkId = repo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
-            val sprites = repo.loadActiveSprites()
-            val useGrassBackground = repo.loadUseGrassBackground()
+            val seenIds = localRepo.loadSeenIds()
+            val daily = localRepo.loadDailyStats()
+            val presets = localRepo.loadWorkPresets()
+            val whitelistedApps = localRepo.loadWhitelistedApps()
+            val currentWorkId = localRepo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
+            val sprites = localRepo.loadActiveSprites()
+            val useGrassBackground = localRepo.loadUseGrassBackground()
 
             val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
             val currentWork = presets.find { it.id == currentWorkId }
@@ -77,7 +80,7 @@ class PomodoroViewModel(
                 timerService.requestStatus()
             } else {
                 // [수정] 서비스가 비활성 상태일 때, 저장된 타이머 상태를 불러옵니다.
-                val savedState = repo.loadTimerState()
+                val savedState = localRepo.loadTimerState()
                 if (savedState != null) {
                     _uiState.update {
                         it.copy(
@@ -97,7 +100,17 @@ class PomodoroViewModel(
         }
     }
 
-    // ... (onPermissionRequestResult, setPermissionAttemptedInSession, checkAndupdatePermissions 등 중간 함수 생략) ...
+    private val _users = MutableStateFlow<List<User>>(emptyList())
+    val users = _users.asStateFlow()
+
+
+    fun loadUsers() {
+        viewModelScope.launch {
+            val result = networkRepo.getUsers()
+            _users.value = result
+        }
+    }
+
     fun onPermissionRequestResult(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             checkAndupdatePermissions(context)
@@ -119,7 +132,7 @@ class PomodoroViewModel(
         if (wasAttempted && !notificationPermissionInfo.isGranted && !isGrantedNow) {
             val newCount = _notificationDenialCount.value + 1
             viewModelScope.launch {
-                repo.saveNotificationDenialCount(newCount)
+                localRepo.saveNotificationDenialCount(newCount)
                 _notificationDenialCount.value = newCount
             }
         }
@@ -172,7 +185,7 @@ class PomodoroViewModel(
     }
     fun refreshActiveSprites() {
         viewModelScope.launch {
-            val updatedSprites = repo.loadActiveSprites()
+            val updatedSprites = localRepo.loadActiveSprites()
             _uiState.update { it.copy(activeSprites = updatedSprites) }
         }
     }
@@ -185,8 +198,8 @@ class PomodoroViewModel(
 
     private suspend fun performResetLogic(settings: Settings) {
         // [수정] 저장된 타이머 상태와 활성 스프라이트를 모두 삭제합니다.
-        repo.clearTimerState()
-        repo.saveActiveSprites(emptyList())
+        localRepo.clearTimerState()
+        localRepo.saveActiveSprites(emptyList())
 
         _uiState.update {
             it.copy(
@@ -222,7 +235,7 @@ class PomodoroViewModel(
     fun pauseTimer() {
         // [수정] 일시정지 시 동물들의 현재 상태(위치 등)를 저장합니다.
         viewModelScope.launch {
-            repo.saveActiveSprites(uiState.value.activeSprites)
+            localRepo.saveActiveSprites(uiState.value.activeSprites)
         }
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
         timerService.pause()
@@ -242,7 +255,7 @@ class PomodoroViewModel(
                     preset
                 }
             }
-            repo.saveWorkPresets(updatedPresets)
+            localRepo.saveWorkPresets(updatedPresets)
             _uiState.update { it.copy(workPresets = updatedPresets) }
             val newActiveSettings = updatedPresets.find { it.id == currentId }?.settings ?: Settings()
             performResetLogic(newActiveSettings)
@@ -259,20 +272,20 @@ class PomodoroViewModel(
     fun addToWhitelist(packageName: String) {
         viewModelScope.launch {
             val updatedWhitelist = _uiState.value.whitelistedApps + packageName
-            repo.saveWhitelistedApps(updatedWhitelist)
+            localRepo.saveWhitelistedApps(updatedWhitelist)
             _uiState.update { it.copy(whitelistedApps = updatedWhitelist) }
         }
     }
     fun removeFromWhitelist(packageName: String) {
         viewModelScope.launch {
             val updatedWhitelist = _uiState.value.whitelistedApps - packageName
-            repo.saveWhitelistedApps(updatedWhitelist)
+            localRepo.saveWhitelistedApps(updatedWhitelist)
             _uiState.update { it.copy(whitelistedApps = updatedWhitelist) }
         }
     }
     fun selectWorkPreset(presetId: String) {
         viewModelScope.launch {
-            repo.saveCurrentWorkId(presetId)
+            localRepo.saveCurrentWorkId(presetId)
             _uiState.update {
                 it.copy(currentWorkId = presetId)
             }
@@ -283,14 +296,14 @@ class PomodoroViewModel(
         viewModelScope.launch {
             val newPreset = WorkPreset(name = "새 Work", settings = Settings())
             val updatedPresets = _uiState.value.workPresets + newPreset
-            repo.saveWorkPresets(updatedPresets)
+            localRepo.saveWorkPresets(updatedPresets)
             _uiState.update { it.copy(workPresets = updatedPresets) }
         }
     }
     fun deleteWorkPreset(id: String) {
         viewModelScope.launch {
             val updatedPresets = _uiState.value.workPresets.filterNot { it.id == id }
-            repo.saveWorkPresets(updatedPresets)
+            localRepo.saveWorkPresets(updatedPresets)
             _uiState.update { it.copy(workPresets = updatedPresets) }
             if (_uiState.value.currentWorkId == id) {
                 selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "")
@@ -302,7 +315,7 @@ class PomodoroViewModel(
             val updatedPresets = _uiState.value.workPresets.map {
                 if (it.id == id) it.copy(name = newName) else it
             }
-            repo.saveWorkPresets(updatedPresets)
+            localRepo.saveWorkPresets(updatedPresets)
             _uiState.update { it.copy(workPresets = updatedPresets) }
         }
     }
@@ -326,7 +339,7 @@ class PomodoroViewModel(
     fun toggleBackground() {
         viewModelScope.launch {
             val newPreference = !_uiState.value.useGrassBackground
-            repo.saveUseGrassBackground(newPreference)
+            localRepo.saveUseGrassBackground(newPreference)
             _uiState.update { it.copy(useGrassBackground = newPreference) }
         }
     }

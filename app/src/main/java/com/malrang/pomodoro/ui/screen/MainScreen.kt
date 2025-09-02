@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -378,6 +379,11 @@ fun PortraitMainScreen(
                 viewModel.toggleBackground()
             }) {
                 Icon(painterResource(R.drawable.light_night), contentDescription = "배경 변경", tint = contentColor)
+            }
+            IconButton(onClick = {
+                viewModel.showScreen(Screen.StudyRoom)
+            }) {
+                Icon(Icons.Default.ThumbUp, contentDescription = "스터디룸", tint = contentColor)
             }
         }
     }

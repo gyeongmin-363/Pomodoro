@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,6 +25,8 @@ import androidx.lifecycle.ViewModelProvider
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.localRepo.PomodoroRepository
+import com.malrang.pomodoro.networkRepo.StudyRoomRepository
+import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.service.AppUsageMonitoringService
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
@@ -32,6 +35,7 @@ import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.withpet.BackPressExit
+import io.github.jan.supabase.postgrest.postgrest
 
 class MainActivity : ComponentActivity() {
 
@@ -184,11 +188,13 @@ class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factor
         if (modelClass.isAssignableFrom(PomodoroViewModel::class.java)) {
             val localDatastoreRepo = PomodoroRepository(app)
             val timerServiceProvider = TimerServiceProvider(app)
+            val studyRoomRepo = StudyRoomRepository(postgrest = SupabaseProvider.client.postgrest)
 
             @Suppress("UNCHECKED_CAST")
             return PomodoroViewModel(
-                repo = localDatastoreRepo,
-                timerService = timerServiceProvider
+                localRepo = localDatastoreRepo,
+                timerService = timerServiceProvider,
+                networkRepo = studyRoomRepo
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

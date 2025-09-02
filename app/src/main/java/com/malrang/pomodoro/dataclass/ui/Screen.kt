@@ -17,5 +17,6 @@ enum class Screen {
     /** 화이트리스트 */
     Whitelist,
     /** 권한 설정 화면 */
-    Permission
+    Permission,
+    StudyRoom
 }

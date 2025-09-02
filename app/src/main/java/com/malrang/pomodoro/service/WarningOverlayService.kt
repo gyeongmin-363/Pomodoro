@@ -76,7 +76,7 @@ class WarningOverlayService : Service() {
 
         val continueButton = overlayView?.findViewById<Button>(R.id.btn_continue_using)
         continueButton?.setOnClickListener {
-            sendBroadcast(Intent("com.malrang.pomodoro.ACTION_TEMP_PASS"))
+            sendBroadcast(Intent("com.malrang.pomodoro.ACTION_TEMP_PASS").apply { setPackage("com.malrang.pomodoro") })
             stopSelf()
         }
     }
