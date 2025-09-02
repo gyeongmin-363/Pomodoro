@@ -5,6 +5,7 @@ import com.malrang.pomodoro.BuildConfig
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.serializer.JacksonSerializer
+import io.ktor.client.engine.okhttp.OkHttp
 
 object SupabaseProvider {
     val client by lazy {
@@ -12,9 +13,11 @@ object SupabaseProvider {
             supabaseUrl = BuildConfig.SUPABASE_URL,
             supabaseKey = BuildConfig.SUPABASE_ANON_KEY
         ) {
-            // Jackson serializer를 기본 직렬화기로 사용
+            // 직렬화기
             defaultSerializer = JacksonSerializer()
-            // Postgrest (DB) 모듈 설치
+            // ✅ Ktor 엔진 명시
+            httpEngine = OkHttp.create()
+            // 모듈 설치
             install(Postgrest)
         }
     }
