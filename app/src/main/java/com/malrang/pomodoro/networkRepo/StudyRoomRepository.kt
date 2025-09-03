@@ -18,7 +18,9 @@ class StudyRoomRepository(
      */
     suspend fun createStudyRoom(studyRoom: StudyRoom): StudyRoom? {
         return postgrest["study_rooms"]
-            .insert(studyRoom)
+            .insert(studyRoom) {
+                select() // 👈 반드시 붙여야 JSON이 반환됨
+            }
             .decodeSingleOrNull<StudyRoom>()
     }
 
