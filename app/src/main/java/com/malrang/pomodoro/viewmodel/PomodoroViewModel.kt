@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.random.Random
 
 class PomodoroViewModel(
@@ -108,49 +109,59 @@ class PomodoroViewModel(
         }
     }
 
-
-    // MARK: - User Functions
-
     /**
-     * 새로운 사용자를 데이터베이스에 추가합니다.
+     * AuthViewModel의 인증 상태를 관찰하고,
+     * 인증이 완료되면 currentUser를 설정하고 관련 데이터를 로드합니다.
      */
-    fun insertUser(user: User) {
+    fun observeAuthState(authViewModel: AuthViewModel) {
         viewModelScope.launch {
-            networkRepo.insertUser(user)
-        }
-    }
+            authViewModel.uiState.collect { authState ->
+                when (authState) {
+                    is AuthViewModel.AuthState.Authenticated -> {
+                        // 인증 성공! UserInfo 객체에서 필요한 정보를 추출합니다.
+                        val userInfo = authState.user
+                        if (userInfo != null) {
+                            // UserInfo에서 이름 추출 (userMetadata는 JSON이므로 파싱 필요)
+                            val userName = userInfo.userMetadata?.get("name")?.jsonPrimitive?.content ?: "사용자"
 
-    /**
-     * 특정 ID의 사용자를 불러와 UI 상태를 업데이트합니다.
-     */
-    fun loadUserById(userId: String) {
-        viewModelScope.launch {
-            val user = networkRepo.getUserById(userId)
-            _studyRoomUiState.update { it.copy(currentUser = user) }
-        }
-    }
+                            // 앱 내부용 User 모델 객체 생성
+                            val appUser = User(id = userInfo.id, name = userName)
 
-    /**
-     * 사용자 이름을 업데이트합니다.
-     */
-    fun updateUserName(userId: String, newName: String) {
-        viewModelScope.launch {
-            networkRepo.updateUserName(userId, newName)
-            loadUserById(userId)
-        }
-    }
+                            // UI 상태 업데이트
+                            _studyRoomUiState.update { it.copy(currentUser = appUser) }
 
-    /**
-     * 사용자를 삭제합니다.
-     */
-    fun deleteUser(userId: String) {
-        viewModelScope.launch {
-            networkRepo.deleteUser(userId)
-            if (_studyRoomUiState.value.currentUser?.id == userId) {
-                _studyRoomUiState.update { it.copy(currentUser = null) }
+                            // 이 사용자의 스터디룸 목록 로드
+                            loadUserStudyRooms(appUser.id)
+                            loadAllAnimals()
+
+                        } else {
+                            // 사용자는 인증되었지만 정보가 없는 예외적인 경우
+                            // 로그아웃 처리 또는 기본값 설정
+                            clearUserRelatedState()
+                        }
+                    }
+                    is AuthViewModel.AuthState.NotAuthenticated -> {
+                        // 로그아웃 상태이므로 사용자 관련 모든 정보를 초기화합니다.
+                        clearUserRelatedState()
+                    }
+                    else -> {
+                        // Idle, Loading, Error 등의 상태 처리
+                    }
+                }
             }
         }
     }
+
+    private fun clearUserRelatedState() {
+        _studyRoomUiState.update {
+            it.copy(
+                currentUser = null,
+                userStudyRooms = emptyList()
+                // ... 기타 사용자 관련 상태 초기화
+            )
+        }
+    }
+
 
     // MARK: - StudyRoom Functions
 
@@ -364,6 +375,23 @@ class PomodoroViewModel(
         }
     }
 
+
+    /**
+     * [추가] 권한을 확인하고, 필요하다면 권한 화면으로 이동시키는 함수
+     */
+    fun checkPermissionsAndNavigateIfNeeded(context: Context) {
+        val allGranted = checkAndupdatePermissions(context)
+        if (!allGranted) {
+            // 권한이 하나라도 없으면 권한 화면으로 보냅니다.
+            showScreen(Screen.Permission)
+        } else {
+            // 모든 권한이 있고, 현재 화면이 혹시 권한 화면이었다면 메인으로 보냅니다.
+            if (_uiState.value.currentScreen == Screen.Permission) {
+                showScreen(Screen.Main)
+            }
+            // 이미 메인 화면이라면 아무것도 하지 않습니다.
+        }
+    }
 
     fun onPermissionRequestResult(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {

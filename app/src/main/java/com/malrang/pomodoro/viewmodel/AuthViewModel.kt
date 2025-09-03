@@ -2,12 +2,16 @@ package com.malrang.pomodoro.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.malrang.pomodoro.viewmodel.AuthViewModel.AuthState.*
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
@@ -18,9 +22,21 @@ class AuthViewModel(
     val uiState: StateFlow<AuthState> = _uiState
 
     init {
-        // ViewModel이 처음 생성될 때 현재 세션이 있는지 확인합니다.
-        checkSession()
+        // ✅ [핵심 수정] ViewModel 생성 시 Supabase의 인증 상태 흐름을 구독합니다.
+        // 이 코드가 로그인, 로그아웃, 토큰 갱신 등 모든 상태 변화를 자동으로 감지하고
+        // uiState를 올바르게 업데이트합니다.
+        supabase.auth.sessionStatus
+            .onEach { status ->
+                _uiState.value = when (status) {
+                    is SessionStatus.Authenticated -> Authenticated(status.session.user)
+                    is SessionStatus.NotAuthenticated -> AuthState.NotAuthenticated
+                    is SessionStatus.Initializing -> TODO()
+                    is SessionStatus.RefreshFailure -> TODO()
+                }
+            }
+            .launchIn(viewModelScope)
     }
+
 
     fun signInWithGoogle() {
         viewModelScope.launch {
@@ -34,21 +50,6 @@ class AuthViewModel(
                 // 성공 여부는 MainActivity의 신호를 통해 확인되므로 여기서는 추가 상태 변경이 없습니다.
             } catch (e: Exception) {
                 _uiState.value = AuthState.Error(e.message ?: "Unknown error")
-            }
-        }
-    }
-
-    /**
-     * 현재 Supabase에 저장된 세션을 확인하고 UI 상태를 업데이트합니다.
-     * MainActivity에서 딥링크를 받은 후 직접 호출될 것입니다.
-     */
-    fun checkSession() {
-        viewModelScope.launch {
-            val session = supabase.auth.sessionManager.loadSession()
-            if (session != null) {
-                _uiState.value = AuthState.Authenticated(session.user)
-            } else {
-                _uiState.value = AuthState.NotAuthenticated
             }
         }
     }

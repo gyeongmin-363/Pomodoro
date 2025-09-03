@@ -8,65 +8,6 @@ import io.github.jan.supabase.postgrest.query.Columns
 class StudyRoomRepository(
     private val postgrest: Postgrest,
 ) {
-    // MARK: - User Functions
-
-    /**
-     * 새로운 사용자를 추가합니다.
-     * @param user 추가할 사용자 객체
-     */
-    suspend fun insertUser(user: User) {
-        postgrest["users"].insert(user)
-    }
-
-    /**
-     * 모든 사용자 목록을 가져옵니다.
-     * @return User 객체 리스트
-     */
-    suspend fun getUsers(): List<User> {
-        return postgrest["users"].select().decodeList<User>()
-    }
-
-    /**
-     * 특정 ID의 사용자를 가져옵니다.
-     * @param userId 가져올 사용자의 ID
-     * @return User 객체 (없으면 null)
-     */
-    suspend fun getUserById(userId: String): User? {
-        return postgrest["users"]
-            .select {
-                filter {
-                    eq("id", userId)
-                }
-            }
-            .decodeSingleOrNull<User>()
-    }
-
-    /**
-     * 사용자 이름을 업데이트합니다.
-     * @param userId 업데이트할 사용자의 ID
-     * @param newName 새로운 이름
-     */
-    suspend fun updateUserName(userId: String, newName: String) {
-        postgrest["users"]
-            .update({ set("name", newName) }) {
-                filter {
-                    eq("id", userId)
-                }
-            }
-    }
-
-    /**
-     * 사용자를 삭제합니다.
-     * @param userId 삭제할 사용자의 ID
-     */
-    suspend fun deleteUser(userId: String) {
-        postgrest["users"]
-            .delete {
-                filter {
-                    eq("id", userId)
-                }
-            }
-    }
 
     // MARK: - StudyRoom Functions
 

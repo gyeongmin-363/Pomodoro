@@ -80,7 +80,6 @@ class MainActivity : ComponentActivity() {
         // ✅ 딥링크 처리 추가
         SupabaseProvider.client.handleDeeplinks(intent)
         // ✅ ViewModel에게 즉시 세션을 다시 확인하라고 명령합니다.
-        authVm.checkSession()
 
         enableEdgeToEdge()
         setContent {
@@ -100,7 +99,6 @@ class MainActivity : ComponentActivity() {
         // 앱이 이미 실행 중일 때에도 딥링크를 처리하고,
         SupabaseProvider.client.handleDeeplinks(intent)
         // ✅ ViewModel에게 즉시 세션을 다시 확인하라고 명령합니다.
-        authVm.checkSession()
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -127,7 +125,6 @@ class MainActivity : ComponentActivity() {
         vm.requestTimerStatus()
         vm.refreshActiveSprites()
 
-        checkPermissionsAndNavigate()
         stopAppMonitoringService()
         stopWarningOverlay()
     }
@@ -165,16 +162,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun checkPermissionsAndNavigate() {
-        val allGranted = vm.checkAndupdatePermissions(this)
-        if (!allGranted) {
-            vm.showScreen(Screen.Permission)
-        } else {
-            if (vm.uiState.value.currentScreen == Screen.Permission) {
-                vm.showScreen(Screen.Main)
-            }
-        }
-    }
 
 
     private fun startAppMonitoringService(

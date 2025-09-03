@@ -12,11 +12,10 @@ import java.util.UUID
 @Serializable
 data class User(
     @SerialName("id")
-    val id: String, // Supabase는 UUID를 문자열로 다루는 경우가 많으므로 String 타입이 더 편리할 수 있습니다.
+    val id: String, // auth.users.id (UUID)
     @SerialName("name")
-    val name: String
+    val name: String // auth.users.user_metadata 에서 가져온 이름
 )
-
 /**
  * public.animals 테이블에 매핑되는 데이터 클래스
  */
