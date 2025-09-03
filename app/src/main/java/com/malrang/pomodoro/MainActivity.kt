@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+    import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
@@ -34,6 +36,7 @@ import com.malrang.pomodoro.viewmodel.StudyRoomVMFactory
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.withpet.BackPressExit
 import io.github.jan.supabase.auth.handleDeeplinks
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -76,7 +79,8 @@ class MainActivity : ComponentActivity() {
 
         // ✅ 딥링크 처리 추가
         SupabaseProvider.client.handleDeeplinks(intent)
-        // ✅ ViewModel에게 즉시 세션을 다시 확인하라고 명령합니다.
+
+        handleStudyRoomIntent(intent)
 
         enableEdgeToEdge()
         setContent {
@@ -95,7 +99,31 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         // 앱이 이미 실행 중일 때에도 딥링크를 처리하고,
         SupabaseProvider.client.handleDeeplinks(intent)
-        // ✅ ViewModel에게 즉시 세션을 다시 확인하라고 명령합니다.
+
+        handleStudyRoomIntent(intent)
+    }
+
+    // ▼▼▼ [추가] Intent에서 스터디룸 ID를 파싱하고 ViewModel에 전달하는 함수 ▼▼▼
+    private fun handleStudyRoomIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            val data: Uri? = intent.data
+            // 스키마와 호스트가 일치하는지 확인 (pomodoro-study://join)
+            if (data?.scheme == "pixbbo-room" && data.host == "join") {
+                // 경로에서 studyRoomId 추출 ( /studyRoomId -> studyRoomId )
+                val studyRoomId = data.lastPathSegment
+                if (!studyRoomId.isNullOrBlank()) {
+                    // ViewModel에 ID 전달
+                    // AuthState가 Authenticated가 된 후에 처리되도록 lifecycleScope 사용
+                    lifecycleScope.launch {
+                        authVm.uiState.collect { state ->
+                            if (state is AuthViewModel.AuthState.Authenticated) {
+                                roomVm.handleInviteLink(studyRoomId)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")

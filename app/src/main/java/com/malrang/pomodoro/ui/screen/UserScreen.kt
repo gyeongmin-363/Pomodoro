@@ -28,7 +28,8 @@ import java.util.UUID
 @Composable
 fun UserScreen(
     authVM: AuthViewModel,
-    roomVM: StudyRoomViewModel
+    roomVM: StudyRoomViewModel,
+    inviteStudyRoomId: String?
 ) {
     val authState by authVM.uiState.collectAsState()
 
@@ -47,6 +48,13 @@ fun UserScreen(
             else -> { /* 로딩, 에러 등 */ }
         }
     }
+
+    LaunchedEffect(inviteStudyRoomId) {
+        inviteStudyRoomId?.let {
+            roomVM.handleInviteLink(it)
+        }
+    }
+
 
     val uiState by roomVM.studyRoomUiState.collectAsState()
     val currentUser = uiState.currentUser
