@@ -1,6 +1,5 @@
 package com.malrang.pomodoro.ui
 
-import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -12,6 +11,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.CollectionScreen
 import com.malrang.pomodoro.ui.screen.LoginScreen
@@ -24,6 +26,7 @@ import com.malrang.pomodoro.ui.screen.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
+import com.malrang.withpet.BackPressExit
 import com.malrang.withpet.BackPressMove
 
 /**
@@ -40,11 +43,21 @@ fun PomodoroApp(
     roomVm : StudyRoomViewModel = viewModel(),
 ) {
     // 1. 두 ViewModel의 상태를 모두 관찰합니다.
-    val appState by vm.uiState.collectAsState()
     val authState by authVm.uiState.collectAsState()
     val context = LocalContext.current
 
-    // 2. 인증 상태가 'Authenticated'로 변경될 때만 권한 확인 로직을 실행합니다.
+    val navController = rememberNavController()
+
+    LaunchedEffect(Unit) {
+        vm.navigationEvents.collect { screen ->
+            navController.navigate(screen.name) {
+                // 필요에 따라 popUpTo 같은 네비게이션 옵션을 설정할 수 있습니다.
+                // 예: popUpTo(Screen.Main.name) { inclusive = true }
+            }
+        }
+    }
+
+    // 인증 상태가 'Authenticated'로 변경될 때만 권한 확인 로직을 실행합니다.
     LaunchedEffect(authState) {
         if (authState is AuthViewModel.AuthState.Authenticated) {
             // 로그인 성공 시점에 권한을 확인하고 필요한 화면으로 이동시킵니다.
@@ -52,31 +65,32 @@ fun PomodoroApp(
         }
     }
 
-    // ✅ MainScreen이 아닐 경우 뒤로가기 버튼을 누르면 Main으로 이동
-    if (appState.currentScreen != Screen.Main && appState.currentScreen != Screen.Whitelist ) {
-        BackPressMove {
-            vm.showScreen(Screen.Main)
-        }
-    }
 
+//    // ✅ MainScreen이 아닐 경우 뒤로가기 버튼을 누르면 Main으로 이동
+//    if (appState.currentScreen != Screen.Main && appState.currentScreen != Screen.Whitelist ) {
+//        BackPressMove {
+//            vm.navigateTo(Screen.Main)
+//        }
+//    }
+//
+//
 
     // 3. 인증 상태에 따라 화면을 분기합니다.
     when (authState) {
         is AuthViewModel.AuthState.Authenticated -> {
-            // ✅ 로그인이 완료되었을 때 앱의 주 화면 로직을 따릅니다.
-            // LaunchedEffect가 권한 확인 후 적절한 화면(Permission 또는 Main)으로 이동시킵니다.
-            // 따라서 여기서는 절대 LoginScreen을 보여주지 않습니다.
-            when (appState.currentScreen) {
-                Screen.Main -> MainScreen(vm)
-                Screen.Collection -> CollectionScreen(vm)
-                Screen.Settings -> SettingsScreen(vm)
-                Screen.Stats -> StatsScreen(vm)
-                Screen.Whitelist -> WhitelistScreen(vm)
-                Screen.Permission -> PermissionScreen(vm)
-                Screen.StudyRoom -> UserScreen(authVm, roomVm, null)
-                // 만약 currentScreen이 Login이거나 다른 예외적인 경우,
-                // MainScreen을 기본값으로 보여줍니다.
-                else -> MainScreen(vm)
+            // ✅ 로그인이 완료되었을 때 NavHost를 통해 화면을 관리합니다.
+            NavHost(navController = navController, startDestination = Screen.Main.name) {
+                composable(Screen.Main.name) {
+                    MainScreen(vm)
+                    BackPressExit()
+                }
+                composable(Screen.Collection.name) { CollectionScreen(vm) }
+                composable(Screen.Settings.name) { SettingsScreen(vm) }
+                composable(Screen.Stats.name) { StatsScreen(vm) }
+                composable(Screen.Whitelist.name) { WhitelistScreen(vm) }
+                composable(Screen.Permission.name) { PermissionScreen(vm) }
+                composable(Screen.StudyRoom.name) { UserScreen(authVm, roomVm, null) }
+                // Login 화면은 인증 분기 바깥에 있으므로 여기서는 필요 없습니다.
             }
         }
         is AuthViewModel.AuthState.NotAuthenticated,

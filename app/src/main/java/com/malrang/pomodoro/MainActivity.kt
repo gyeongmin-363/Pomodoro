@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold {
                     Box(modifier = Modifier.padding(it)) {
                         PomodoroApp(vm, authVm, roomVm)
-                        BackPressExit()
+//                        BackPressExit()
                     }
                 }
             }

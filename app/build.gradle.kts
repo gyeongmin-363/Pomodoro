@@ -100,6 +100,8 @@ dependencies {
     implementation("io.ktor:ktor-client-android:3.2.2")
     implementation(libs.androidx.foundation)
 
+    implementation("androidx.navigation:navigation-compose:2.9.3")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

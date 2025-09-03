@@ -16,22 +16,17 @@ import com.malrang.pomodoro.dataclass.ui.PermissionType
 import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.Settings
-import com.malrang.pomodoro.dataclass.ui.StudyRoomUiState
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.localRepo.PomodoroRepository
-import com.malrang.pomodoro.networkRepo.HabitProgress
-import com.malrang.pomodoro.networkRepo.StudyRoom
-import com.malrang.pomodoro.networkRepo.StudyRoomMember
-import com.malrang.pomodoro.networkRepo.StudyRoomRepository
-import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.random.Random
 
 class PomodoroViewModel(
@@ -50,6 +45,10 @@ class PomodoroViewModel(
     val editingWorkPreset: StateFlow<WorkPreset?> = _editingWorkPreset.asStateFlow()
     private val _draftSettings = MutableStateFlow<Settings?>(null)
     val draftSettings: StateFlow<Settings?> = _draftSettings.asStateFlow()
+
+    // [추가] 네비게이션 이벤트를 위한 SharedFlow
+    private val _navigationEvents = MutableSharedFlow<Screen>()
+    val navigationEvents = _navigationEvents.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -112,11 +111,11 @@ class PomodoroViewModel(
         val allGranted = checkAndupdatePermissions(context)
         if (!allGranted) {
             // 권한이 하나라도 없으면 권한 화면으로 보냅니다.
-            showScreen(Screen.Permission)
+            navigateTo(Screen.Permission)
         } else {
             // 모든 권한이 있고, 현재 화면이 혹시 권한 화면이었다면 메인으로 보냅니다.
             if (_uiState.value.currentScreen == Screen.Permission) {
-                showScreen(Screen.Main)
+                navigateTo(Screen.Main)
             }
             // 이미 메인 화면이라면 아무것도 하지 않습니다.
         }
@@ -384,7 +383,17 @@ class PomodoroViewModel(
             )
         }
     }
-    fun showScreen(s: Screen) { _uiState.update { it.copy(currentScreen = s) } }
+
+    /**
+     * [수정] 화면 이동을 위한 함수. 이제 상태를 직접 바꾸지 않고 이벤트를 발생시킵니다.
+     */
+
+    fun navigateTo(s: Screen) {
+        viewModelScope.launch {
+            _navigationEvents.emit(s)
+        }
+    }
+
     fun updateSprites(deltaSec: Float, widthPx: Int, heightPx: Int) {
         _uiState.update { s ->
             val updated = s.activeSprites.map { sp ->

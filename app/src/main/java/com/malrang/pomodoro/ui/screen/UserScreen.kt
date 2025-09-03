@@ -66,7 +66,7 @@ fun UserScreen(
                 title = { Text("내 스터디룸") },
                 navigationIcon = {
                     IconButton(onClick = {
-//                        viewModel.showScreen(Screen.Main)
+//                        viewModel.navigateTo(Screen.Main)
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
                     }
