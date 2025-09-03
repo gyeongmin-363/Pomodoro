@@ -58,9 +58,10 @@ fun PomodoroApp(vm: PomodoroViewModel = viewModel(), authVm : AuthViewModel = vi
     // 3. 인증 상태에 따라 화면을 분기합니다.
     when (authState) {
         is AuthViewModel.AuthState.Authenticated -> {
-            // ✅ 로그인이 완료되었을 때만 앱의 주 화면 로직을 따릅니다.
+            // ✅ 로그인이 완료되었을 때 앱의 주 화면 로직을 따릅니다.
+            // LaunchedEffect가 권한 확인 후 적절한 화면(Permission 또는 Main)으로 이동시킵니다.
+            // 따라서 여기서는 절대 LoginScreen을 보여주지 않습니다.
             when (appState.currentScreen) {
-                Screen.Login -> LoginScreen(authVm)
                 Screen.Main -> MainScreen(vm)
                 Screen.Collection -> CollectionScreen(vm)
                 Screen.Settings -> SettingsScreen(vm)
@@ -68,7 +69,9 @@ fun PomodoroApp(vm: PomodoroViewModel = viewModel(), authVm : AuthViewModel = vi
                 Screen.Whitelist -> WhitelistScreen(vm)
                 Screen.Permission -> PermissionScreen(vm)
                 Screen.StudyRoom -> UserScreen(vm)
-                else -> LoginScreen(authVm)
+                // 만약 currentScreen이 Login이거나 다른 예외적인 경우,
+                // MainScreen을 기본값으로 보여줍니다.
+                else -> MainScreen(vm)
             }
         }
         is AuthViewModel.AuthState.NotAuthenticated,

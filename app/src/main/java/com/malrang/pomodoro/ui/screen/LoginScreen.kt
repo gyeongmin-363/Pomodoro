@@ -21,9 +21,10 @@ fun LoginScreen(viewModel: AuthViewModel) {
         // 이 부분은 ViewModel의 상태가 바뀌면 자동으로 업데이트됩니다.
         when(state) {
             is AuthViewModel.AuthState.Loading -> CircularProgressIndicator() // 로딩 중일 때 표시
-            is AuthViewModel.AuthState.Authenticated -> Text("로그인 완료: ${(state as AuthViewModel.AuthState.Authenticated).user?.email}")
             is AuthViewModel.AuthState.Error -> Text("오류: ${(state as AuthViewModel.AuthState.Error).message}")
-            else -> {}
+            else -> {
+                // Authenticated, Idle 등 다른 상태에서는 아무것도 표시하지 않음
+            }
         }
         when(state){
             is AuthViewModel.AuthState.Authenticated -> {
