@@ -16,14 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.viewmodel.AuthViewModel
-import com.malrang.pomodoro.viewmodel.PomodoroViewModel
-import com.malrang.pomodoro.viewmodel.StudyRoomVMFactory
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.UUID
@@ -36,15 +32,12 @@ fun UserScreen(
 ) {
     val authState by authVM.uiState.collectAsState()
 
-    // authState가 변경될 때마다 이 효과가 실행됩니다.
     LaunchedEffect(authState) {
         when (val state = authState) {
             is AuthViewModel.AuthState.Authenticated -> {
                 state.user?.let { userInfo ->
-                    // UserInfo를 앱에서 사용하는 User 모델로 변환
                     val userName = userInfo.userMetadata?.get("name")?.jsonPrimitive?.content ?: "사용자"
                     val appUser = User(id = userInfo.id, name = userName)
-                    // StudyRoomViewModel에 사용자 정보 전달
                     roomVM.onUserAuthenticated(appUser)
                 }
             }
@@ -55,7 +48,6 @@ fun UserScreen(
         }
     }
 
-    // 이제 UserScreen의 나머지 부분은 studyRoomViewModel만 사용하면 됩니다.
     val uiState by roomVM.studyRoomUiState.collectAsState()
     val currentUser = uiState.currentUser
     val userStudyRooms = uiState.userStudyRooms
@@ -81,9 +73,7 @@ fun UserScreen(
             }
         }
     ) { paddingValues ->
-        // ✅ [수정] currentUser의 상태에 따라 다른 화면을 보여줍니다.
         if (currentUser == null) {
-            // 데이터 로딩 중임을 알리는 화면
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -92,41 +82,78 @@ fun UserScreen(
                 Text("사용자 정보를 불러오는 중...")
             }
         } else {
-            // 데이터 로딩이 완료되면 기존 UI를 보여줍니다.
+            // ✅ [수정] 생성한 룸과 참여한 룸을 분리
+            val (createdRooms, joinedRooms) = userStudyRooms.partition { it.creator_id == currentUser.id }
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp)
+                    .padding(horizontal = 16.dp)
             ) {
-                items(uiState.userStudyRooms) { room ->
-                    StudyRoomItem(room = room, onClick = {
-                        roomVM.onJoinStudyRoom(room)
-                    })
+                // 내가 생성한 스터디룸 섹션
+                if (createdRooms.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "내가 생성한 스터디룸",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+                    items(createdRooms) { room ->
+                        StudyRoomItem(room = room, onClick = {
+                            roomVM.onJoinStudyRoom(room)
+                        })
+                    }
+                }
+
+                // 생성한 룸과 참여한 룸이 모두 있을 경우 구분선 표시
+                if (createdRooms.isNotEmpty() && joinedRooms.isNotEmpty()) {
+                    item {
+                        Divider(modifier = Modifier.padding(vertical = 16.dp))
+                    }
+                }
+
+                // 내가 참여한 스터디룸 섹션
+                if (joinedRooms.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "내가 참여한 스터디룸",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                        )
+                    }
+                    items(joinedRooms) { room ->
+                        StudyRoomItem(room = room, onClick = {
+                            roomVM.onJoinStudyRoom(room)
+                        })
+                    }
                 }
             }
         }
 
-
-            // 스터디룸 생성 다이얼로그
+        // 스터디룸 생성 다이얼로그
         if (uiState.showCreateStudyRoomDialog) {
-            CreateStudyRoomDialog(
-                currentUser = currentUser,
-                allAnimals = uiState.allAnimals,
-                viewModel = roomVM,
-                onDismiss = { roomVM.showCreateStudyRoomDialog(false) }
-            )
+            currentUser?.let { user ->
+                CreateStudyRoomDialog(
+                    currentUser = user,
+                    viewModel = roomVM,
+                    onDismiss = { roomVM.showCreateStudyRoomDialog(false) }
+                )
+            }
         }
 
-        // 스터디룸 참여(닉네임/동물 설정) 다이얼로그
+        // 스터디룸 참여 다이얼로그
         uiState.showJoinStudyRoomDialog?.let { room ->
-            JoinStudyRoomDialog(
-                room = room,
-                currentUser = currentUser,
-                allAnimals = uiState.allAnimals,
-                viewModel = roomVM,
-                onDismiss = { roomVM.dismissJoinStudyRoomDialog() }
-            )
+            currentUser?.let { user ->
+                JoinStudyRoomDialog(
+                    room = room,
+                    currentUser = user,
+                    allAnimals = uiState.allAnimals,
+                    viewModel = roomVM,
+                    onDismiss = { roomVM.dismissJoinStudyRoomDialog() }
+                )
+            }
         }
     }
 }
@@ -148,19 +175,16 @@ fun StudyRoomItem(room: StudyRoom, onClick: () -> Unit) {
     }
 }
 
+// ✅ [수정] CreateStudyRoomDialog에서 닉네임 및 동물 선택 UI 제거
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateStudyRoomDialog(
-    currentUser: User?,
-    allAnimals: List<com.malrang.pomodoro.networkRepo.Animal>,
+    currentUser: User,
     viewModel: StudyRoomViewModel,
     onDismiss: () -> Unit
 ) {
     var roomName by remember { mutableStateOf("") }
     var habitDays by remember { mutableStateOf("") }
-    var nickname by remember { mutableStateOf("") }
-    var selectedAnimal by remember { mutableStateOf<com.malrang.pomodoro.networkRepo.Animal?>(null) }
-    var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -181,72 +205,22 @@ fun CreateStudyRoomDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = nickname,
-                    onValueChange = { nickname = it },
-                    label = { Text("사용할 닉네임") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier
-                            .menuAnchor()
-                            .   fillMaxWidth(),
-                        readOnly = true,
-                        value = selectedAnimal?.name ?: "동물 선택 (선택사항)",
-                        onValueChange = {},
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        allAnimals.forEach { animal ->
-                            DropdownMenuItem(
-                                text = { Text(animal.name ?: "이름 없음") },
-                                onClick = {
-                                    selectedAnimal = animal
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    // 여기에 추가했던 Log.d가 이제는 보여야 합니다.
-                    android.util.Log.d("StudyRoomDebug", "버튼 클릭됨!")
-
-                    val userId = currentUser?.id ?: return@Button
-
                     val newRoom = StudyRoom(
                         id = UUID.randomUUID().toString(),
                         name = roomName,
                         habit_days = habitDays.toIntOrNull() ?: 0,
-                        creator_id = userId
+                        creator_id = currentUser.id
                     )
-
-                    val newMember = StudyRoomMember(
-                        id = UUID.randomUUID().toString(),
-                        user_id = userId,
-                        nickname = nickname,
-                        animal = selectedAnimal?.id,
-                        is_admin = true // 방 생성자는 관리자
-                    )
-
-                    viewModel.createStudyRoomAndJoin(newRoom, newMember)
+                    viewModel.createStudyRoom(newRoom)
                 },
-                enabled = roomName.isNotBlank() && habitDays.isNotBlank() && nickname.isNotBlank()
+                enabled = roomName.isNotBlank() && habitDays.isNotBlank()
             ) {
-                Text("생성 및 참여")
+                Text("생성") // 버튼 텍스트 변경
             }
         },
         dismissButton = {
@@ -261,7 +235,7 @@ fun CreateStudyRoomDialog(
 @Composable
 fun JoinStudyRoomDialog(
     room: StudyRoom,
-    currentUser: User?,
+    currentUser: User,
     allAnimals: List<com.malrang.pomodoro.networkRepo.Animal>,
     viewModel: StudyRoomViewModel,
     onDismiss: () -> Unit
@@ -313,11 +287,10 @@ fun JoinStudyRoomDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val userId = currentUser?.id ?: return@Button
                     val member = StudyRoomMember(
                         id = UUID.randomUUID().toString(),
                         study_room_id = room.id,
-                        user_id = userId,
+                        user_id = currentUser.id,
                         nickname = nickname,
                         animal = selectedAnimal?.id
                     )
@@ -335,4 +308,3 @@ fun JoinStudyRoomDialog(
         }
     )
 }
-
