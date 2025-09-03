@@ -23,6 +23,7 @@ import com.malrang.pomodoro.ui.screen.UserScreen
 import com.malrang.pomodoro.ui.screen.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.withpet.BackPressMove
 
 /**
@@ -33,7 +34,11 @@ import com.malrang.withpet.BackPressMove
 + * @param onRequestPermission 권한 설정 버튼 클릭 시 호출될 함수입니다.
  */
 @Composable
-fun PomodoroApp(vm: PomodoroViewModel = viewModel(), authVm : AuthViewModel = viewModel()) {
+fun PomodoroApp(
+    vm: PomodoroViewModel = viewModel(),
+    authVm : AuthViewModel = viewModel(),
+    roomVm : StudyRoomViewModel = viewModel(),
+) {
     // 1. 두 ViewModel의 상태를 모두 관찰합니다.
     val appState by vm.uiState.collectAsState()
     val authState by authVm.uiState.collectAsState()
@@ -68,7 +73,7 @@ fun PomodoroApp(vm: PomodoroViewModel = viewModel(), authVm : AuthViewModel = vi
                 Screen.Stats -> StatsScreen(vm)
                 Screen.Whitelist -> WhitelistScreen(vm)
                 Screen.Permission -> PermissionScreen(vm)
-                Screen.StudyRoom -> UserScreen(vm)
+                Screen.StudyRoom -> UserScreen(authVm, roomVm)
                 // 만약 currentScreen이 Login이거나 다른 예외적인 경우,
                 // MainScreen을 기본값으로 보여줍니다.
                 else -> MainScreen(vm)

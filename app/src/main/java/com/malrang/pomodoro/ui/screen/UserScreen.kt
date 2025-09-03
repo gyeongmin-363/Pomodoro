@@ -16,18 +16,47 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.User
+import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.pomodoro.viewmodel.StudyRoomVMFactory
+import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserScreen(viewModel: PomodoroViewModel) {
-    // State를 최상위에서 한 번만 collect 합니다.
-    val uiState by viewModel.studyRoomUiState.collectAsState()
+fun UserScreen(
+    authVM: AuthViewModel,
+    roomVM: StudyRoomViewModel
+) {
+    val authState by authVM.uiState.collectAsState()
+
+    // authState가 변경될 때마다 이 효과가 실행됩니다.
+    LaunchedEffect(authState) {
+        when (val state = authState) {
+            is AuthViewModel.AuthState.Authenticated -> {
+                state.user?.let { userInfo ->
+                    // UserInfo를 앱에서 사용하는 User 모델로 변환
+                    val userName = userInfo.userMetadata?.get("name")?.jsonPrimitive?.content ?: "사용자"
+                    val appUser = User(id = userInfo.id, name = userName)
+                    // StudyRoomViewModel에 사용자 정보 전달
+                    roomVM.onUserAuthenticated(appUser)
+                }
+            }
+            is AuthViewModel.AuthState.NotAuthenticated -> {
+                roomVM.onUserNotAuthenticated()
+            }
+            else -> { /* 로딩, 에러 등 */ }
+        }
+    }
+
+    // 이제 UserScreen의 나머지 부분은 studyRoomViewModel만 사용하면 됩니다.
+    val uiState by roomVM.studyRoomUiState.collectAsState()
     val currentUser = uiState.currentUser
     val userStudyRooms = uiState.userStudyRooms
 
@@ -36,7 +65,9 @@ fun UserScreen(viewModel: PomodoroViewModel) {
             TopAppBar(
                 title = { Text("내 스터디룸") },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.showScreen(Screen.Main) }) {
+                    IconButton(onClick = {
+//                        viewModel.showScreen(Screen.Main)
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
                     }
                 }
@@ -44,7 +75,7 @@ fun UserScreen(viewModel: PomodoroViewModel) {
         },
         floatingActionButton = {
             if (currentUser != null) {
-                FloatingActionButton(onClick = { viewModel.showCreateStudyRoomDialog(true) }) {
+                FloatingActionButton(onClick = { roomVM.showCreateStudyRoomDialog(true) }) {
                     Icon(Icons.Default.Add, contentDescription = "스터디룸 생성")
                 }
             }
@@ -70,7 +101,7 @@ fun UserScreen(viewModel: PomodoroViewModel) {
             ) {
                 items(uiState.userStudyRooms) { room ->
                     StudyRoomItem(room = room, onClick = {
-                        viewModel.onJoinStudyRoom(room)
+                        roomVM.onJoinStudyRoom(room)
                     })
                 }
             }
@@ -82,8 +113,8 @@ fun UserScreen(viewModel: PomodoroViewModel) {
             CreateStudyRoomDialog(
                 currentUser = currentUser,
                 allAnimals = uiState.allAnimals,
-                viewModel = viewModel,
-                onDismiss = { viewModel.showCreateStudyRoomDialog(false) }
+                viewModel = roomVM,
+                onDismiss = { roomVM.showCreateStudyRoomDialog(false) }
             )
         }
 
@@ -93,8 +124,8 @@ fun UserScreen(viewModel: PomodoroViewModel) {
                 room = room,
                 currentUser = currentUser,
                 allAnimals = uiState.allAnimals,
-                viewModel = viewModel,
-                onDismiss = { viewModel.dismissJoinStudyRoomDialog() }
+                viewModel = roomVM,
+                onDismiss = { roomVM.dismissJoinStudyRoomDialog() }
             )
         }
     }
@@ -122,7 +153,7 @@ fun StudyRoomItem(room: StudyRoom, onClick: () -> Unit) {
 fun CreateStudyRoomDialog(
     currentUser: User?,
     allAnimals: List<com.malrang.pomodoro.networkRepo.Animal>,
-    viewModel: PomodoroViewModel,
+    viewModel: StudyRoomViewModel,
     onDismiss: () -> Unit
 ) {
     var roomName by remember { mutableStateOf("") }
@@ -213,7 +244,7 @@ fun CreateStudyRoomDialog(
 
                     viewModel.createStudyRoomAndJoin(newRoom, newMember)
                 },
-//                enabled = roomName.isNotBlank() && habitDays.isNotBlank() && nickname.isNotBlank()
+                enabled = roomName.isNotBlank() && habitDays.isNotBlank() && nickname.isNotBlank()
             ) {
                 Text("생성 및 참여")
             }
@@ -232,7 +263,7 @@ fun JoinStudyRoomDialog(
     room: StudyRoom,
     currentUser: User?,
     allAnimals: List<com.malrang.pomodoro.networkRepo.Animal>,
-    viewModel: PomodoroViewModel,
+    viewModel: StudyRoomViewModel,
     onDismiss: () -> Unit
 ) {
     var nickname by remember { mutableStateOf("") }
