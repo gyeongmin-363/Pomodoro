@@ -30,8 +30,8 @@ class AuthViewModel(
                 _uiState.value = when (status) {
                     is SessionStatus.Authenticated -> Authenticated(status.session.user)
                     is SessionStatus.NotAuthenticated -> AuthState.NotAuthenticated
-                    is SessionStatus.Initializing -> TODO()
-                    is SessionStatus.RefreshFailure -> TODO()
+                    is SessionStatus.Initializing -> AuthState.Loading
+                    is SessionStatus.RefreshFailure -> AuthState.Error("세션 갱신에 실패했습니다. 다시 로그인해주세요.")
                 }
             }
             .launchIn(viewModelScope)

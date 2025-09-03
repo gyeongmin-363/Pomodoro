@@ -18,7 +18,7 @@ import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
  * @property useGrassBackground 풀 배경화면 사용 여부를 나타냅니다.
  */
 data class PomodoroUiState(
-    val currentScreen: Screen = Screen.Login,
+    val currentScreen: Screen = Screen.Main,
     val currentMode: Mode = Mode.STUDY,
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,

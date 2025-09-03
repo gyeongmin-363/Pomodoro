@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -30,14 +31,6 @@ fun UserScreen(viewModel: PomodoroViewModel) {
     val currentUser = uiState.currentUser
     val userStudyRooms = uiState.userStudyRooms
 
-    // 화면이 처음 나타날 때 사용자의 스터디룸 목록을 불러옵니다.
-    LaunchedEffect(currentUser) {
-        if (currentUser != null) {
-            viewModel.loadUserStudyRooms(currentUser.id)
-            viewModel.loadAllAnimals() // 동물 선택을 위해 전체 동물 목록 로드
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -50,25 +43,41 @@ fun UserScreen(viewModel: PomodoroViewModel) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.showCreateStudyRoomDialog(true) }) {
-                Icon(Icons.Default.Add, contentDescription = "스터디룸 생성")
+            if (currentUser != null) {
+                FloatingActionButton(onClick = { viewModel.showCreateStudyRoomDialog(true) }) {
+                    Icon(Icons.Default.Add, contentDescription = "스터디룸 생성")
+                }
             }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            items(userStudyRooms) { room ->
-                StudyRoomItem(room = room, onClick = {
-                    viewModel.onJoinStudyRoom(room)
-                })
+        // ✅ [수정] currentUser의 상태에 따라 다른 화면을 보여줍니다.
+        if (currentUser == null) {
+            // 데이터 로딩 중임을 알리는 화면
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+                Text("사용자 정보를 불러오는 중...")
+            }
+        } else {
+            // 데이터 로딩이 완료되면 기존 UI를 보여줍니다.
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                items(uiState.userStudyRooms) { room ->
+                    StudyRoomItem(room = room, onClick = {
+                        viewModel.onJoinStudyRoom(room)
+                    })
+                }
             }
         }
 
-        // 스터디룸 생성 다이얼로그
+
+            // 스터디룸 생성 다이얼로그
         if (uiState.showCreateStudyRoomDialog) {
             CreateStudyRoomDialog(
                 currentUser = currentUser,
@@ -182,6 +191,9 @@ fun CreateStudyRoomDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    // 여기에 추가했던 Log.d가 이제는 보여야 합니다.
+                    android.util.Log.d("StudyRoomDebug", "버튼 클릭됨!")
+
                     val userId = currentUser?.id ?: return@Button
 
                     val newRoom = StudyRoom(
@@ -201,7 +213,7 @@ fun CreateStudyRoomDialog(
 
                     viewModel.createStudyRoomAndJoin(newRoom, newMember)
                 },
-                enabled = roomName.isNotBlank() && habitDays.isNotBlank() && nickname.isNotBlank()
+//                enabled = roomName.isNotBlank() && habitDays.isNotBlank() && nickname.isNotBlank()
             ) {
                 Text("생성 및 참여")
             }
