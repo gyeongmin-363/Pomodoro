@@ -143,7 +143,7 @@ fun StudyRoomItem(room: StudyRoom, onClick: () -> Unit) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = room.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "매일 ${room.habitDays}일 습관", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+            Text(text = "매일 ${room.habit_days}일 습관", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
         }
     }
 }
@@ -196,7 +196,7 @@ fun CreateStudyRoomDialog(
                     OutlinedTextField(
                         modifier = Modifier
                             .menuAnchor()
-                            .fillMaxWidth(),
+                            .   fillMaxWidth(),
                         readOnly = true,
                         value = selectedAnimal?.name ?: "동물 선택 (선택사항)",
                         onValueChange = {},
@@ -230,16 +230,16 @@ fun CreateStudyRoomDialog(
                     val newRoom = StudyRoom(
                         id = UUID.randomUUID().toString(),
                         name = roomName,
-                        habitDays = habitDays.toIntOrNull() ?: 0,
-                        creatorId = userId
+                        habit_days = habitDays.toIntOrNull() ?: 0,
+                        creator_id = userId
                     )
 
                     val newMember = StudyRoomMember(
                         id = UUID.randomUUID().toString(),
-                        userId = userId,
+                        user_id = userId,
                         nickname = nickname,
                         animal = selectedAnimal?.id,
-                        isAdmin = true // 방 생성자는 관리자
+                        is_admin = true // 방 생성자는 관리자
                     )
 
                     viewModel.createStudyRoomAndJoin(newRoom, newMember)
@@ -316,8 +316,8 @@ fun JoinStudyRoomDialog(
                     val userId = currentUser?.id ?: return@Button
                     val member = StudyRoomMember(
                         id = UUID.randomUUID().toString(),
-                        studyRoomId = room.id,
-                        userId = userId,
+                        study_room_id = room.id,
+                        user_id = userId,
                         nickname = nickname,
                         animal = selectedAnimal?.id
                     )

@@ -102,7 +102,7 @@ class StudyRoomViewModel(
     fun addMemberToStudyRoom(member: StudyRoomMember) {
         viewModelScope.launch {
             networkRepo.addMemberToStudyRoom(member)
-            loadStudyRoomMembers(member.studyRoomId!!) // 멤버 목록 새로고침
+            loadStudyRoomMembers(member.study_room_id!!) // 멤버 목록 새로고침
         }
     }
 
@@ -134,7 +134,7 @@ class StudyRoomViewModel(
     fun logHabitProgress(progress: HabitProgress) {
         viewModelScope.launch {
             networkRepo.logHabitProgress(progress)
-            loadHabitProgressForUser(progress.studyRoomId!!, progress.userId!!)
+            loadHabitProgressForUser(progress.study_room_id!!, progress.user_id!!)
         }
     }
 
@@ -200,7 +200,7 @@ class StudyRoomViewModel(
             // 이미 참여한 멤버인지 확인하는 로직 추가 (선택사항)
             val userId = _studyRoomUiState.value.currentUser?.id ?: return@launch
             val members = networkRepo.getStudyRoomMembers(room.id)
-            val isMember = members.any { it.userId == userId }
+            val isMember = members.any { it.user_id == userId }
 
             if (isMember) {
                 // 이미 멤버라면 상세 화면으로 바로 이동
@@ -230,13 +230,13 @@ class StudyRoomViewModel(
 
             if (createdRoom != null) {
                 // 2. 생성 성공 시, 반환된 스터디룸의 ID를 멤버 정보에 할당합니다.
-                val finalMemberInfo = memberProfile.copy(studyRoomId = createdRoom.id)
+                val finalMemberInfo = memberProfile.copy(study_room_id = createdRoom.id)
 
                 // 3. 완성된 멤버 정보를 서버에 추가합니다.
                 networkRepo.addMemberToStudyRoom(finalMemberInfo)
 
                 // 4. UI 상태를 업데이트합니다.
-                studyRoom.creatorId?.let { loadUserStudyRooms(it) } // 목록 새로고침
+                studyRoom.creator_id?.let { loadUserStudyRooms(it) } // 목록 새로고침
                 dismissJoinStudyRoomDialog() // 참여 다이얼로그 닫기
                 showCreateStudyRoomDialog(false) // 생성 다이얼로그 닫기
 
@@ -256,7 +256,7 @@ class StudyRoomViewModel(
             networkRepo.addMemberToStudyRoom(member)
             // 참여 완료 후 다이얼로그를 닫고, 스터디룸 목록을 새로고침합니다.
             dismissJoinStudyRoomDialog()
-            member.userId?.let { loadUserStudyRooms(it) }
+            member.user_id?.let { loadUserStudyRooms(it) }
         }
     }
 }

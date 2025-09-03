@@ -6,29 +6,22 @@ import java.util.UUID
 
 /**
  * public.users 테이블에 매핑되는 데이터 클래스
- * @Serializable: kotlinx.serialization 라이브러리를 통해 JSON 직렬화/역직렬화 지원
- * @SerialName: JSON 필드명과 Kotlin 프로퍼티명을 매핑
  */
 @Serializable
 data class User(
-    @SerialName("id")
     val id: String, // auth.users.id (UUID)
-    @SerialName("name")
     val name: String // auth.users.user_metadata 에서 가져온 이름
 )
+
 /**
  * public.animals 테이블에 매핑되는 데이터 클래스
  */
 @Serializable
 data class Animal(
-    @SerialName("id")
     val id: Long,
-    @SerialName("name")
     val name: String? = null,
-    @SerialName("rarity")
     val rarity: String? = null,
-    @SerialName("image_url")
-    val imageUrl: String? = null
+    val image_url: String? = null
 )
 
 
@@ -37,14 +30,10 @@ data class Animal(
  */
 @Serializable
 data class StudyRoom(
-    @SerialName("id")
     val id: String = UUID.randomUUID().toString(),
-    @SerialName("name")
     val name: String,
-    @SerialName("habit_days")
-    val habitDays: Int,
-    @SerialName("creator_id")
-    val creatorId: String? = null
+    val habit_days: Int, // habitDays -> habit_days
+    val creator_id: String? = null
 )
 
 /**
@@ -52,18 +41,12 @@ data class StudyRoom(
  */
 @Serializable
 data class StudyRoomMember(
-    @SerialName("id")
     val id: String = UUID.randomUUID().toString(),
-    @SerialName("study_room_id")
-    val studyRoomId: String? = null,
-    @SerialName("user_id")
-    val userId: String? = null,
-    @SerialName("nickname")
+    val study_room_id: String? = null,
+    val user_id: String? = null,
     val nickname: String,
-    @SerialName("animal")
-    val animal: Long? = null, // [수정] 동물 선택은 선택사항이므로 nullable로 변경
-    @SerialName("is_admin")
-    val isAdmin: Boolean = false
+    val animal: Long? = null,
+    val is_admin: Boolean = false
 )
 
 /**
@@ -71,15 +54,9 @@ data class StudyRoomMember(
  */
 @Serializable
 data class HabitProgress(
-    @SerialName("id")
     val id: String,
-    @SerialName("study_room_id")
-    val studyRoomId: String? = null,
-    @SerialName("user_id")
-    val userId: String? = null,
-    @SerialName("day_number")
-    val dayNumber: Int,
-    @SerialName("is_done")
-    val isDone: Boolean = false
+    val study_room_id: String? = null,
+    val user_id: String? = null,
+    val day_number: Int,
+    val is_done: Boolean = false
 )
-
