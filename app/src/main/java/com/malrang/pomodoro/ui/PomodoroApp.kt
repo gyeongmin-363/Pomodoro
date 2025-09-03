@@ -11,9 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.CollectionScreen
 import com.malrang.pomodoro.ui.screen.LoginScreen
@@ -21,13 +23,13 @@ import com.malrang.pomodoro.ui.screen.MainScreen
 import com.malrang.pomodoro.ui.screen.PermissionScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen
 import com.malrang.pomodoro.ui.screen.StatsScreen
+import com.malrang.pomodoro.ui.screen.StudyRoomDetailScreen
 import com.malrang.pomodoro.ui.screen.UserScreen
 import com.malrang.pomodoro.ui.screen.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.withpet.BackPressExit
-import com.malrang.withpet.BackPressMove
 
 /**
  * 앱의 메인 컴포저블 함수입니다.
@@ -39,8 +41,8 @@ import com.malrang.withpet.BackPressMove
 @Composable
 fun PomodoroApp(
     vm: PomodoroViewModel = viewModel(),
-    authVm : AuthViewModel = viewModel(),
-    roomVm : StudyRoomViewModel = viewModel(),
+    authVm: AuthViewModel = viewModel(),
+    roomVm: StudyRoomViewModel = viewModel(),
 ) {
     // 1. 두 ViewModel의 상태를 모두 관찰합니다.
     val authState by authVm.uiState.collectAsState()
@@ -57,6 +59,14 @@ fun PomodoroApp(
         }
     }
 
+    // ✅ [추가] StudyRoomViewModel의 네비게이션 이벤트를 처리합니다.
+    LaunchedEffect(Unit) {
+        roomVm.navigationEvents.collect { route ->
+            navController.navigate(route)
+        }
+    }
+
+
     // 인증 상태가 'Authenticated'로 변경될 때만 권한 확인 로직을 실행합니다.
     LaunchedEffect(authState) {
         if (authState is AuthViewModel.AuthState.Authenticated) {
@@ -64,16 +74,6 @@ fun PomodoroApp(
             vm.checkPermissionsAndNavigateIfNeeded(context)
         }
     }
-
-
-//    // ✅ MainScreen이 아닐 경우 뒤로가기 버튼을 누르면 Main으로 이동
-//    if (appState.currentScreen != Screen.Main && appState.currentScreen != Screen.Whitelist ) {
-//        BackPressMove {
-//            vm.navigateTo(Screen.Main)
-//        }
-//    }
-//
-//
 
     // 3. 인증 상태에 따라 화면을 분기합니다.
     when (authState) {
@@ -89,8 +89,26 @@ fun PomodoroApp(
                 composable(Screen.Stats.name) { StatsScreen(vm) }
                 composable(Screen.Whitelist.name) { WhitelistScreen(vm) }
                 composable(Screen.Permission.name) { PermissionScreen(vm) }
-                composable(Screen.StudyRoom.name) { UserScreen(authVm, roomVm, null) }
-                // Login 화면은 인증 분기 바깥에 있으므로 여기서는 필요 없습니다.
+                composable(Screen.StudyRoom.name) {
+                    UserScreen(
+                        authVM = authVm,
+                        roomVM = roomVm,
+                        inviteStudyRoomId = null, // TODO: 딥링크 처리 로직 필요
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                // ✅ [추가] 스터디룸 상세 화면을 위한 새로운 composable 경로
+                composable(
+                    route = "studyRoomDetail/{roomId}",
+                    arguments = listOf(navArgument("roomId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val roomId = backStackEntry.arguments?.getString("roomId")
+                    StudyRoomDetailScreen(
+                        roomId = roomId,
+                        roomVm = roomVm,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
         is AuthViewModel.AuthState.NotAuthenticated,

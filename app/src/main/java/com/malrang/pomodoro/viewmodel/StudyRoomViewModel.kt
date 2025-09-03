@@ -8,8 +8,10 @@ import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.StudyRoomRepository
 import com.malrang.pomodoro.networkRepo.User
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -20,6 +22,10 @@ class StudyRoomViewModel(
 
     private val _studyRoomUiState = MutableStateFlow(StudyRoomUiState())
     val studyRoomUiState: StateFlow<StudyRoomUiState> = _studyRoomUiState.asStateFlow()
+
+    // 네비게이션 이벤트를 위한 SharedFlow
+    private val _navigationEvents = MutableSharedFlow<String>()
+    val navigationEvents = _navigationEvents.asSharedFlow()
 
     /**
      * 딥링크를 통해 전달된 스터디룸 ID를 받아 참여 다이얼로그를 표시하도록 상태를 업데이트합니다.
@@ -74,7 +80,7 @@ class StudyRoomViewModel(
     // MARK: - StudyRoom Functions
 
     /**
-     * ✅ [수정] 새로운 스터디룸을 생성하고 목록을 새로고침합니다.
+     * 새로운 스터디룸을 생성하고 목록을 새로고침합니다.
      * 기존의 createStudyRoomAndJoin 함수를 대체합니다.
      */
     fun createStudyRoom(studyRoom: StudyRoom) {
@@ -193,7 +199,8 @@ class StudyRoomViewModel(
             val isMember = members.any { it.user_id == userId }
 
             if (isMember) {
-                // navController.navigate("studyRoomDetail/${room.id}")
+                // ✅ [수정] NavController 직접 호출 대신, 네비게이션 이벤트를 발생시킵니다.
+                _navigationEvents.emit("studyRoomDetail/${room.id}")
             } else {
                 _studyRoomUiState.update { it.copy(showJoinStudyRoomDialog = room) }
             }

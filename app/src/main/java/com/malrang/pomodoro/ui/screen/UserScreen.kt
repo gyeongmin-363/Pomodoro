@@ -29,7 +29,8 @@ import java.util.UUID
 fun UserScreen(
     authVM: AuthViewModel,
     roomVM: StudyRoomViewModel,
-    inviteStudyRoomId: String?
+    inviteStudyRoomId: String?,
+    onNavigateBack: () -> Unit // ✅ [추가] 뒤로가기 콜백 함수
 ) {
     val authState by authVM.uiState.collectAsState()
 
@@ -65,9 +66,8 @@ fun UserScreen(
             TopAppBar(
                 title = { Text("내 스터디룸") },
                 navigationIcon = {
-                    IconButton(onClick = {
-//                        viewModel.navigateTo(Screen.Main)
-                    }) {
+                    // ✅ [수정] 뒤로가기 콜백 호출
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
                     }
                 }
@@ -315,4 +315,87 @@ fun JoinStudyRoomDialog(
             }
         }
     )
+}
+
+/**
+ * 스터디룸 상세 정보를 표시하는 화면 Composable
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StudyRoomDetailScreen(
+    roomId: String?,
+    roomVm: StudyRoomViewModel,
+    onNavigateBack: () -> Unit
+) {
+    // 화면이 처음 구성될 때 roomId를 사용하여 스터디룸 정보를 불러옵니다.
+    LaunchedEffect(roomId) {
+        if (roomId != null) {
+            roomVm.loadStudyRoomById(roomId)
+            roomVm.loadStudyRoomMembers(roomId)
+        }
+    }
+
+    val uiState by roomVm.studyRoomUiState.collectAsState()
+    val room = uiState.currentStudyRoom
+    val members = uiState.currentRoomMembers
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(room?.name ?: "스터디룸 로딩 중...") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (room == null) {
+            // 로딩 상태 표시
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            // 스터디룸 정보 및 멤버 목록 표시
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = room.name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "매일 ${room.habit_days}일 달성 목표",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "멤버 목록 (${members.size}명)",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(members) { member ->
+                        Text(
+                            text = "- ${member.nickname ?: "이름 없는 멤버"}",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+                // TODO: 여기에 스터디룸 관련 추가 UI(채팅, 현황 등)를 구현할 수 있습니다.
+            }
+        }
+    }
 }
