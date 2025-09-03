@@ -73,7 +73,7 @@ fun PomodoroApp(
                 Screen.Stats -> StatsScreen(vm)
                 Screen.Whitelist -> WhitelistScreen(vm)
                 Screen.Permission -> PermissionScreen(vm)
-                Screen.StudyRoom -> UserScreen(authVm, roomVm)
+                Screen.StudyRoom -> UserScreen(authVm, roomVm, null)
                 // 만약 currentScreen이 Login이거나 다른 예외적인 경우,
                 // MainScreen을 기본값으로 보여줍니다.
                 else -> MainScreen(vm)
