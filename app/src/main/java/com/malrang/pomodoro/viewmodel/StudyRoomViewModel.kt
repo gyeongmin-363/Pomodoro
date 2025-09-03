@@ -21,6 +21,37 @@ class StudyRoomViewModel(
     private val _studyRoomUiState = MutableStateFlow(StudyRoomUiState())
     val studyRoomUiState: StateFlow<StudyRoomUiState> = _studyRoomUiState.asStateFlow()
 
+    /**
+     * 딥링크를 통해 전달된 스터디룸 ID를 받아 참여 다이얼로그를 표시하도록 상태를 업데이트합니다.
+     */
+    fun handleInviteLink(studyRoomId: String) {
+        viewModelScope.launch {
+            // 1. 유효한 스터디룸 ID인지 서버에서 확인합니다.
+            val room = networkRepo.getStudyRoomById(studyRoomId)
+            if (room != null) {
+                // 2. 현재 로그인한 사용자인지 확인합니다.
+                val userId = _studyRoomUiState.value.currentUser?.id
+                if (userId == null) {
+                    // TODO: 로그인이 필요하다는 메시지를 표시하거나 로그인 화면으로 안내할 수 있습니다.
+                    return@launch
+                }
+
+                // 3. 이미 멤버인지 확인합니다.
+                val members = networkRepo.getStudyRoomMembers(studyRoomId)
+                val isMember = members.any { it.user_id == userId }
+
+                if (isMember) {
+                    // TODO: 이미 참여한 스터디룸이라는 토스트 메시지 등을 보여줄 수 있습니다.
+                } else {
+                    // 4. 참여 다이얼로그를 띄우도록 상태를 업데이트합니다.
+                    _studyRoomUiState.update { it.copy(showJoinStudyRoomDialog = room) }
+                }
+            } else {
+                // TODO: 존재하지 않는 스터디룸이라는 메시지를 표시할 수 있습니다.
+            }
+        }
+    }
+
     fun onUserAuthenticated(user: User) {
         _studyRoomUiState.update { it.copy(currentUser = user) }
         loadUserStudyRooms(user.id)
