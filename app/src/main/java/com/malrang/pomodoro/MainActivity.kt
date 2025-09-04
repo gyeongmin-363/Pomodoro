@@ -80,8 +80,6 @@ class MainActivity : ComponentActivity() {
         // ✅ 딥링크 처리 추가
         SupabaseProvider.client.handleDeeplinks(intent)
 
-        handleStudyRoomIntent(intent)
-
         enableEdgeToEdge()
         setContent {
             PomodoroTheme {
@@ -99,31 +97,6 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         // 앱이 이미 실행 중일 때에도 딥링크를 처리하고,
         SupabaseProvider.client.handleDeeplinks(intent)
-
-        handleStudyRoomIntent(intent)
-    }
-
-    // ▼▼▼ [추가] Intent에서 스터디룸 ID를 파싱하고 ViewModel에 전달하는 함수 ▼▼▼
-    private fun handleStudyRoomIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_VIEW) {
-            val data: Uri? = intent.data
-            // 스키마와 호스트가 일치하는지 확인 (pomodoro-study://join)
-            if (data?.scheme == "pixbbo-room" && data.host == "join") {
-                // 경로에서 studyRoomId 추출 ( /studyRoomId -> studyRoomId )
-                val studyRoomId = data.lastPathSegment
-                if (!studyRoomId.isNullOrBlank()) {
-                    // ViewModel에 ID 전달
-                    // AuthState가 Authenticated가 된 후에 처리되도록 lifecycleScope 사용
-                    lifecycleScope.launch {
-                        authVm.uiState.collect { state ->
-                            if (state is AuthViewModel.AuthState.Authenticated) {
-                                roomVm.handleInviteLink(studyRoomId)
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")

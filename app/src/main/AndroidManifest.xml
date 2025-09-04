@@ -51,11 +51,13 @@
                 <data android:scheme="pixbbo" android:host="auth" />
             </intent-filter>
 
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="pixbbo-room" android:host="join" />
+                <data android:scheme="https"
+                    android:host="pixbbo.netlify.app"
+                    android:pathPrefix="/study-room" />
             </intent-filter>
         </activity>
         <service
