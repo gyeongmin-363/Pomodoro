@@ -31,7 +31,7 @@ import com.malrang.pomodoro.ui.screen.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
-import com.malrang.withpet.BackPressExit
+import com.malrang.pomodoro.BackPressExit
 
 /**
  * 앱의 메인 컴포저블 함수입니다.
@@ -92,28 +92,36 @@ fun PomodoroApp(
                 composable(Screen.Whitelist.name) { WhitelistScreen(vm) }
                 composable(Screen.Permission.name) { PermissionScreen(vm) }
 
-                // ✅ [수정] 딥링크 처리를 위해 composable 정의를 수정합니다.
+                // 딥링크 처리
                 composable(
                     route = "${Screen.StudyRoom.name}?inviteId={inviteId}",
                     arguments = listOf(navArgument("inviteId") {
                         type = NavType.StringType
                         nullable = true
                     }),
-                    deepLinks = listOf(navDeepLink {
-                        action = Intent.ACTION_VIEW
-                        uriPattern = "https://pixbbo.netlify.app/study-room/{inviteId}"
-                    })
+                    deepLinks = listOf(
+                        // App Links (https://) 하지만 작동은 안함
+                        navDeepLink {
+                            action = Intent.ACTION_VIEW
+                            uriPattern = "https://pixbbo.netlify.app/study-room/{inviteId}"
+                        },
+                        // Custom Scheme (pixbbo://)
+                        navDeepLink {
+                            action = Intent.ACTION_VIEW
+                            uriPattern = "pixbbo://study-room/{inviteId}"
+                        }
+                    )
                 ) { backStackEntry ->
                     val inviteId = backStackEntry.arguments?.getString("inviteId")
                     UserScreen(
                         authVM = authVm,
                         roomVM = roomVm,
-                        inviteStudyRoomId = inviteId, // 딥링크로 받은 ID를 전달합니다.
+                        inviteStudyRoomId = inviteId, // ✅ 여기서 uuid 주입됨
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
 
-                // ✅ [추가] 스터디룸 상세 화면을 위한 새로운 composable 경로
+                // 스터디룸 상세 화면을 위한 composable 경로
                 composable(
                     route = "studyRoomDetail/{roomId}",
                     arguments = listOf(navArgument("roomId") { type = NavType.StringType })

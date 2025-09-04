@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
-import com.malrang.withpet.BackPressMove
 
 /**
  * 설치된 앱 목록을 보여주고 화이트리스트를 관리하는 화면입니다.
