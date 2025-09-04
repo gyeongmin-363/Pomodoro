@@ -47,9 +47,14 @@ class AuthViewModel(
                     scopes.add("email")
                     scopes.add("profile")
                 }
-                // 성공 여부는 MainActivity의 신호를 통해 확인되므로 여기서는 추가 상태 변경이 없습니다.
+                // ✅ [핵심 수정] 로그인 시도 후, 인증 상태가 여전히 NotAuthenticated라면
+                // 사용자가 로그인을 취소한 것으로 간주하고 상태를 되돌립니다.
+                if (supabase.auth.sessionStatus.value is SessionStatus.NotAuthenticated) {
+                    _uiState.value = NotAuthenticated
+                }
             } catch (e: Exception) {
-                _uiState.value = AuthState.Error(e.message ?: "Unknown error")
+                // 실제 에러가 발생하면 Error 상태로 변경합니다.
+                _uiState.value = Error(e.message ?: "알 수 없는 오류가 발생했습니다.")
             }
         }
     }
