@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-    import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -19,9 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
 import com.malrang.pomodoro.dataclass.ui.Mode
-import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.service.AppUsageMonitoringService
 import com.malrang.pomodoro.service.TimerService
@@ -34,9 +31,7 @@ import com.malrang.pomodoro.viewmodel.PomodoroVMFactory
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomVMFactory
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
-import com.malrang.withpet.BackPressExit
 import io.github.jan.supabase.auth.handleDeeplinks
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 

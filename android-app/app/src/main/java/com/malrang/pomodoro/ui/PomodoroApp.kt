@@ -31,7 +31,7 @@ import com.malrang.pomodoro.ui.screen.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
-import com.malrang.withpet.BackPressExit
+import com.malrang.pomodoro.BackPressExit
 
 /**
  * 앱의 메인 컴포저블 함수입니다.

@@ -1,4 +1,4 @@
-package com.malrang.withpet
+package com.malrang.pomodoro
 
 import android.app.Activity
 import android.widget.Toast
