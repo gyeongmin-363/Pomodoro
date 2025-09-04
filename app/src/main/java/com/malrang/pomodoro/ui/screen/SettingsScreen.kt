@@ -153,7 +153,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
-            TextButton(onClick = { viewModel.showScreen(Screen.Whitelist) }) {
+            TextButton(onClick = { viewModel.navigateTo(Screen.Whitelist) }) {
                 Text("예외 목록 설정")
             }
         }
@@ -199,7 +199,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             IconButton(
                 onClick = {
                     viewModel.clearDraftSettings()
-                    viewModel.showScreen(Screen.Main)
+                    viewModel.navigateTo(Screen.Main)
                 },
             ) {
                 Icon(Icons.Default.Close, "취소", tint = Color.White)
@@ -221,7 +221,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             onConfirm = {
                 // 변경사항을 저장하고 타이머를 초기화한 후 메인 화면으로 돌아갑니다.
                 viewModel.saveSettingsAndReset()
-                viewModel.showScreen(Screen.Main)
+                viewModel.navigateTo(Screen.Main)
                 showDialog = false
             }
         ) {

@@ -2,15 +2,14 @@ package com.malrang.pomodoro
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+    import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -20,26 +19,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.malrang.pomodoro.dataclass.ui.Mode
-import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.localRepo.PomodoroRepository
-import com.malrang.pomodoro.networkRepo.StudyRoomRepository
+import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.service.AppUsageMonitoringService
 import com.malrang.pomodoro.service.TimerService
-import com.malrang.pomodoro.service.TimerServiceProvider
 import com.malrang.pomodoro.service.WarningOverlayService
 import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.ui.theme.PomodoroTheme
+import com.malrang.pomodoro.viewmodel.AuthVMFactory
+import com.malrang.pomodoro.viewmodel.AuthViewModel
+import com.malrang.pomodoro.viewmodel.PomodoroVMFactory
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.pomodoro.viewmodel.StudyRoomVMFactory
+import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.withpet.BackPressExit
-import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.auth.handleDeeplinks
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private val vm: PomodoroViewModel by viewModels { PomodoroVMFactory(application) }
+    private val authVm: AuthViewModel by viewModels { AuthVMFactory(SupabaseProvider.client) }
+    private val roomVm: StudyRoomViewModel by viewModels { StudyRoomVMFactory() }
 
     private val timerUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -73,18 +76,27 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
+        // ✅ 딥링크 처리 추가
+        SupabaseProvider.client.handleDeeplinks(intent)
+
+        enableEdgeToEdge()
         setContent {
             PomodoroTheme {
                 Scaffold {
                     Box(modifier = Modifier.padding(it)) {
-                        PomodoroApp(vm)
-                        BackPressExit()
+                        PomodoroApp(vm, authVm, roomVm)
+//                        BackPressExit()
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // 앱이 이미 실행 중일 때에도 딥링크를 처리하고,
+        SupabaseProvider.client.handleDeeplinks(intent)
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -111,7 +123,6 @@ class MainActivity : ComponentActivity() {
         vm.requestTimerStatus()
         vm.refreshActiveSprites()
 
-        checkPermissionsAndNavigate()
         stopAppMonitoringService()
         stopWarningOverlay()
     }
@@ -149,16 +160,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun checkPermissionsAndNavigate() {
-        val allGranted = vm.checkAndupdatePermissions(this)
-        if (!allGranted) {
-            vm.showScreen(Screen.Permission)
-        } else {
-            if (vm.uiState.value.currentScreen == Screen.Permission) {
-                vm.showScreen(Screen.Main)
-            }
-        }
-    }
 
 
     private fun startAppMonitoringService(
@@ -180,23 +181,5 @@ class MainActivity : ComponentActivity() {
 
     private fun stopWarningOverlay() {
         stopService(Intent(this, WarningOverlayService::class.java))
-    }
-}
-
-class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(PomodoroViewModel::class.java)) {
-            val localDatastoreRepo = PomodoroRepository(app)
-            val timerServiceProvider = TimerServiceProvider(app)
-            val studyRoomRepo = StudyRoomRepository(postgrest = SupabaseProvider.client.postgrest)
-
-            @Suppress("UNCHECKED_CAST")
-            return PomodoroViewModel(
-                localRepo = localDatastoreRepo,
-                timerService = timerServiceProvider,
-                networkRepo = studyRoomRepo
-            ) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

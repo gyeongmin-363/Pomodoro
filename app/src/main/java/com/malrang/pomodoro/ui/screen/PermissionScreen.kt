@@ -3,7 +3,6 @@ package com.malrang.pomodoro.ui.screen
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
-import android.graphics.drawable.shapes.RoundRectShape
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -21,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -66,7 +64,7 @@ fun PermissionScreen(vm: PomodoroViewModel) {
 
     LaunchedEffect(attemptedCount, totalCount) {
         if (totalCount > 0 && attemptedCount >= totalCount) {
-            vm.showScreen(Screen.Main)
+            vm.navigateTo(Screen.Main)
         }
     }
 
