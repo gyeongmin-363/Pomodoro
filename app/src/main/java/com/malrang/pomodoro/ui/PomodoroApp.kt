@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.CollectionScreen
 import com.malrang.pomodoro.ui.screen.LoginScreen
@@ -89,14 +91,28 @@ fun PomodoroApp(
                 composable(Screen.Stats.name) { StatsScreen(vm) }
                 composable(Screen.Whitelist.name) { WhitelistScreen(vm) }
                 composable(Screen.Permission.name) { PermissionScreen(vm) }
-                composable(Screen.StudyRoom.name) {
+
+                // ✅ [수정] 딥링크 처리를 위해 composable 정의를 수정합니다.
+                composable(
+                    route = "${Screen.StudyRoom.name}?inviteId={inviteId}",
+                    arguments = listOf(navArgument("inviteId") {
+                        type = NavType.StringType
+                        nullable = true
+                    }),
+                    deepLinks = listOf(navDeepLink {
+                        action = Intent.ACTION_VIEW
+                        uriPattern = "https://pixbbo.netlify.app/study-room/{inviteId}"
+                    })
+                ) { backStackEntry ->
+                    val inviteId = backStackEntry.arguments?.getString("inviteId")
                     UserScreen(
                         authVM = authVm,
                         roomVM = roomVm,
-                        inviteStudyRoomId = null, // TODO: 딥링크 처리 로직 필요
+                        inviteStudyRoomId = inviteId, // 딥링크로 받은 ID를 전달합니다.
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
+
                 // ✅ [추가] 스터디룸 상세 화면을 위한 새로운 composable 경로
                 composable(
                     route = "studyRoomDetail/{roomId}",

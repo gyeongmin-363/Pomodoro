@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen
 
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,11 +9,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -327,6 +330,9 @@ fun StudyRoomDetailScreen(
     roomVm: StudyRoomViewModel,
     onNavigateBack: () -> Unit
 ) {
+    // ✅ [추가] 공유 인텐트를 위해 LocalContext를 가져옵니다.
+    val context = LocalContext.current
+
     // 화면이 처음 구성될 때 roomId를 사용하여 스터디룸 정보를 불러옵니다.
     LaunchedEffect(roomId) {
         if (roomId != null) {
@@ -346,6 +352,21 @@ fun StudyRoomDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기")
+                    }
+                },
+                // ✅ [추가] 공유 버튼을 포함하는 actions 입니다.
+                actions = {
+                    IconButton(onClick = {
+                        val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
+                        val sendIntent: Intent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl")
+                            type = "text/plain"
+                        }
+                        val shareIntent = Intent.createChooser(sendIntent, "스터디룸 공유")
+                        context.startActivity(shareIntent)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "스터디룸 공유")
                     }
                 }
             )
