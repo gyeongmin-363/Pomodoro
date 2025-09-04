@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.networkRepo
 
+import androidx.annotation.Keep
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.util.UUID
@@ -7,6 +8,7 @@ import java.util.UUID
 /**
  * public.users 테이블에 매핑되는 데이터 클래스
  */
+@Keep
 @Serializable
 data class User(
     val id: String, // auth.users.id (UUID)
@@ -16,6 +18,7 @@ data class User(
 /**
  * public.animals 테이블에 매핑되는 데이터 클래스
  */
+@Keep
 @Serializable
 data class Animal(
     val id: Long,
@@ -28,6 +31,7 @@ data class Animal(
 /**
  * public.study_rooms 테이블에 매핑되는 데이터 클래스
  */
+@Keep
 @Serializable
 data class StudyRoom(
     val id: String = UUID.randomUUID().toString(),
@@ -39,6 +43,7 @@ data class StudyRoom(
 /**
  * public.study_room_members 테이블에 매핑되는 데이터 클래스
  */
+@Keep
 @Serializable
 data class StudyRoomMember(
     val id: String = UUID.randomUUID().toString(),
@@ -52,6 +57,7 @@ data class StudyRoomMember(
 /**
  * public.habit_progress 테이블에 매핑되는 데이터 클래스
  */
+@Keep
 @Serializable
 data class HabitProgress(
     val id: String,
