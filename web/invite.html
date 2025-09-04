@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>스터디 참여하기</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f0f2f5;
+      color: #333;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.8em;
+      margin-bottom: 20px;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #4285F4;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1em;
+      margin-top: 20px;
+      transition: background-color 0.3s;
+    }
+    .btn:hover {
+      background-color: #3367D6;
+    }
+  </style>
+  <script>
+    function openApp() {
+      const uuid = window.location.pathname.split("/").pop(); // /study-room/{uuid} 에서 uuid 추출
+      const appUrl = `pixbbo://study-room/${uuid}`;
+      const storeUrl = "https://play.google.com/store/apps/details?id=com.malrang.pomodoro";
+
+      // 앱 열기 시도
+      window.location = appUrl;
+
+      // 앱이 없을 경우만 스토어 이동
+      setTimeout(() => {
+        if (!document.hidden) {
+          window.location = storeUrl;
+        }
+      }, 1500);
+    }
+  </script>
+</head>
+<body onload="openApp()">
+  <h1>스터디 참여하기</h1>
+  <p>앱이 설치되어 있다면 자동으로 실행됩니다.</p>
+  <p>앱이 없다면 Google Play로 이동합니다.</p>
+  <a href="javascript:openApp()" class="btn">앱으로 열기</a>
+</body>
+</html>

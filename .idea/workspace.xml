@@ -1,0 +1,974 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AndroidLayouts">
+    <shared>
+      <config />
+    </shared>
+    <layouts>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/android_neutral_rd_ctn.xml">
+        <config>
+          <theme>@style/Theme.Pomodoro</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/ic_pause.xml">
+        <config>
+          <theme>@style/Theme.Pomodoro</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/ic_reset.xml">
+        <config>
+          <theme>@style/Theme.Pomodoro</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/ic_save.xml">
+        <config>
+          <theme>@style/Theme.Pomodoro</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/ic_skip.xml">
+        <config>
+          <theme>@style/Theme.Pomodoro</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/ic_stats.xml">
+        <config>
+          <theme>@style/Theme.Pomodoro</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/ic_wallpaper.xml">
+        <config>
+          <theme>@style/Theme.Pomodoro</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/overlay_warning.xml">
+        <config>
+          <theme>@style/Theme.Pomodoro</theme>
+        </config>
+      </layout>
+    </layouts>
+  </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="314f4047-11b9-425c-888e-156b5896d053" name="Changes" comment="드디어 (커스텀)딥링크 구현 성공, App Link는 불가능으로 판명">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/AndroidProjectSystem.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/AndroidProjectSystem.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/appInsightsSettings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/appInsightsSettings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/deploymentTargetSelector.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/migrations.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/migrations.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/runConfigurations.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/proguard-rules.pro" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/proguard-rules.pro" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/androidTest/java/com/malrang/pomodoro/ExampleInstrumentedTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/androidTest/java/com/malrang/pomodoro/ExampleInstrumentedTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/ic_launcher-playstore.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/ic_launcher-playstore.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/BackPressExit.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/BackPressExit.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/MainActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/animalInfo/Animal.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/animalInfo/Animal.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/animalInfo/AnimalsTable.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/animalInfo/AnimalsTable.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/animalInfo/Rarity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/animalInfo/Rarity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/sprite/AnimalSprite.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/sprite/AnimalSprite.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/sprite/SpriteData.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/sprite/SpriteData.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/sprite/SpriteMap.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/sprite/SpriteMap.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/sprite/SpriteState.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/sprite/SpriteState.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/BlockMode.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/BlockMode.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/DailyStat.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/DailyStat.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/Mode.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/Mode.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/PermissionType.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/PermissionType.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/PomodoroUiState.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/PomodoroUiState.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/Screen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/Screen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/Settings.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/Settings.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/StudyRoomUiState.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/StudyRoomUiState.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/dataclass/ui/WorkPreset.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/dataclass/ui/WorkPreset.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/localRepo/DataStore.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/localRepo/DataStore.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/localRepo/SoundPlayer.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/localRepo/SoundPlayer.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/localRepo/VibratorHelper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/localRepo/VibratorHelper.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/networkRepo/Models.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/networkRepo/Models.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/networkRepo/StudyRoomRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/networkRepo/StudyRoomRepository.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/networkRepo/SupabaseProvider.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/networkRepo/SupabaseProvider.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/service/AppUsageMonitoringService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/service/AppUsageMonitoringService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/service/TimerService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/service/TimerService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/service/TimerServiceProvider.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/service/TimerServiceProvider.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/service/WarningOverlayService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/service/WarningOverlayService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/PixelArtConfirmDialog.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/PixelArtConfirmDialog.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/PomodoroApp.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/PomodoroApp.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/screen/CollectionScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/screen/CollectionScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/screen/LoginScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/screen/LoginScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/screen/MainScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/screen/MainScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/screen/PermissionScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/screen/PermissionScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/screen/SettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/screen/SettingsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/screen/StatsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/screen/StatsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/screen/UserScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/screen/UserScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/screen/WhitelistScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/screen/WhitelistScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/theme/Color.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/theme/Color.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/theme/Theme.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/theme/Theme.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/ui/theme/Type.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/ui/theme/Type.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/viewmodel/AuthViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/viewmodel/AuthViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/viewmodel/PomodoroViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/viewmodel/PomodoroViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/viewmodel/StudyRoomViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/viewmodel/StudyRoomViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/malrang/pomodoro/viewmodel/ViewModelFactory.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/java/com/malrang/pomodoro/viewmodel/ViewModelFactory.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/android_neutral_rd_ctn.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/android_neutral_rd_ctn.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/batman_cat_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/batman_cat_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/batman_cat_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/batman_cat_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/black_cat_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/black_cat_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/black_cat_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/black_cat_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/brown_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/brown_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/brown_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/brown_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/classical_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/classical_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/classical_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/classical_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/demonic_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/demonic_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/demonic_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/demonic_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/egypt_cat_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/egypt_cat_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/egypt_cat_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/egypt_cat_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/grass_background.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/grass_background.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_collection.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_collection.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_launcher_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_launcher_background.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_launcher_foreground.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_launcher_foreground.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_pause.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_pause.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_play.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_play.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_reset.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_reset.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_save.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_save.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_settings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_skip.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_skip.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_stats.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_stats.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_wallpaper.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/ic_wallpaper.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/launcher_image.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/launcher_image.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/light_night.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/light_night.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/siamese_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/siamese_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/siamese_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/siamese_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/three_color_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/three_color_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/three_color_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/three_color_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/tiger_cat_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/tiger_cat_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/tiger_cat_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/tiger_cat_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/white_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/white_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/white_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/white_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/xmas_idle.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/xmas_idle.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/xmas_jump.png" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/drawable/xmas_jump.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/font/neo_dunggeunmo_pro_regular.ttf" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/font/neo_dunggeunmo_pro_regular.ttf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/overlay_full_block.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/layout/overlay_full_block.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/overlay_warning.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/layout/overlay_warning.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-hdpi/ic_launcher.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_round.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-hdpi/ic_launcher_round.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-mdpi/ic_launcher.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_round.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-mdpi/ic_launcher_round.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xhdpi/ic_launcher.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_round.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xhdpi/ic_launcher_round.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xxhdpi/ic_launcher.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/raw/notification_sound.wav" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/raw/notification_sound.wav" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/values/colors.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/ic_launcher_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/values/ic_launcher_background.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/values/strings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/themes.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/values/themes.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/xml/backup_rules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/xml/backup_rules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/xml/data_extraction_rules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/main/res/xml/data_extraction_rules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/malrang/pomodoro/ExampleUnitTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/app/src/test/java/com/malrang/pomodoro/ExampleUnitTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/gradle.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/libs.versions.toml" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/gradle/libs.versions.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.jar" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/gradle/wrapper/gradle-wrapper.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradlew" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/gradlew" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradlew.bat" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/gradlew.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android-app/settings.gradle.kts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[]" />
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$">
+      <ProjectState />
+    </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <task path="$PROJECT_DIR$/app">
+          <activation />
+        </task>
+        <task path="$PROJECT_DIR$">
+          <activation />
+        </task>
+        <projects_view>
+          <tree_state>
+            <expand>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="Pomodoro" type="f1a62948:ProjectNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="Pomodoro" type="f1a62948:ProjectNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="Pomodoro" type="f1a62948:ProjectNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+                <item name="android" type="c8890929:TasksNode$1" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="Pomodoro" type="f1a62948:ProjectNode" />
+                <item name="app" type="2d1252cf:ModuleNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="Pomodoro" type="f1a62948:ProjectNode" />
+                <item name="app" type="2d1252cf:ModuleNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="Pomodoro" type="f1a62948:ProjectNode" />
+                <item name="app" type="2d1252cf:ModuleNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+                <item name="android" type="c8890929:TasksNode$1" />
+              </path>
+            </expand>
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Kotlin Object" />
+        <option value="Kotlin Class" />
+        <option value="resourceFile" />
+      </list>
+    </option>
+  </component>
+  <component name="GenerateSignedApkSettings">
+    <option name="KEY_STORE_PATH" value="H:\내 드라이브\프로젝트 백업\포로도로\keystore" />
+    <option name="KEY_ALIAS" value="pixbbo" />
+    <option name="REMEMBER_PASSWORDS" value="true" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="supabase" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {}
+}</component>
+  <component name="GitHubPullRequestState">{
+  &quot;prStates&quot;: [
+    {
+      &quot;id&quot;: {
+        &quot;id&quot;: &quot;PR_kwDOPfSe186kqMqY&quot;,
+        &quot;number&quot;: 4
+      },
+      &quot;lastSeen&quot;: 1755772547822
+    },
+    {
+      &quot;id&quot;: {
+        &quot;id&quot;: &quot;PR_kwDOPfSe186k1YGY&quot;,
+        &quot;number&quot;: 5
+      },
+      &quot;lastSeen&quot;: 1755848469609
+    }
+  ]
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/gyeongmin-363/Pomodoro.git&quot;,
+    &quot;accountId&quot;: &quot;2b9c3d9f-3c27-494d-a62f-60387c2ad206&quot;
+  },
+  &quot;recentNewPullRequestHead&quot;: {
+    &quot;server&quot;: {
+      &quot;useHttp&quot;: false,
+      &quot;host&quot;: &quot;github.com&quot;,
+      &quot;port&quot;: null,
+      &quot;suffix&quot;: null
+    },
+    &quot;owner&quot;: &quot;gyeongmin-363&quot;,
+    &quot;repository&quot;: &quot;Pomodoro&quot;
+  }
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="31PFmqpaH4Qzs3sEILGkdNZCrbK" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="showExcludedFiles" value="false" />
+    <option name="showLibraryContents" value="true" />
+    <option name="showVisibilityIcons" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Android App.app.executor": "Run",
+    "BundleExportedModule": "Pomodoro.app",
+    "ExportBundle.BundlePathForPomodoro.app": "C:\\Users\\82102\\AndroidStudioProjects\\Pomodoro\\app",
+    "Gradle.Pomodoro [signingReport].executor": "Run",
+    "Gradle.Pomodoro:app [signingReport].executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "com.google.services.firebase.aqiPopupShown": "true",
+    "git-widget-placeholder": "supabase",
+    "last_opened_file_path": "C:/Users/82102/AndroidStudioProjects/Pomodoro/app/src/main/res/drawable",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.17",
+    "project.structure.side.proportion": "0.2",
+    "run.code.analysis.last.selected.profile": "pProject Default",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
+  },
+  "keyToStringList": {
+    "ExportApk.BuildVariants": [
+      "release"
+    ]
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\82102\AndroidStudioProjects\Pomodoro\app\src\main\res\drawable" />
+      <recent name="C:\Users\82102\AndroidStudioProjects\Pomodoro\app\src\main\res\layout" />
+      <recent name="C:\Users\82102\AndroidStudioProjects\Pomodoro\app\src\main\java\com\malrang\pomodoro" />
+      <recent name="C:\Users\82102\AndroidStudioProjects\Pomodoro\app\src\main\res\font" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\82102\AndroidStudioProjects\Pomodoro\app\src\main\res\drawable" />
+    </key>
+    <key name="K2MoveDeclarationsDialog.RECENT_PACKAGE_KEY">
+      <recent name="com.malrang.pomodoro.viewmodel" />
+      <recent name="com.malrang.pomodoro.dataclass.ui" />
+      <recent name="com.malrang.pomodoro.dataclass.animalInfo" />
+      <recent name="com.malrang.pomodoro.dataclass.sprite" />
+      <recent name="com.malrang.pomodoro.localRepo" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Android App.app">
+    <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
+      <module name="Pomodoro.app" />
+      <option name="ANDROID_RUN_CONFIGURATION_SCHEMA_VERSION" value="1" />
+      <option name="DEPLOY" value="true" />
+      <option name="DEPLOY_APK_FROM_BUNDLE" value="false" />
+      <option name="DEPLOY_AS_INSTANT" value="false" />
+      <option name="ARTIFACT_NAME" value="" />
+      <option name="PM_INSTALL_OPTIONS" value="" />
+      <option name="ALL_USERS" value="false" />
+      <option name="ALWAYS_INSTALL_WITH_PM" value="false" />
+      <option name="ALLOW_ASSUME_VERIFIED" value="false" />
+      <option name="CLEAR_APP_STORAGE" value="false" />
+      <option name="DYNAMIC_FEATURES_DISABLED_LIST" value="" />
+      <option name="ACTIVITY_EXTRA_FLAGS" value="" />
+      <option name="MODE" value="default_activity" />
+      <option name="RESTORE_ENABLED" value="false" />
+      <option name="RESTORE_FILE" value="" />
+      <option name="RESTORE_FRESH_INSTALL_ONLY" value="false" />
+      <option name="CLEAR_LOGCAT" value="false" />
+      <option name="SHOW_LOGCAT_AUTOMATICALLY" value="false" />
+      <option name="TARGET_SELECTION_MODE" value="DEVICE_AND_SNAPSHOT_COMBO_BOX" />
+      <option name="SELECTED_CLOUD_MATRIX_CONFIGURATION_ID" value="-1" />
+      <option name="SELECTED_CLOUD_MATRIX_PROJECT_ID" value="" />
+      <option name="DEBUGGER_TYPE" value="Auto" />
+      <Auto>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+        <option name="DEBUG_SANDBOX_SDK" value="false" />
+      </Auto>
+      <Hybrid>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+        <option name="DEBUG_SANDBOX_SDK" value="false" />
+      </Hybrid>
+      <Java>
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+        <option name="DEBUG_SANDBOX_SDK" value="false" />
+      </Java>
+      <Native>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+        <option name="DEBUG_SANDBOX_SDK" value="false" />
+      </Native>
+      <Profilers>
+        <option name="ADVANCED_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_CONFIGURATION_NAME" value="Java/Kotlin Method Sample (legacy)" />
+        <option name="STARTUP_NATIVE_MEMORY_PROFILING_ENABLED" value="false" />
+        <option name="NATIVE_MEMORY_SAMPLE_RATE_BYTES" value="2048" />
+      </Profilers>
+      <option name="DEEP_LINK" value="" />
+      <option name="ACTIVITY" value="" />
+      <option name="ACTIVITY_CLASS" value="" />
+      <option name="SEARCH_ACTIVITY_IN_GLOBAL_SCOPE" value="false" />
+      <option name="SKIP_ACTIVITY_VALIDATION" value="false" />
+      <method v="2">
+        <option name="Android.Gradle.BeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Pomodoro [signingReport]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="signingReport" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <configuration name="Pomodoro:app [signingReport]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/app" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="signingReport" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>false</RunAsTest>
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Gradle.Pomodoro [signingReport]" />
+        <item itemvalue="Gradle.Pomodoro:app [signingReport]" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="314f4047-11b9-425c-888e-156b5896d053" name="Changes" comment="" />
+      <created>1755417963723</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1755417963723</updated>
+    </task>
+    <task id="LOCAL-00082" summary="권한 설정창 따로 만들기">
+      <option name="closed" value="true" />
+      <created>1756215415643</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1756215415643</updated>
+    </task>
+    <task id="LOCAL-00083" summary="디자인 일부 수정 및 위치 조정">
+      <option name="closed" value="true" />
+      <created>1756223985850</created>
+      <option name="number" value="00083" />
+      <option name="presentableId" value="LOCAL-00083" />
+      <option name="project" value="LOCAL" />
+      <updated>1756223985850</updated>
+    </task>
+    <task id="LOCAL-00084" summary="일부 수정">
+      <option name="closed" value="true" />
+      <created>1756273615240</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1756273615240</updated>
+    </task>
+    <task id="LOCAL-00085" summary="파이어베이스 Crashlytics 추가">
+      <option name="closed" value="true" />
+      <created>1756273979426</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1756273979426</updated>
+    </task>
+    <task id="LOCAL-00086" summary="버전코드 2 / 버전네임 1.0.1">
+      <option name="closed" value="true" />
+      <created>1756274031436</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1756274031436</updated>
+    </task>
+    <task id="LOCAL-00087" summary="가로모드 추가">
+      <option name="closed" value="true" />
+      <created>1756277199289</created>
+      <option name="number" value="00087" />
+      <option name="presentableId" value="LOCAL-00087" />
+      <option name="project" value="LOCAL" />
+      <updated>1756277199289</updated>
+    </task>
+    <task id="LOCAL-00088" summary="가로모드 ui 수정">
+      <option name="closed" value="true" />
+      <created>1756277865269</created>
+      <option name="number" value="00088" />
+      <option name="presentableId" value="LOCAL-00088" />
+      <option name="project" value="LOCAL" />
+      <updated>1756277865269</updated>
+    </task>
+    <task id="LOCAL-00089" summary="권한 설정 로직 수정">
+      <option name="closed" value="true" />
+      <created>1756284801961</created>
+      <option name="number" value="00089" />
+      <option name="presentableId" value="LOCAL-00089" />
+      <option name="project" value="LOCAL" />
+      <updated>1756284801961</updated>
+    </task>
+    <task id="LOCAL-00090" summary="권한 설정 로직 완성(알림 2회 실패시 패키지 설정 이동)">
+      <option name="closed" value="true" />
+      <created>1756286585184</created>
+      <option name="number" value="00090" />
+      <option name="presentableId" value="LOCAL-00090" />
+      <option name="project" value="LOCAL" />
+      <updated>1756286585184</updated>
+    </task>
+    <task id="LOCAL-00091" summary="스킵 오류 수정">
+      <option name="closed" value="true" />
+      <created>1756297133311</created>
+      <option name="number" value="00091" />
+      <option name="presentableId" value="LOCAL-00091" />
+      <option name="project" value="LOCAL" />
+      <updated>1756297133312</updated>
+    </task>
+    <task id="LOCAL-00092" summary="dataSync -&gt; mediaPlayback으로 변경">
+      <option name="closed" value="true" />
+      <created>1756298289956</created>
+      <option name="number" value="00092" />
+      <option name="presentableId" value="LOCAL-00092" />
+      <option name="project" value="LOCAL" />
+      <updated>1756298289956</updated>
+    </task>
+    <task id="LOCAL-00093" summary="버전 3 / 1.0.2">
+      <option name="closed" value="true" />
+      <created>1756298350931</created>
+      <option name="number" value="00093" />
+      <option name="presentableId" value="LOCAL-00093" />
+      <option name="project" value="LOCAL" />
+      <updated>1756298350931</updated>
+    </task>
+    <task id="LOCAL-00094" summary="권한 설정창 픽셀 디자인">
+      <option name="closed" value="true" />
+      <created>1756300038274</created>
+      <option name="number" value="00094" />
+      <option name="presentableId" value="LOCAL-00094" />
+      <option name="project" value="LOCAL" />
+      <updated>1756300038274</updated>
+    </task>
+    <task id="LOCAL-00095" summary="화면 세로가로 바뀌면 메인으로 가던 오류해결">
+      <option name="closed" value="true" />
+      <created>1756301560705</created>
+      <option name="number" value="00095" />
+      <option name="presentableId" value="LOCAL-00095" />
+      <option name="project" value="LOCAL" />
+      <updated>1756301560705</updated>
+    </task>
+    <task id="LOCAL-00096" summary="설정이 영구 저장이 안되던 버그 해결">
+      <option name="closed" value="true" />
+      <created>1756310183616</created>
+      <option name="number" value="00096" />
+      <option name="presentableId" value="LOCAL-00096" />
+      <option name="project" value="LOCAL" />
+      <updated>1756310183616</updated>
+    </task>
+    <task id="LOCAL-00097" summary="접속 중 타이머가 되어도 리스트에만 동물이 들어가고 ui에는 안나타나던 버그 수정">
+      <option name="closed" value="true" />
+      <created>1756312547708</created>
+      <option name="number" value="00097" />
+      <option name="presentableId" value="LOCAL-00097" />
+      <option name="project" value="LOCAL" />
+      <updated>1756312547708</updated>
+    </task>
+    <task id="LOCAL-00098" summary="최소화 상태일 때, ui 갱신 안되던 오류 해결">
+      <option name="closed" value="true" />
+      <created>1756313105552</created>
+      <option name="number" value="00098" />
+      <option name="presentableId" value="LOCAL-00098" />
+      <option name="project" value="LOCAL" />
+      <updated>1756313105552</updated>
+    </task>
+    <task id="LOCAL-00099" summary="알림 백그라운드에서 유지 제거 &amp; 서비스 종료되어도 상태 저장">
+      <option name="closed" value="true" />
+      <created>1756365983293</created>
+      <option name="number" value="00099" />
+      <option name="presentableId" value="LOCAL-00099" />
+      <option name="project" value="LOCAL" />
+      <updated>1756365983294</updated>
+    </task>
+    <task id="LOCAL-00100" summary="선 그래프 -&gt; 바 그래프로 변경">
+      <option name="closed" value="true" />
+      <created>1756369436737</created>
+      <option name="number" value="00100" />
+      <option name="presentableId" value="LOCAL-00100" />
+      <option name="project" value="LOCAL" />
+      <updated>1756369436738</updated>
+    </task>
+    <task id="LOCAL-00101" summary="그래프 라벨 텍스트 흰색으로 변경">
+      <option name="closed" value="true" />
+      <created>1756381904073</created>
+      <option name="number" value="00101" />
+      <option name="presentableId" value="LOCAL-00101" />
+      <option name="project" value="LOCAL" />
+      <updated>1756381904073</updated>
+    </task>
+    <task id="LOCAL-00102" summary="동물 확률 수정">
+      <option name="closed" value="true" />
+      <created>1756382098821</created>
+      <option name="number" value="00102" />
+      <option name="presentableId" value="LOCAL-00102" />
+      <option name="project" value="LOCAL" />
+      <updated>1756382098821</updated>
+    </task>
+    <task id="LOCAL-00103" summary="그래프 색상 변경">
+      <option name="closed" value="true" />
+      <created>1756382787494</created>
+      <option name="number" value="00103" />
+      <option name="presentableId" value="LOCAL-00103" />
+      <option name="project" value="LOCAL" />
+      <updated>1756382787494</updated>
+    </task>
+    <task id="LOCAL-00104" summary="화이트리스트 ui 수정">
+      <option name="closed" value="true" />
+      <created>1756396094356</created>
+      <option name="number" value="00104" />
+      <option name="presentableId" value="LOCAL-00104" />
+      <option name="project" value="LOCAL" />
+      <updated>1756396094356</updated>
+    </task>
+    <task id="LOCAL-00105" summary="버전코드 4 / 버전네임 1.0.3">
+      <option name="closed" value="true" />
+      <created>1756396438890</created>
+      <option name="number" value="00105" />
+      <option name="presentableId" value="LOCAL-00105" />
+      <option name="project" value="LOCAL" />
+      <updated>1756396438890</updated>
+    </task>
+    <task id="LOCAL-00106" summary="세로모드 ui 가운데 오도록 수정">
+      <option name="closed" value="true" />
+      <created>1756706937114</created>
+      <option name="number" value="00106" />
+      <option name="presentableId" value="LOCAL-00106" />
+      <option name="project" value="LOCAL" />
+      <updated>1756706937114</updated>
+    </task>
+    <task id="LOCAL-00107" summary="드디어 supabase 연결">
+      <option name="closed" value="true" />
+      <created>1756798935281</created>
+      <option name="number" value="00107" />
+      <option name="presentableId" value="LOCAL-00107" />
+      <option name="project" value="LOCAL" />
+      <updated>1756798935281</updated>
+    </task>
+    <task id="LOCAL-00108" summary="임시 아이콘 설정">
+      <option name="closed" value="true" />
+      <created>1756798976145</created>
+      <option name="number" value="00108" />
+      <option name="presentableId" value="LOCAL-00108" />
+      <option name="project" value="LOCAL" />
+      <updated>1756798976145</updated>
+    </task>
+    <task id="LOCAL-00109" summary="ktor 엔진 명시">
+      <option name="closed" value="true" />
+      <created>1756799358216</created>
+      <option name="number" value="00109" />
+      <option name="presentableId" value="LOCAL-00109" />
+      <option name="project" value="LOCAL" />
+      <updated>1756799358216</updated>
+    </task>
+    <task id="LOCAL-00110" summary="모델과 함수 정의">
+      <option name="closed" value="true" />
+      <created>1756801712998</created>
+      <option name="number" value="00110" />
+      <option name="presentableId" value="LOCAL-00110" />
+      <option name="project" value="LOCAL" />
+      <updated>1756801712998</updated>
+    </task>
+    <task id="LOCAL-00111" summary="뷰모델을 분리">
+      <option name="closed" value="true" />
+      <created>1756813946599</created>
+      <option name="number" value="00111" />
+      <option name="presentableId" value="LOCAL-00111" />
+      <option name="project" value="LOCAL" />
+      <updated>1756813946600</updated>
+    </task>
+    <task id="LOCAL-00112" summary="일단 뷰모델에 함수추가 및 ui 대충">
+      <option name="closed" value="true" />
+      <created>1756818335784</created>
+      <option name="number" value="00112" />
+      <option name="presentableId" value="LOCAL-00112" />
+      <option name="project" value="LOCAL" />
+      <updated>1756818335785</updated>
+    </task>
+    <task id="LOCAL-00113" summary="구글 로그인 구현">
+      <option name="closed" value="true" />
+      <created>1756829589708</created>
+      <option name="number" value="00113" />
+      <option name="presentableId" value="LOCAL-00113" />
+      <option name="project" value="LOCAL" />
+      <updated>1756829589709</updated>
+    </task>
+    <task id="LOCAL-00114" summary="앱 런처가 안보이던 버그 수정">
+      <option name="closed" value="true" />
+      <created>1756829918082</created>
+      <option name="number" value="00114" />
+      <option name="presentableId" value="LOCAL-00114" />
+      <option name="project" value="LOCAL" />
+      <updated>1756829918082</updated>
+    </task>
+    <task id="LOCAL-00115" summary="auth 바로 적용(로그인 후 바로 퍼미션)">
+      <option name="closed" value="true" />
+      <created>1756860130828</created>
+      <option name="number" value="00115" />
+      <option name="presentableId" value="LOCAL-00115" />
+      <option name="project" value="LOCAL" />
+      <updated>1756860130829</updated>
+    </task>
+    <task id="LOCAL-00116" summary="계정 로그인이 확인되면 바로 넘어감">
+      <option name="closed" value="true" />
+      <created>1756899542840</created>
+      <option name="number" value="00116" />
+      <option name="presentableId" value="LOCAL-00116" />
+      <option name="project" value="LOCAL" />
+      <updated>1756899542840</updated>
+    </task>
+    <task id="LOCAL-00117" summary="스터디룸뷰모델 생성 &amp; 이제 &quot;생성 및 참여&quot; 버튼 작동은 함(에러는 나지만)">
+      <option name="closed" value="true" />
+      <created>1756901924308</created>
+      <option name="number" value="00117" />
+      <option name="presentableId" value="LOCAL-00117" />
+      <option name="project" value="LOCAL" />
+      <updated>1756901924308</updated>
+    </task>
+    <task id="LOCAL-00118" summary="모델 이름 db에 맞도록 스네이크표기법으로 변경">
+      <option name="closed" value="true" />
+      <created>1756903254658</created>
+      <option name="number" value="00118" />
+      <option name="presentableId" value="LOCAL-00118" />
+      <option name="project" value="LOCAL" />
+      <updated>1756903254659</updated>
+    </task>
+    <task id="LOCAL-00119" summary="방 불러오기 정상">
+      <option name="closed" value="true" />
+      <created>1756905443205</created>
+      <option name="number" value="00119" />
+      <option name="presentableId" value="LOCAL-00119" />
+      <option name="project" value="LOCAL" />
+      <updated>1756905443205</updated>
+    </task>
+    <task id="LOCAL-00120" summary="저장 오류 해결">
+      <option name="closed" value="true" />
+      <created>1756906269407</created>
+      <option name="number" value="00120" />
+      <option name="presentableId" value="LOCAL-00120" />
+      <option name="project" value="LOCAL" />
+      <updated>1756906269407</updated>
+    </task>
+    <task id="LOCAL-00121" summary="방 url 입장코드 (1)">
+      <option name="closed" value="true" />
+      <created>1756913283611</created>
+      <option name="number" value="00121" />
+      <option name="presentableId" value="LOCAL-00121" />
+      <option name="project" value="LOCAL" />
+      <updated>1756913283611</updated>
+    </task>
+    <task id="LOCAL-00122" summary="방 url 입장코드 (1)">
+      <option name="closed" value="true" />
+      <created>1756913421489</created>
+      <option name="number" value="00122" />
+      <option name="presentableId" value="LOCAL-00122" />
+      <option name="project" value="LOCAL" />
+      <updated>1756913421489</updated>
+    </task>
+    <task id="LOCAL-00123" summary="showScreen -&gt; navigation으로 변경">
+      <option name="closed" value="true" />
+      <created>1756914798087</created>
+      <option name="number" value="00123" />
+      <option name="presentableId" value="LOCAL-00123" />
+      <option name="project" value="LOCAL" />
+      <updated>1756914798087</updated>
+    </task>
+    <task id="LOCAL-00124" summary="방 디테일 구현">
+      <option name="closed" value="true" />
+      <created>1756916621110</created>
+      <option name="number" value="00124" />
+      <option name="presentableId" value="LOCAL-00124" />
+      <option name="project" value="LOCAL" />
+      <updated>1756916621110</updated>
+    </task>
+    <task id="LOCAL-00125" summary="방초대를 위한 url링크 추가">
+      <option name="closed" value="true" />
+      <created>1756968360035</created>
+      <option name="number" value="00125" />
+      <option name="presentableId" value="LOCAL-00125" />
+      <option name="project" value="LOCAL" />
+      <updated>1756968360036</updated>
+    </task>
+    <task id="LOCAL-00126" summary="versionCode = 5 / versionName = &quot;1.0.4&quot;">
+      <option name="closed" value="true" />
+      <created>1756971283349</created>
+      <option name="number" value="00126" />
+      <option name="presentableId" value="LOCAL-00126" />
+      <option name="project" value="LOCAL" />
+      <updated>1756971283350</updated>
+    </task>
+    <task id="LOCAL-00127" summary="Could not find the 'a' column of 'study_rooms' in the schema cache. 에러 해결(난독화로부터 보호[@Keep])">
+      <option name="closed" value="true" />
+      <created>1756975095589</created>
+      <option name="number" value="00127" />
+      <option name="presentableId" value="LOCAL-00127" />
+      <option name="project" value="LOCAL" />
+      <updated>1756975095589</updated>
+    </task>
+    <task id="LOCAL-00128" summary="임시 로그인 창 구성">
+      <option name="closed" value="true" />
+      <created>1756977772946</created>
+      <option name="number" value="00128" />
+      <option name="presentableId" value="LOCAL-00128" />
+      <option name="project" value="LOCAL" />
+      <updated>1756977772946</updated>
+    </task>
+    <task id="LOCAL-00129" summary="versionCode = 6 / versionName = &quot;1.0.5&quot;">
+      <option name="closed" value="true" />
+      <created>1756977879738</created>
+      <option name="number" value="00129" />
+      <option name="presentableId" value="LOCAL-00129" />
+      <option name="project" value="LOCAL" />
+      <updated>1756977879738</updated>
+    </task>
+    <task id="LOCAL-00130" summary="드디어 (커스텀)딥링크 구현 성공, App Link는 불가능으로 판명">
+      <option name="closed" value="true" />
+      <created>1756993313589</created>
+      <option name="number" value="00130" />
+      <option name="presentableId" value="LOCAL-00130" />
+      <option name="project" value="LOCAL" />
+      <updated>1756993313590</updated>
+    </task>
+    <option name="localTasksCounter" value="131" />
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="master" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="세로모드 ui 가운데 오도록 수정" />
+    <MESSAGE value="드디어 supabase 연결" />
+    <MESSAGE value="임시 아이콘 설정" />
+    <MESSAGE value="ktor 엔진 명시" />
+    <MESSAGE value="모델과 함수 정의" />
+    <MESSAGE value="뷰모델을 분리" />
+    <MESSAGE value="일단 뷰모델에 함수추가 및 ui 대충" />
+    <MESSAGE value="구글 로그인 구현" />
+    <MESSAGE value="앱 런처가 안보이던 버그 수정" />
+    <MESSAGE value="auth 바로 적용(로그인 후 바로 퍼미션)" />
+    <MESSAGE value="계정 로그인이 확인되면 바로 넘어감" />
+    <MESSAGE value="스터디룸뷰모델 생성 &amp; 이제 &quot;생성 및 참여&quot; 버튼 작동은 함(에러는 나지만)" />
+    <MESSAGE value="모델 이름 db에 맞도록 스네이크표기법으로 변경" />
+    <MESSAGE value="방 불러오기 정상" />
+    <MESSAGE value="저장 오류 해결" />
+    <MESSAGE value="방 url 입장코드 (1)" />
+    <MESSAGE value="showScreen -&gt; navigation으로 변경" />
+    <MESSAGE value="방 디테일 구현" />
+    <MESSAGE value="방초대를 위한 url링크 추가" />
+    <MESSAGE value="versionCode = 5 / versionName = &quot;1.0.4&quot;" />
+    <MESSAGE value="Could not find the 'a' column of 'study_rooms' in the schema cache. 에러 해결(난독화로부터 보호[@Keep])" />
+    <MESSAGE value="임시 로그인 창 구성" />
+    <MESSAGE value="versionCode = 6 / versionName = &quot;1.0.5&quot;" />
+    <MESSAGE value="드디어 딥링크 구현 성공" />
+    <MESSAGE value="드디어 (커스텀)딥링크 구현 성공, App Link는 불가능으로 판명" />
+    <option name="LAST_COMMIT_MESSAGE" value="드디어 (커스텀)딥링크 구현 성공, App Link는 불가능으로 판명" />
+  </component>
+  <component name="play_dynamic_filters_status">
+    <option name="appIdToCheckInfo">
+      <map>
+        <entry key="com.malrang.pomodoro">
+          <value>
+            <CheckInfo lastCheckTimestamp="1756912021861" />
+          </value>
+        </entry>
+        <entry key="com.malrang.pomodoro.test">
+          <value>
+            <CheckInfo lastCheckTimestamp="1756912021857" />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
