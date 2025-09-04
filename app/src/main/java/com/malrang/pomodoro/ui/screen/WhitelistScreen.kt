@@ -1,8 +1,6 @@
 package com.malrang.pomodoro.ui.screen
 
 import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -15,20 +13,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -74,10 +68,10 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
         }
     }
 
-    // ✅ 시스템 뒤로가기 버튼을 눌렀을 때 SettingsScreen으로 이동하도록 설정
-    BackPressMove {
-        viewModel.showScreen(Screen.Settings)
-    }
+//    // ✅ 시스템 뒤로가기 버튼을 눌렀을 때 SettingsScreen으로 이동하도록 설정
+//    BackPressMove {
+//        viewModel.navigateTo(Screen.Settings)
+//    }
 
     Scaffold(
         containerColor = Color(0xFF1E1B4B),
@@ -96,7 +90,7 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
             ) {
                 Text("앱 허용 목록 (전체)", fontSize = 16.sp)
 
-                IconButton(onClick = { viewModel.showScreen(Screen.Settings) }) {
+                IconButton(onClick = { viewModel.navigateTo(Screen.Settings) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                 }
             }

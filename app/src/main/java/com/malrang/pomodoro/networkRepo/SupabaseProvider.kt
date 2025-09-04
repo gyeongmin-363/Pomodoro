@@ -2,6 +2,8 @@ package com.malrang.pomodoro.networkRepo
 
 
 import com.malrang.pomodoro.BuildConfig
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.ExternalAuthAction
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.serializer.JacksonSerializer
@@ -19,6 +21,13 @@ object SupabaseProvider {
             httpEngine = OkHttp.create()
             // 모듈 설치
             install(Postgrest)
+            install(Auth){
+                host = "auth"
+                scheme = "pixbbo"
+                // 안드로이드에서 CustomTabs 사용 예:
+                defaultExternalAuthAction = ExternalAuthAction.CustomTabs()
+                // 필요시 flowType = FlowType.PKCE
+            }
         }
     }
 }

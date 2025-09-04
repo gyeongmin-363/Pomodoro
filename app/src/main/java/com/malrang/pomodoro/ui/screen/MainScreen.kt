@@ -11,7 +11,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -28,7 +27,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -39,13 +37,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
@@ -54,7 +50,6 @@ import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
-import com.malrang.pomodoro.ui.PomodoroApp
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.delay
 
@@ -307,7 +302,7 @@ fun PortraitMainScreen(
                     onRenamePreset = { preset -> onPresetToRenameChange(preset) },
                     onEditSettings = { presetId ->
                         viewModel.startEditingWorkPreset(presetId)
-                        viewModel.showScreen(Screen.Settings)
+                        viewModel.navigateTo(Screen.Settings)
                     },
                     useGrassBackground = state.useGrassBackground
                 )
@@ -366,10 +361,10 @@ fun PortraitMainScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
+            IconButton(onClick = { viewModel.navigateTo(Screen.Collection) }) {
                 Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = contentColor)
             }
-            IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
+            IconButton(onClick = { viewModel.navigateTo(Screen.Stats) }) {
                 Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = contentColor)
             }
             IconButton(onClick = {
@@ -381,7 +376,7 @@ fun PortraitMainScreen(
                 Icon(painterResource(R.drawable.light_night), contentDescription = "배경 변경", tint = contentColor)
             }
             IconButton(onClick = {
-                viewModel.showScreen(Screen.StudyRoom)
+                viewModel.navigateTo(Screen.StudyRoom)
             }) {
                 Icon(Icons.Default.ThumbUp, contentDescription = "스터디룸", tint = contentColor)
             }
@@ -463,7 +458,7 @@ fun LandscapeMainScreen(
                     onRenamePreset = { preset -> onPresetToRenameChange(preset) },
                     onEditSettings = { presetId ->
                         viewModel.startEditingWorkPreset(presetId)
-                        viewModel.showScreen(Screen.Settings)
+                        viewModel.navigateTo(Screen.Settings)
                     },
                     useGrassBackground = state.useGrassBackground
                 )
@@ -505,10 +500,10 @@ fun LandscapeMainScreen(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { viewModel.showScreen(Screen.Collection) }) {
+                IconButton(onClick = { viewModel.navigateTo(Screen.Collection) }) {
                     Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감", tint = contentColor)
                 }
-                IconButton(onClick = { viewModel.showScreen(Screen.Stats) }) {
+                IconButton(onClick = { viewModel.navigateTo(Screen.Stats) }) {
                     Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계", tint = contentColor)
                 }
                 IconButton(onClick = {

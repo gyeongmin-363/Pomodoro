@@ -90,7 +90,7 @@ fun StatsScreen(vm: PomodoroViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("📊 통계", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            IconButton(onClick = { vm.showScreen(Screen.Main) }) {
+            IconButton(onClick = { vm.navigateTo(Screen.Main) }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "돌아가기",
