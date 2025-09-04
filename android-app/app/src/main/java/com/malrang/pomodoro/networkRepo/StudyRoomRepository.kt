@@ -62,6 +62,30 @@ class StudyRoomRepository(
             .decodeList<StudyRoom>()
     }
 
+    suspend fun findStudyRoomsByMemberExcludingCreator(userId: String): List<StudyRoom> {
+        // 1. 내가 속한 study_room_id 가져오기
+        val memberRecords = postgrest.from("study_room_members")
+            .select(columns = Columns.list("study_room_id"))
+            {
+                filter { eq("user_id", userId) }
+            }
+            .decodeList<StudyRoomMemberRef>()
+
+        val roomIds = memberRecords.map { it.study_room_id }
+        if (roomIds.isEmpty()) return emptyList()
+
+        // 2. 생성자가 나인 방 제외하고 조회
+        return postgrest.from("study_rooms")
+            .select()
+            {
+                filter {
+                    isIn("id", roomIds)
+                    neq("creator_id", userId)
+                }
+            }
+            .decodeList<StudyRoom>()
+    }
+
 
     /**
      * 스터디룸 정보를 업데이트합니다.
