@@ -1,6 +1,11 @@
 package com.malrang.pomodoro.ui.screen.main
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -145,19 +150,36 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             }
         }
 
-        if (state.useGrassBackground) {
-            Image(
-                painter = painterResource(id = R.drawable.grass_background),
-                contentDescription = "grass background",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            )
+        AnimatedContent(
+            targetState = state.currentMode == Mode.STUDY,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(durationMillis = 2000)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = 2000))
+            },
+            label = "Background Transition"
+        ) { isStudyMode ->
+            if (isStudyMode && state.useGrassBackground) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF99C658))
+                )
+            } else {
+                if (state.useGrassBackground) {
+                    Image(
+                        painter = painterResource(id = R.drawable.grass_background),
+                        contentDescription = "잔디, 꽃 배경",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black)
+                    )
+                }
+            }
         }
 
         if ((state.currentMode != Mode.STUDY || state.isPaused) && state.useGrassBackground) {
