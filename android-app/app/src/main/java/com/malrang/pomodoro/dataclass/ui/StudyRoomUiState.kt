@@ -27,5 +27,7 @@ data class StudyRoomUiState(
     val createdStudyRooms: List<StudyRoom> = emptyList(), // 사용자가 생성한 스터디룸 목록
     val joinedStudyRooms: List<StudyRoom> = emptyList(),  // 사용자가 참여만 한 스터디룸 목록
     val showCreateStudyRoomDialog: Boolean = false,       // 스터디룸 생성 다이얼로그 표시 여부
-    val showJoinStudyRoomDialog: StudyRoom? = null       // 참여할 스터디룸 정보 (null이 아니면 다이얼로그 표시)
+    val showJoinStudyRoomDialog: StudyRoom? = null,       // 참여할 스터디룸 정보 (null이 아니면 다이얼로그 표시)
+
+    val isLoading: Boolean = true,
 )

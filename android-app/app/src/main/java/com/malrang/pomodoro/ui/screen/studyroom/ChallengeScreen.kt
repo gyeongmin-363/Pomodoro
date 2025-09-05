@@ -80,10 +80,11 @@ fun ChallengeScreen(
     val currentUser = uiState.currentUser
     val createdRooms = uiState.createdStudyRooms
     val joinedRooms = uiState.joinedStudyRooms
+    val isLoading = uiState.isLoading
 
     // ✅ [추가] 탭 상태 관리를 위한 변수
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("내가 생성한 챌린지룸", "내가 참여한 챌린지룸")
+    val tabs = listOf("내 챌린지룸", "참여 챌린지룸")
 
     // FloatingActionButton은 Scaffold와 함께 사용하는 것이 일반적이지만,
     // 현재 구조를 유지하기 위해 Box로 감싸 화면 위에 표시되도록 합니다.
@@ -97,7 +98,7 @@ fun ChallengeScreen(
             // .verticalScroll(rememberScrollState())
         ){
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -119,7 +120,7 @@ fun ChallengeScreen(
                     Tab(
                         selected = selectedTabIndex == index,
                         onClick = { selectedTabIndex = index },
-                        text = { Text(text = title) }
+                        text = { Text(text = title, style = MaterialTheme.typography.bodyLarge) }
                     )
                 }
             }
@@ -134,7 +135,17 @@ fun ChallengeScreen(
                     CircularProgressIndicator()
                     Text("사용자 정보를 불러오는 중...", modifier = Modifier.padding(top = 60.dp))
                 }
-            } else {
+            }
+            else if(isLoading){
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                    Text("챌린지룸 불러오는 중...", modifier = Modifier.padding(top = 60.dp))
+                }
+            }
+            else {
                 // ✅ [변경] 선택된 탭에 따라 다른 컨텐츠를 보여줌
                 when (selectedTabIndex) {
                     // "내가 생성한 챌린지룸" 탭

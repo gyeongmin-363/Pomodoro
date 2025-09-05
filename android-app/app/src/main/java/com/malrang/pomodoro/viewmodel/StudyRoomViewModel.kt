@@ -180,6 +180,9 @@ class StudyRoomViewModel(
     // MARK: - UI Control Functions
 
     fun loadUserStudyRooms(userId: String) {
+        // 1. 로딩 시작: isLoading을 true로 설정
+        _studyRoomUiState.update { it.copy(isLoading = true) }
+
         viewModelScope.launch {
             val createdRooms = networkRepo.findStudyRoomsByCreator(userId)
             val joinedRooms = networkRepo.findStudyRoomsByMemberExcludingCreator(userId)
@@ -187,7 +190,8 @@ class StudyRoomViewModel(
             _studyRoomUiState.update {
                 it.copy(
                     createdStudyRooms = createdRooms,
-                    joinedStudyRooms = joinedRooms
+                    joinedStudyRooms = joinedRooms,
+                    isLoading = false // 로딩 완료
                 )
             }
         }
