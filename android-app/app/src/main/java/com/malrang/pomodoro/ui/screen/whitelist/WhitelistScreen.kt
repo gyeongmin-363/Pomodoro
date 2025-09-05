@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -79,7 +80,7 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
 //    }
 
     Scaffold(
-        containerColor = Color(0xFF1E1B4B),
+        containerColor = backgroundColor,
         contentColor = Color.White
     ) { paddingValues ->
         Column(

@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExposedDropdownMenuDefaults.textFieldColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,27 +48,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     val contentColor = if (state.useGrassBackground) Color.Black else Color.White
     val secondaryTextColor = Color.LightGray
     val highlightColor = if (state.useGrassBackground) Color(0xFF01579B) else Color.Cyan // 잔디 배경일 때 더 어두운 파란색
-    val textFieldColors = if (state.useGrassBackground) {
-        OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Color.Black,
-            unfocusedBorderColor = Color.Gray,
-            cursorColor = Color.Black,
-            focusedLabelColor = Color.Black,
-            unfocusedLabelColor = Color.Gray,
-            focusedTextColor = Color.Black,
-            unfocusedTextColor = Color.Black
-        )
-    } else {
-        OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Color.White,
-            unfocusedBorderColor = Color.Gray,
-            cursorColor = Color.White,
-            focusedLabelColor = Color.White,
-            unfocusedLabelColor = Color.Gray,
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White
-        )
-    }
+
 
     if (presetToRename != null) {
         PixelArtConfirmDialog(
@@ -85,7 +66,15 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 onValueChange = { newPresetName = it },
                 label = { Text("새 이름") },
                 singleLine = true,
-                colors = textFieldColors
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = Color.White,
+                    focusedLabelColor = Color.White,
+                    unfocusedLabelColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
             )
         }
     }
