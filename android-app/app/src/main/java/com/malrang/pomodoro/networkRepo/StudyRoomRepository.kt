@@ -182,46 +182,8 @@ class StudyRoomRepository(
     }
 
 
-    // MARK: - HabitProgress Functions
+    // MARK: - HabitProgress Functions TODO
 
-    /**
-     * 습관 진행 상태를 기록합니다.
-     * @param progress 기록할 진행 상태 객체
-     */
-    suspend fun logHabitProgress(progress: HabitProgress) {
-        postgrest["habit_progress"].insert(progress)
-    }
-
-    /**
-     * 특정 사용자의 특정 스터디룸에서의 모든 습관 진행 상태를 가져옵니다.
-     * @param studyRoomId 스터디룸 ID
-     * @param userId 사용자 ID
-     * @return HabitProgress 객체 리스트
-     */
-    suspend fun getHabitProgressForUser(studyRoomId: String, userId: String): List<HabitProgress> {
-        return postgrest["habit_progress"]
-            .select {
-                filter {
-                    eq("study_room_id", studyRoomId)
-                    eq("user_id", userId)
-                }
-            }
-            .decodeList<HabitProgress>()
-    }
-
-    /**
-     * 습관 진행 상태를 업데이트합니다.
-     * @param progressId 업데이트할 진행 상태의 ID
-     * @param isDone 완료 여부
-     */
-    suspend fun updateHabitProgress(progressId: String, isDone: Boolean) {
-        postgrest["habit_progress"]
-            .update({ set("is_done", isDone) }) {
-                filter {
-                    eq("id", progressId)
-                }
-            }
-    }
 
     // MARK: - Animal Functions (주로 읽기 전용)
 

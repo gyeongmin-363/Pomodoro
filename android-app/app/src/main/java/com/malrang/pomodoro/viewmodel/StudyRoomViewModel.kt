@@ -3,11 +3,7 @@ package com.malrang.pomodoro.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.ui.StudyRoomUiState
-import com.malrang.pomodoro.networkRepo.HabitProgress
-import com.malrang.pomodoro.networkRepo.StudyRoom
-import com.malrang.pomodoro.networkRepo.StudyRoomMember
-import com.malrang.pomodoro.networkRepo.StudyRoomRepository
-import com.malrang.pomodoro.networkRepo.User
+import com.malrang.pomodoro.networkRepo.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -145,28 +141,9 @@ class StudyRoomViewModel(
         }
     }
 
-    // MARK: - HabitProgress Functions
+    // MARK: - HabitProgress Functions TODO
 
-    fun logHabitProgress(progress: HabitProgress) {
-        viewModelScope.launch {
-            networkRepo.logHabitProgress(progress)
-            loadHabitProgressForUser(progress.study_room_id!!, progress.user_id!!)
-        }
-    }
 
-    fun loadHabitProgressForUser(studyRoomId: String, userId: String) {
-        viewModelScope.launch {
-            val progress = networkRepo.getHabitProgressForUser(studyRoomId, userId)
-            _studyRoomUiState.update { it.copy(userHabitProgress = progress) }
-        }
-    }
-
-    fun updateHabitProgress(progressId: String, isDone: Boolean, studyRoomId: String, userId: String) {
-        viewModelScope.launch {
-            networkRepo.updateHabitProgress(progressId, isDone)
-            loadHabitProgressForUser(studyRoomId, userId)
-        }
-    }
 
     // MARK: - Animal Functions
 
