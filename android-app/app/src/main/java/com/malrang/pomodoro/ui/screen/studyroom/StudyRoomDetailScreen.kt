@@ -14,21 +14,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -72,13 +79,15 @@ fun StudyRoomDetailScreen(
     roomVm: StudyRoomViewModel,
     onNavigateBack: () -> Unit
 ) {
-    // ✅ [추가] 공유 인텐트를 위해 LocalContext를 가져옵니다.
     val context = LocalContext.current
     var tappedDate by remember { mutableStateOf<LocalDate?>(null) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     val headerText = "${selectedDate.year}년 ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}"
 
-    // 화면이 처음 구성될 때 roomId를 사용하여 스터디룸 정보를 불러옵니다.
+    // ✅ 1. 버튼의 상태(완료 여부)를 관리할 변수를 추가합니다.
+    var isChallengeCompleted by remember { mutableStateOf(false) }
+
+
     LaunchedEffect(roomId) {
         if (roomId != null) {
             roomVm.loadStudyRoomById(roomId)
@@ -90,42 +99,47 @@ fun StudyRoomDetailScreen(
     val room = uiState.currentStudyRoom
     val members = uiState.currentRoomMembers
 
-    Box(modifier = Modifier.fillMaxSize()){
+    // Box를 사용하여 컨텐츠와 버튼을 겹치게 배치합니다.
+    Box(modifier = Modifier.fillMaxSize().background(backgroundColor)){
+        val scrollState = rememberScrollState()
+        // ✅ 2. Column에 verticalScroll과 하단 padding을 추가하여
+        // 스크롤이 가능하게 하고, 버튼에 내용이 가려지지 않도록 합니다.
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
-                .padding(top = 16.dp)
+                .verticalScroll(scrollState)
+                .padding(bottom = 80.dp) // 버튼이 차지할 공간 확보
         ){
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(room?.name ?: "스터디룸 로딩 중...", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "돌아가기",
-                        tint = Color.White
-                    )
-                }
-                IconButton(onClick = {
-                    val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
-                    val sendIntent: Intent = Intent().apply {
-                        action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_TEXT, "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl")
-                        type = "text/plain"
+                Row {
+                    IconButton(onClick = {
+                        val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
+                        val sendIntent: Intent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl")
+                            type = "text/plain"
+                        }
+                        val shareIntent = Intent.createChooser(sendIntent, "스터디룸 공유")
+                        context.startActivity(shareIntent)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "스터디룸 공유", tint = Color.White)
                     }
-                    val shareIntent = Intent.createChooser(sendIntent, "스터디룸 공유")
-                    context.startActivity(shareIntent)
-                }) {
-                    Icon(Icons.Default.Share, contentDescription = "스터디룸 공유")
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "돌아가기",
+                            tint = Color.White
+                        )
+                    }
                 }
             }
 
             if (room == null) {
-                // 로딩 상태 표시
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -133,28 +147,33 @@ fun StudyRoomDetailScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                // 스터디룸 정보 및 멤버 목록 표시
-                Text(
-                    text = room.inform ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Gray
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "참여자 (${members.size}명)",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(members) { member ->
-                        Text(
-                            text = "- ${member.nickname}",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    Text(
+                        text = room.inform ?: "",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "참여자 (${members.size}명)",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // 멤버 목록은 LazyColumn 대신 Column으로 변경하여 전체 스크롤에 포함시킵니다.
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        members.forEach { member ->
+                            Text(
+                                text = "- ${member.nickname}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 }
+
 
                 //달력
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -209,11 +228,97 @@ fun StudyRoomDetailScreen(
                     )
                 } //달력 끝
 
-
-
+                RankingItem(rank = 1, name = "홍길동", status = "26일 완료", progress = 0.8f)
 
                 // TODO: 여기에 스터디룸 관련 추가 UI(채팅, 현황 등)를 구현할 수 있습니다.
             }
+        }
+
+        // ✅ 3. 화면 하단에 고정될 버튼을 추가합니다.
+        Button(
+            // 버튼 클릭 시 상태를 true로 변경
+            onClick = { isChallengeCompleted = true },
+            modifier = Modifier
+                .align(Alignment.BottomCenter) // Box의 하단 중앙에 위치
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            // isChallengeCompleted가 true이면 버튼 비활성화
+            enabled = !isChallengeCompleted,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF4CAF50), // 활성 상태 색상
+                disabledContainerColor = Color.Gray // 비활성 상태 색상
+            )
+        ) {
+            Text(
+                // isChallengeCompleted 값에 따라 텍스트 변경
+                text = if (isChallengeCompleted) "오늘 챌린지 완료됨!" else "오늘 챌린지 완료하기",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+    }
+}
+
+// 이하 다른 @Composable 함수들은 변경 없음
+@Composable
+fun RankingItem(
+    rank: Int,
+    name: String,
+    status: String,
+    progress: Float // 0.0f ~ 1.0f 사이의 값
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.Top // 컨텐츠를 위쪽으로 정렬
+    ) {
+        // 1. 순위 표시 (노란색 박스)
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .background(Color(0xFFFFC107)), // 노란색
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$rank",
+                color = Color.Black,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // 2. 이름, 상태, 프로그레스 바 (세로 정렬)
+        Column(
+            modifier = Modifier.weight(1f) // 남은 공간을 모두 차지
+        ) {
+            Text(
+                text = name,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = status,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            // 3. 프로그레스 바
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+                color = Color(0xFF4CAF50), // 초록색
+                trackColor = Color.DarkGray
+            )
         }
     }
 }
