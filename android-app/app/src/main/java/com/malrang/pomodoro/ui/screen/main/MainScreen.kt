@@ -1,10 +1,9 @@
 package com.malrang.pomodoro.ui.screen.main
 
 import android.content.res.Configuration
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -150,36 +149,26 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             }
         }
 
-        AnimatedContent(
-            targetState = state.currentMode == Mode.STUDY,
-            transitionSpec = {
-                fadeIn(animationSpec = tween(durationMillis = 2000)) togetherWith
-                        fadeOut(animationSpec = tween(durationMillis = 2000))
-            },
-            label = "Background Transition"
-        ) { isStudyMode ->
-            if (isStudyMode && state.useGrassBackground) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFF99C658))
-                )
-            } else {
-                if (state.useGrassBackground) {
-                    Image(
-                        painter = painterResource(id = R.drawable.grass_background),
-                        contentDescription = "잔디, 꽃 배경",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black)
-                    )
-                }
-            }
+        // 기본 배경색 설정
+        val backgroundColor = if (state.useGrassBackground) Color(0xFF99C658) else Color.Black
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(backgroundColor)
+        )
+
+        // 공부 모드가 아닐 때와 grass 배경을 사용할 때만 Image를 애니메이션과 함께 보이도록 설정
+        AnimatedVisibility(
+            visible = (state.currentMode != Mode.STUDY || state.isPaused) && state.useGrassBackground,
+            enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 1000))
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.grass_background),
+                contentDescription = "잔디, 꽃 배경",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
         if ((state.currentMode != Mode.STUDY || state.isPaused) && state.useGrassBackground) {
