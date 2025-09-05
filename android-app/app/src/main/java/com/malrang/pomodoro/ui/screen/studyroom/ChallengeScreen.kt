@@ -93,7 +93,7 @@ fun ChallengeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundColor)
-                .padding(vertical = 16.dp)
+                .padding(top = 16.dp)
             // ❌ [제거] 중첩 스크롤을 유발하는 원인이므로 제거합니다.
             // .verticalScroll(rememberScrollState())
         ){
@@ -163,6 +163,9 @@ fun ChallengeScreen(
                                         roomVM.onJoinStudyRoom(room)
                                     })
                                 }
+                                item {
+                                    Spacer(Modifier.height(16.dp))
+                                }
                             }
                         } else {
                             EmptyStateMessage(
@@ -186,6 +189,9 @@ fun ChallengeScreen(
                                     StudyRoomItem(room = room, onClick = {
                                         roomVM.onJoinStudyRoom(room)
                                     })
+                                }
+                                item {
+                                    Spacer(Modifier.height(16.dp))
                                 }
                             }
                         } else {
