@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.ui.screen
+package com.malrang.pomodoro.ui.screen.studyroom
 
 import android.content.Intent
 import androidx.compose.foundation.clickable
@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.malrang.pomodoro.networkRepo.Animal
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.User
@@ -246,12 +247,12 @@ fun CreateStudyRoomDialog(
 fun JoinStudyRoomDialog(
     room: StudyRoom,
     currentUser: User,
-    allAnimals: List<com.malrang.pomodoro.networkRepo.Animal>,
+    allAnimals: List<Animal>,
     viewModel: StudyRoomViewModel,
     onDismiss: () -> Unit
 ) {
     var nickname by remember { mutableStateOf("") }
-    var selectedAnimal by remember { mutableStateOf<com.malrang.pomodoro.networkRepo.Animal?>(null) }
+    var selectedAnimal by remember { mutableStateOf<Animal?>(null) }
     var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(

@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.ui.screen
+package com.malrang.pomodoro.ui.screen.whitelist
 
 import android.content.Intent
 import androidx.compose.animation.animateColorAsState

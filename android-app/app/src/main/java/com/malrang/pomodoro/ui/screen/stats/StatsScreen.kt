@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.ui.screen
+package com.malrang.pomodoro.ui.screen.stats
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
