@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.ui.screen
+package com.malrang.pomodoro.ui.screen.collection
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,11 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -38,12 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.dataclass.animalInfo.Rarity
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
-import com.malrang.pomodoro.dataclass.sprite.SpriteMap
-import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.screen.main.SpriteSheetImage
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -160,95 +153,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
     }
 }
 
-/**
- * 동물의 상세 정보를 보여주는 모달 창입니다.
- */
-@Composable
-fun AnimalDetailModal(animal: Animal, onDismissRequest: () -> Unit) {
-    Dialog(onDismissRequest = onDismissRequest) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2A5C))
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                SpriteItem(animal = animal, size = 128f)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = animal.displayName,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = getRarityString(animal.rarity),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = getRarityColor(animal.rarity)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = animal.description,
-                    fontSize = 14.sp,
-                    color = Color.LightGray,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
 
 
-@Composable
-fun SpriteItem(animal: Animal, size: Float) {
-    val spriteData = SpriteMap.map[animal]
-    if (spriteData == null) return
-    val tempSprite = remember(animal.id) {
-        AnimalSprite(
-            id = animal.id + "-collection",
-            animalId = animal.id,
-            idleSheetRes = spriteData.idleRes,
-            idleCols = spriteData.idleCols,
-            idleRows = spriteData.idleRows,
-            jumpSheetRes = spriteData.jumpRes,
-            jumpCols = spriteData.jumpCols,
-            jumpRows = spriteData.jumpRows,
-            spriteState = SpriteState.IDLE,
-            x = 0f,
-            y = 0f,
-            vx = 0f,
-            vy = 0f,
-            sizeDp = size
-        )
-    }
 
-    SpriteSheetImage(
-        sprite = tempSprite,
-        onJumpFinished = {},
-        modifier = Modifier.size(size.dp)
-    )
-}
 
-@Composable
-private fun getRarityString(rarity: Rarity): String {
-    return when (rarity) {
-        Rarity.COMMON -> "일반"
-        Rarity.RARE -> "레어"
-        Rarity.EPIC -> "에픽"
-        Rarity.LEGENDARY -> "전설"
-    }
-}
-
-@Composable
-private fun getRarityColor(rarity: Rarity): Color {
-    return when (rarity) {
-        Rarity.COMMON -> Color.LightGray
-        Rarity.RARE -> Color(0xFF67A5FF) // 파란색
-        Rarity.EPIC -> Color(0xFFC56DFF) // 보라색
-        Rarity.LEGENDARY -> Color(0xFFFFD700) // 금색
-    }
-}
