@@ -43,6 +43,7 @@ import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.ui.screen.main.SpriteSheetImage
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
