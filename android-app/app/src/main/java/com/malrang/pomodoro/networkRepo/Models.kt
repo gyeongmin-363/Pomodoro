@@ -36,7 +36,7 @@ data class Animal(
 data class StudyRoom(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
-    val habit_days: Int, // habitDays -> habit_days
+    val inform: String? = null,
     val creator_id: String? = null
 )
 
