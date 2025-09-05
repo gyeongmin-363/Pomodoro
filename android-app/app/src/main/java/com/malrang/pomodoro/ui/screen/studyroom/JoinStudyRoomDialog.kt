@@ -2,6 +2,7 @@ package com.malrang.pomodoro.ui.screen.studyroom
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -46,8 +47,15 @@ fun JoinStudyRoomDialog(
             Column {
                 OutlinedTextField(
                     value = nickname,
-                    onValueChange = { nickname = it },
-                    label = { Text("닉네임") }
+                    onValueChange = {
+                        if (it.length <= 10) { // 10자 이하로 제한
+                            nickname = it
+                        }
+                    },
+                    label = { Text("닉네임 (${nickname.length}/10))") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true // 한 줄로 제한
+
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 

@@ -42,21 +42,28 @@ fun CreateStudyRoomDialog(
             Column {
                 OutlinedTextField(
                     value = roomName,
-                    onValueChange = { roomName = it },
-                    label = { Text("스터디룸 이름") },
-                    modifier = Modifier.fillMaxWidth()
+                    onValueChange = {
+                        if (it.length <= 20) { // 20자 이하로 제한
+                            roomName = it
+                        }
+                    },
+                    label = { Text("스터디룸 이름 (${roomName.length}/20)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true // 한 줄로 제한
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = roomInform,
                     onValueChange = {
-                        // 100자 이상 입력 시 잘라내기
-                        if (it.length <= 100) {
+                        // 줄바꿈 문자의 개수와 텍스트 길이를 동시에 제한
+                        if (it.count { char -> char == '\n' } < 10 && it.length <= 100) {
                             roomInform = it
                         }
                     },
-                    label = { Text("설명 (${roomInform.length}/100)") }, // 길이 표시 추가
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("설명 (${roomInform.length}/100)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 1,
+                    maxLines = 10 // 최대 10줄
                 )
             }
         },
@@ -71,9 +78,9 @@ fun CreateStudyRoomDialog(
                     )
                     viewModel.createStudyRoom(newRoom)
                 },
-                enabled = roomName.isNotBlank() && roomInform.isNotBlank() && roomInform.length <= 100
+                enabled = roomName.isNotBlank() && roomInform.isNotBlank() && roomName.length <= 20 && roomInform.length <= 100
             ) {
-                Text("생성") // 버튼 텍스트 변경
+                Text("생성")
             }
         },
         dismissButton = {
