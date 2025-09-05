@@ -3,7 +3,6 @@ package com.malrang.pomodoro.dataclass.ui
 import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
-import com.malrang.pomodoro.networkRepo.HabitProgress
 import com.malrang.pomodoro.networkRepo.Animal
 
 /**
@@ -20,7 +19,6 @@ data class StudyRoomUiState(
     val currentUser: User? = null,
     val currentStudyRoom: StudyRoom? = null,
     val currentRoomMembers: List<StudyRoomMember> = emptyList(),
-    val userHabitProgress: List<HabitProgress> = emptyList(),
     val allAnimals: List<Animal> = emptyList(),
 
     // [UserScreen에서 사용할 상태]
