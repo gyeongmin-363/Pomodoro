@@ -89,7 +89,14 @@ fun PomodoroApp(
                 composable(Screen.Collection.name) { CollectionScreen(vm) }
                 composable(Screen.Settings.name) { SettingsScreen(vm) }
                 composable(Screen.Stats.name) { StatsScreen(vm) }
-                composable(Screen.Whitelist.name) { WhitelistScreen(vm) }
+
+                // ✅ WhitelistScreen 호출 시 onNavigateBack 콜백 전달
+                composable(Screen.Whitelist.name) {
+                    WhitelistScreen(
+                        viewModel = vm,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
                 composable(Screen.Permission.name) { PermissionScreen(vm) }
 
                 // 딥링크 처리

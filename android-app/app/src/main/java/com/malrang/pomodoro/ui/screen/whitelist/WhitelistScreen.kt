@@ -44,7 +44,10 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WhitelistScreen(viewModel: PomodoroViewModel) {
+fun WhitelistScreen(
+    viewModel: PomodoroViewModel,
+    onNavigateBack: () -> Unit // ✅ 뒤로가기 콜백 함수 추가
+) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val packageManager = context.packageManager
@@ -96,7 +99,8 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
             ) {
                 Text("앱 허용 목록 (전체)", fontSize = 16.sp)
 
-                IconButton(onClick = { viewModel.navigateTo(Screen.Settings) }) {
+                // ✅ onClick 이벤트를 콜백 함수로 변경
+                IconButton(onClick = onNavigateBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                 }
             }
@@ -164,4 +168,3 @@ fun WhitelistScreen(viewModel: PomodoroViewModel) {
         }
     }
 }
-
