@@ -30,7 +30,7 @@ fun StudyRoomItem(room: StudyRoom, onClick: () -> Unit) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = room.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "매일 ${room.habit_days}일 습관", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+            Text(text = room.inform ?: "" , style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
         }
     }
 }

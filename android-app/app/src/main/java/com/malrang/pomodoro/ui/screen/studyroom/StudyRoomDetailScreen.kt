@@ -109,7 +109,7 @@ fun StudyRoomDetailScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "매일 ${room.habit_days}일 달성 목표",
+                    text = room.inform ?: "",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.Gray
                 )
@@ -124,7 +124,7 @@ fun StudyRoomDetailScreen(
                 ) {
                     items(members) { member ->
                         Text(
-                            text = "- ${member.nickname ?: "이름 없는 멤버"}",
+                            text = "- ${member.nickname}",
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
