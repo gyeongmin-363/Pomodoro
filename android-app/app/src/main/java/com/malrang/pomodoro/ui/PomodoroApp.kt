@@ -24,10 +24,10 @@ import com.malrang.pomodoro.ui.screen.LoginScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
 import com.malrang.pomodoro.ui.screen.PermissionScreen
 import com.malrang.pomodoro.ui.screen.SettingsScreen
-import com.malrang.pomodoro.ui.screen.StatsScreen
-import com.malrang.pomodoro.ui.screen.StudyRoomDetailScreen
-import com.malrang.pomodoro.ui.screen.StudyRoomScreen
-import com.malrang.pomodoro.ui.screen.WhitelistScreen
+import com.malrang.pomodoro.ui.screen.stats.StatsScreen
+import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomDetailScreen
+import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomScreen
+import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
