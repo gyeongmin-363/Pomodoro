@@ -19,11 +19,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.screen.CollectionScreen
-import com.malrang.pomodoro.ui.screen.LoginScreen
+import com.malrang.pomodoro.ui.screen.collection.CollectionScreen
+import com.malrang.pomodoro.ui.screen.login.LoginScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
-import com.malrang.pomodoro.ui.screen.PermissionScreen
-import com.malrang.pomodoro.ui.screen.SettingsScreen
+import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
+import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
 import com.malrang.pomodoro.ui.screen.stats.StatsScreen
 import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomDetailScreen
 import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomScreen
