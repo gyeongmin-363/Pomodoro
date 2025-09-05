@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.ui.screen
+package com.malrang.pomodoro.ui.screen.setting
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
+import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
@@ -160,9 +161,9 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         Spacer(Modifier.height(8.dp))
 
         val blockOptions = listOf(
-            com.malrang.pomodoro.dataclass.ui.BlockMode.NONE to "없음",
-            com.malrang.pomodoro.dataclass.ui.BlockMode.PARTIAL to "부분 차단",
-            com.malrang.pomodoro.dataclass.ui.BlockMode.FULL to "완전 차단"
+            BlockMode.NONE to "없음",
+            BlockMode.PARTIAL to "부분 차단",
+            BlockMode.FULL to "완전 차단"
         )
 
         Column {

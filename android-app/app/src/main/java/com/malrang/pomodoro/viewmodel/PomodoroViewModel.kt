@@ -46,7 +46,7 @@ class PomodoroViewModel(
     private val _draftSettings = MutableStateFlow<Settings?>(null)
     val draftSettings: StateFlow<Settings?> = _draftSettings.asStateFlow()
 
-    // [추가] 네비게이션 이벤트를 위한 SharedFlow
+    // 네비게이션 이벤트를 위한 SharedFlow
     private val _navigationEvents = MutableSharedFlow<Screen>()
     val navigationEvents = _navigationEvents.asSharedFlow()
 
@@ -82,7 +82,7 @@ class PomodoroViewModel(
             if (TimerService.isServiceActive()) {
                 timerService.requestStatus()
             } else {
-                // [수정] 서비스가 비활성 상태일 때, 저장된 타이머 상태를 불러옵니다.
+                // 서비스가 비활성 상태일 때, 저장된 타이머 상태를 불러옵니다.
                 val savedState = localRepo.loadTimerState()
                 if (savedState != null) {
                     _uiState.update {
@@ -105,7 +105,7 @@ class PomodoroViewModel(
 
 
     /**
-     * [추가] 권한을 확인하고, 필요하다면 권한 화면으로 이동시키는 함수
+     * 권한을 확인하고, 필요하다면 권한 화면으로 이동시키는 함수
      */
     fun checkPermissionsAndNavigateIfNeeded(context: Context) {
         val allGranted = checkAndupdatePermissions(context)
@@ -233,7 +233,6 @@ class PomodoroViewModel(
         }
     }
 
-    // ... (saveSettingsAndReset 이하 나머지 코드는 동일) ...
 
     fun startTimer() {
         if (_uiState.value.isRunning) return
@@ -243,7 +242,7 @@ class PomodoroViewModel(
     }
 
     fun pauseTimer() {
-        // [수정] 일시정지 시 동물들의 현재 상태(위치 등)를 저장합니다.
+        // 일시정지 시 동물들의 현재 상태(위치 등)를 저장합니다.
         viewModelScope.launch {
             localRepo.saveActiveSprites(uiState.value.activeSprites)
         }
@@ -251,7 +250,6 @@ class PomodoroViewModel(
         timerService.pause()
     }
 
-    // ... (이하 나머지 코드는 동일하여 생략) ...
     fun saveSettingsAndReset() {
         viewModelScope.launch {
             val settingsToSave = _draftSettings.value ?: return@launch
@@ -385,7 +383,7 @@ class PomodoroViewModel(
     }
 
     /**
-     * [수정] 화면 이동을 위한 함수. 이제 상태를 직접 바꾸지 않고 이벤트를 발생시킵니다.
+     * 화면 이동을 위한 함수. 이제 상태를 직접 바꾸지 않고 이벤트를 발생시킵니다.
      */
 
     fun navigateTo(s: Screen) {

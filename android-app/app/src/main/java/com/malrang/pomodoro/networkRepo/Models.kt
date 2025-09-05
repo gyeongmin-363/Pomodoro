@@ -66,3 +66,10 @@ data class HabitProgress(
     val day_number: Int,
     val is_done: Boolean = false
 )
+
+// 간단히 id만 매핑 받는 용도
+@Keep
+@Serializable
+data class StudyRoomMemberRef(
+    val study_room_id: String
+)

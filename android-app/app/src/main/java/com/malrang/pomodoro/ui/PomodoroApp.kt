@@ -19,15 +19,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.screen.CollectionScreen
-import com.malrang.pomodoro.ui.screen.LoginScreen
-import com.malrang.pomodoro.ui.screen.MainScreen
-import com.malrang.pomodoro.ui.screen.PermissionScreen
-import com.malrang.pomodoro.ui.screen.SettingsScreen
-import com.malrang.pomodoro.ui.screen.StatsScreen
-import com.malrang.pomodoro.ui.screen.StudyRoomDetailScreen
-import com.malrang.pomodoro.ui.screen.UserScreen
-import com.malrang.pomodoro.ui.screen.WhitelistScreen
+import com.malrang.pomodoro.ui.screen.collection.CollectionScreen
+import com.malrang.pomodoro.ui.screen.login.LoginScreen
+import com.malrang.pomodoro.ui.screen.main.MainScreen
+import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
+import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
+import com.malrang.pomodoro.ui.screen.stats.StatsScreen
+import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomDetailScreen
+import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomScreen
+import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
@@ -113,7 +113,7 @@ fun PomodoroApp(
                     )
                 ) { backStackEntry ->
                     val inviteId = backStackEntry.arguments?.getString("inviteId")
-                    UserScreen(
+                    StudyRoomScreen(
                         authVM = authVm,
                         roomVM = roomVm,
                         inviteStudyRoomId = inviteId, // ✅ 여기서 uuid 주입됨

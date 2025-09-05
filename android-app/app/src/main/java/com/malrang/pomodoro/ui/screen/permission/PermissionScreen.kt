@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.ui.screen
+package com.malrang.pomodoro.ui.screen.permission
 
 import android.Manifest
 import android.app.Activity
@@ -23,15 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.malrang.pomodoro.dataclass.ui.PermissionInfo
 import com.malrang.pomodoro.dataclass.ui.PermissionType
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.ui.theme.Typography
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 @Composable
@@ -125,30 +124,10 @@ fun PermissionScreen(vm: PomodoroViewModel) {
                         "모든 권한 설정 완료"
                     },
                     fontSize = 16.sp,
-                    style = com.malrang.pomodoro.ui.theme.Typography.bodyLarge
+                    style = Typography.bodyLarge
                 )
             }
         }
     }
 }
 
-@Composable
-fun PermissionItem(permission: PermissionInfo, hasBeenAttempted: Boolean) {
-    Card(modifier = Modifier.fillMaxWidth().border(2.dp, Color.White)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = permission.title, fontWeight = FontWeight.Bold)
-                Text(text = permission.description)
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            if (hasBeenAttempted) {
-                Text(
-                    text = if (permission.isGranted) "O" else "X",
-                    color = if (permission.isGranted) Color(0xFF4CAF50) else Color(0xFFF44336),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}

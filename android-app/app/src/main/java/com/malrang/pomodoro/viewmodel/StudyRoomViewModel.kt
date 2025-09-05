@@ -72,7 +72,8 @@ class StudyRoomViewModel(
         _studyRoomUiState.update {
             it.copy(
                 currentUser = null,
-                userStudyRooms = emptyList()
+                createdStudyRooms = emptyList(),
+                joinedStudyRooms = emptyList(),
             )
         }
     }
@@ -180,11 +181,15 @@ class StudyRoomViewModel(
 
     fun loadUserStudyRooms(userId: String) {
         viewModelScope.launch {
-            // TODO: 현재는 사용자가 '생성한' 룸 목록만 가져옵니다.
-            //  실제 앱에서는 study_room_members 테이블에서 userId로 조회하여
-            //  사용자가 '멤버로 있는' 모든 룸 목록을 가져오는 로직으로 수정이 필요합니다.
-            val rooms = networkRepo.findStudyRoomsByCreator(userId)
-            _studyRoomUiState.update { it.copy(userStudyRooms = rooms) }
+            val createdRooms = networkRepo.findStudyRoomsByCreator(userId)
+            val joinedRooms = networkRepo.findStudyRoomsByMemberExcludingCreator(userId)
+
+            _studyRoomUiState.update {
+                it.copy(
+                    createdStudyRooms = createdRooms,
+                    joinedStudyRooms = joinedRooms
+                )
+            }
         }
     }
 
