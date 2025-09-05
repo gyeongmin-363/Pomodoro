@@ -71,7 +71,7 @@ fun CreateStudyRoomDialog(
                     )
                     viewModel.createStudyRoom(newRoom)
                 },
-                enabled = roomName.isNotBlank() && roomInform.isNotBlank() && roomInform.length <= 200
+                enabled = roomName.isNotBlank() && roomInform.isNotBlank() && roomInform.length <= 100
             ) {
                 Text("생성") // 버튼 텍스트 변경
             }
