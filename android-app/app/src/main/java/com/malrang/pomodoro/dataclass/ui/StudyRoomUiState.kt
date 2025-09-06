@@ -4,6 +4,7 @@ import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.Animal
+import com.malrang.pomodoro.networkRepo.HabitSummary
 
 /**
  * 스터디룸과 관련된 UI 상태를 나타내는 데이터 클래스입니다.
@@ -12,14 +13,16 @@ import com.malrang.pomodoro.networkRepo.Animal
  * @property currentUser 현재 로그인한 사용자의 정보입니다.
  * @property currentStudyRoom 현재 참여하고 있는 스터디룸의 정보입니다.
  * @property currentRoomMembers 현재 스터디룸의 멤버 목록입니다.
- * @property userHabitProgress 사용자의 습관 진행 상태 목록입니다.
  * @property allAnimals 데이터베이스에 있는 모든 동물 목록입니다. (앱 전역에서 사용)
+ * @property habitProgressMap 현재 스터디룸 멤버들의 월별 챌린지 현황 맵입니다. (Key: user_id, Value: HabitSummary)
  */
 data class StudyRoomUiState(
     val currentUser: User? = null,
     val currentStudyRoom: StudyRoom? = null,
     val currentRoomMembers: List<StudyRoomMember> = emptyList(),
     val allAnimals: List<Animal> = emptyList(),
+    // 멤버들의 챌린지 현황을 user_id를 키로 하여 저장하는 맵
+    val habitProgressMap: Map<String, HabitSummary> = emptyMap(),
 
     // [UserScreen에서 사용할 상태]
     val createdStudyRooms: List<StudyRoom> = emptyList(), // 사용자가 생성한 스터디룸 목록

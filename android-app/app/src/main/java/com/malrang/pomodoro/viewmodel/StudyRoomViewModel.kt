@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 class StudyRoomViewModel(
     private val networkRepo: StudyRoomRepository
@@ -141,8 +145,59 @@ class StudyRoomViewModel(
         }
     }
 
-    // MARK: - HabitProgress Functions TODO
+    // MARK: - HabitSummary Functions
+    /**
+     * 특정 월의 스터디룸 멤버들의 챌린지 수행 현황을 불러옵니다.
+     */
+    fun loadHabitSummaryForMonth(studyRoomId: String, date: LocalDate) {
+        viewModelScope.launch {
+            val yearMonth = date.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+            val progressList = networkRepo.getHabitProgressForMonth(studyRoomId, yearMonth)
+            // user_id를 키로 사용하는 맵으로 변환하여 UI 상태 업데이트
+            _studyRoomUiState.update { it.copy(habitProgressMap = progressList.associateBy { p -> p.user_id!! }) }
+        }
+    }
 
+    /**
+     * '오늘 챌린지 완료하기' 버튼을 눌렀을 때 호출됩니다.
+     */
+    fun completeTodayChallenge(studyRoomId: String) {
+        viewModelScope.launch {
+            val userId = _studyRoomUiState.value.currentUser?.id ?: return@launch
+            val today = LocalDate.now()
+            val yearMonth = today.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+            val dayOfMonth = today.dayOfMonth // 1-based index
+
+            // 1. 기존 진행 상황 가져오기
+            val currentProgress = _studyRoomUiState.value.habitProgressMap[userId]
+            val daysInMonth = YearMonth.from(today).lengthOfMonth()
+
+            // 2. 오늘 날짜에 해당하는 progress 문자열 업데이트
+            val newDailyProgress = currentProgress?.daily_progress?.let {
+                val progressChars = it.toCharArray()
+                progressChars[dayOfMonth - 1] = '1' // 0-based index
+                String(progressChars)
+            } ?: buildString {
+                // 기존 데이터가 없으면 새로 생성
+                repeat(daysInMonth) { day ->
+                    append(if (day == dayOfMonth - 1) '1' else '0')
+                }
+            }
+
+            // 3. Supabase에 upsert 요청
+            val progressToUpsert = HabitSummary(
+                id = currentProgress?.id ?: UUID.randomUUID().toString(),
+                study_room_id = studyRoomId,
+                user_id = userId,
+                year_month = yearMonth,
+                daily_progress = newDailyProgress
+            )
+            networkRepo.upsertHabitProgress(progressToUpsert)
+
+            // 4. UI 상태 새로고침
+            loadHabitSummaryForMonth(studyRoomId, today)
+        }
+    }
 
 
     // MARK: - Animal Functions

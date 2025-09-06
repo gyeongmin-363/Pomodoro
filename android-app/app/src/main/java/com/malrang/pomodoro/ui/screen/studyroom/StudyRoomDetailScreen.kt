@@ -1,8 +1,8 @@
 package com.malrang.pomodoro.ui.screen.studyroom
 
-import android.R.attr.onClick
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,8 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,9 +37,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,15 +55,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.malrang.pomodoro.dataclass.ui.DailyStat
-import com.malrang.pomodoro.ui.screen.stats.DayCell
-import com.malrang.pomodoro.ui.screen.stats.ExpandableCalendarView
-import com.malrang.pomodoro.ui.screen.stats.MonthlyCalendarGrid
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.malrang.pomodoro.networkRepo.StudyRoomMember
+import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
 import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -82,52 +82,93 @@ fun StudyRoomDetailScreen(
     val context = LocalContext.current
     var tappedDate by remember { mutableStateOf<LocalDate?>(null) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    val headerText = "${selectedDate.year}년 ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}"
-
-    // ✅ 1. 버튼의 상태(완료 여부)를 관리할 변수를 추가합니다.
-    var isChallengeCompleted by remember { mutableStateOf(false) }
-
-
-    LaunchedEffect(roomId) {
-        if (roomId != null) {
-            roomVm.loadStudyRoomById(roomId)
-            roomVm.loadStudyRoomMembers(roomId)
-        }
-    }
-
+    val headerText =
+        "${selectedDate.year}년 ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}"
     val uiState by roomVm.studyRoomUiState.collectAsState()
     val room = uiState.currentStudyRoom
     val members = uiState.currentRoomMembers
+    val currentUser = uiState.currentUser
+    val habitProgressMap = uiState.habitProgressMap
+
+
+    // roomId가 변경되거나, 달력의 월(selectedDate)이 변경될 때 데이터를 새로고침합니다.
+    LaunchedEffect(roomId, selectedDate) {
+        if (roomId != null) {
+            roomVm.loadStudyRoomById(roomId)
+            roomVm.loadStudyRoomMembers(roomId)
+            roomVm.loadHabitSummaryForMonth(roomId, selectedDate)
+        }
+    }
+
+    // 랭킹 계산 로직: 멤버 목록과 습관 진행 현황을 조합하여 랭킹 리스트를 생성합니다.
+    val rankingList by remember(members, habitProgressMap, selectedDate) {
+        mutableStateOf(
+            members.map { member ->
+                val progress = habitProgressMap[member.user_id]
+                val completedDays = progress?.daily_progress?.count { it == '1' } ?: 0
+                val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
+                val progressValue = if (totalDaysInMonth > 0) completedDays.toFloat() / totalDaysInMonth else 0f
+                StudyRoomMemberWithProgress(member, completedDays, progressValue)
+            }.sortedByDescending { it.completedDays }
+        )
+    }
+
+    // '오늘 챌린지 완료' 버튼의 상태를 별도로 관리합니다.
+    var isChallengeCompletedToday by remember { mutableStateOf(false) }
+    LaunchedEffect(habitProgressMap, currentUser) {
+        val today = LocalDate.now()
+        val currentYearMonth = today.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val userProgress = habitProgressMap[currentUser?.id]
+
+        if (userProgress?.year_month == currentYearMonth) {
+            isChallengeCompletedToday = userProgress.daily_progress.getOrNull(today.dayOfMonth - 1) == '1'
+        }
+    }
+
 
     // Box를 사용하여 컨텐츠와 버튼을 겹치게 배치합니다.
-    Box(modifier = Modifier.fillMaxSize().background(backgroundColor)){
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(backgroundColor)) {
         val scrollState = rememberScrollState()
-        // ✅ 2. Column에 verticalScroll과 하단 padding을 추가하여
-        // 스크롤이 가능하게 하고, 버튼에 내용이 가려지지 않도록 합니다.
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(bottom = 80.dp) // 버튼이 차지할 공간 확보
-        ){
+        ) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(room?.name ?: "스터디룸 로딩 중...", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    room?.name ?: "스터디룸 로딩 중...",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
                 Row {
                     IconButton(onClick = {
                         val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
                         val sendIntent: Intent = Intent().apply {
                             action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl")
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl"
+                            )
                             type = "text/plain"
                         }
                         val shareIntent = Intent.createChooser(sendIntent, "스터디룸 공유")
                         context.startActivity(shareIntent)
                     }) {
-                        Icon(Icons.Default.Share, contentDescription = "스터디룸 공유", tint = Color.White)
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "스터디룸 공유",
+                            tint = Color.White
+                        )
                     }
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -148,19 +189,21 @@ fun StudyRoomDetailScreen(
                 }
             } else {
                 Column(Modifier.padding(horizontal = 16.dp)) {
-                    Text(
-                        text = room.inform ?: "",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    if(room.inform != null){
+                        Text(
+                            text = room.inform,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                    }
                     Text(
                         text = "참여자 (${members.size}명)",
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    // 멤버 목록은 LazyColumn 대신 Column으로 변경하여 전체 스크롤에 포함시킵니다.
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -185,7 +228,11 @@ fun StudyRoomDetailScreen(
                         IconButton(onClick = {
                             selectedDate = selectedDate.minusMonths(1)
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "이전", tint = Color.White)
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = "이전",
+                                tint = Color.White
+                            )
                         }
                         Text(
                             text = headerText,
@@ -193,10 +240,17 @@ fun StudyRoomDetailScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
-                        IconButton(onClick = {
-                            selectedDate = selectedDate.plusMonths(1)
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "다음", tint = Color.White)
+
+                        val currentMonth = YearMonth.now()
+                        IconButton(
+                            onClick = { selectedDate = selectedDate.plusMonths(1) },
+                            enabled = YearMonth.from(selectedDate) < currentMonth
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "다음",
+                                tint = if (YearMonth.from(selectedDate) < currentMonth) Color.White else Color.Gray
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -221,45 +275,182 @@ fun StudyRoomDetailScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    c(
-                        selectedDate,
-                        tappedDate,
+                    val completedDaysSet = remember(habitProgressMap, currentUser) {
+                        habitProgressMap[currentUser?.id]?.daily_progress?.mapIndexedNotNull { index, c ->
+                            if (c == '1') index + 1 else null
+                        }?.toSet() ?: emptySet()
+                    }
+
+                    StudyCalendar(
+                        selectedDate = selectedDate,
+                        tappedDate = tappedDate,
+                        completedDays = completedDaysSet,
                         onDateTap = { date -> tappedDate = date }
                     )
                 } //달력 끝
 
-                RankingItem(rank = 1, name = "홍길동", status = "26일 완료", progress = 0.8f)
-
-                // TODO: 여기에 스터디룸 관련 추가 UI(채팅, 현황 등)를 구현할 수 있습니다.
+                // 랭킹 UI에 동적 데이터 적용
+                Column {
+                    rankingList.forEachIndexed { index, item ->
+                        RankingItem(
+                            rank = index + 1,
+                            name = item.member.nickname,
+                            status = "${item.completedDays}일 완료",
+                            progress = item.progress
+                        )
+                    }
+                }
             }
         }
 
-        // ✅ 3. 화면 하단에 고정될 버튼을 추가합니다.
+        // 화면 하단 고정 버튼 로직 수정
         Button(
-            // 버튼 클릭 시 상태를 true로 변경
-            onClick = { isChallengeCompleted = true },
+            onClick = { if (roomId != null) roomVm.completeTodayChallenge(roomId) },
             modifier = Modifier
-                .align(Alignment.BottomCenter) // Box의 하단 중앙에 위치
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            // isChallengeCompleted가 true이면 버튼 비활성화
-            enabled = !isChallengeCompleted,
+            enabled = !isChallengeCompletedToday,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4CAF50), // 활성 상태 색상
-                disabledContainerColor = Color.Gray // 비활성 상태 색상
+                containerColor = Color(0xFF4CAF50),
+                disabledContainerColor = Color.Gray
             )
         ) {
             Text(
-                // isChallengeCompleted 값에 따라 텍스트 변경
-                text = if (isChallengeCompleted) "오늘 챌린지 완료됨!" else "오늘 챌린지 완료하기",
+                text = if (isChallengeCompletedToday) "오늘 챌린지 완료됨!" else "오늘 챌린지 완료하기",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
         }
+
+        // ✅ 날짜 클릭 시 나타날 픽셀아트 다이얼로그
+        if (tappedDate != null) {
+            val completers = remember(tappedDate, members, habitProgressMap) {
+                members.filter { member ->
+                    val progress = habitProgressMap[member.user_id]
+                    val isCorrectMonth = progress?.year_month == YearMonth.from(tappedDate).format(DateTimeFormatter.ofPattern("yyyy-MM"))
+                    if (isCorrectMonth) {
+                        progress?.daily_progress?.getOrNull(tappedDate!!.dayOfMonth - 1) == '1'
+                    } else {
+                        false
+                    }
+                }
+            }
+
+            CompletionStatusDialog(
+                date = tappedDate!!,
+                completers = completers,
+                onDismiss = { tappedDate = null }
+            )
+        }
     }
 }
+
+// ✅ 픽셀아트 스타일로 재구성된 CompletionStatusDialog Composable
+@Composable
+fun CompletionStatusDialog(
+    date: LocalDate,
+    completers: List<StudyRoomMember>,
+    onDismiss: () -> Unit
+) {
+    val dialogTitle = date.format(DateTimeFormatter.ofPattern("M월 d일")) + " 완료 멤버"
+
+    // 픽셀아트 컨셉의 색상 팔레트
+    val pixelDarkGreen = Color(0xFF33691E) // 어두운 녹색
+    val pixelLightGreen = Color(0xFF8BC34A) // 밝은 녹색
+    val pixelBrown = Color(0xFF795548)     // 갈색
+    val pixelBorder = Color(0xFF212121)    // 진한 테두리 색
+    val pixelText = Color(0xFFE0E0E0)      // 밝은 텍스트 색
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false) // 기본 다이얼로그 폭 사용 안함
+    ) {
+        Column(
+            modifier = Modifier
+                .width(300.dp) // 다이얼로그 폭 고정
+                .clip(RoundedCornerShape(0.dp)) // 각진 모서리
+                .background(pixelDarkGreen) // 기본 배경
+                .border(4.dp, pixelBorder) // 진한 테두리
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // 제목 (상단 강조)
+            Text(
+                text = dialogTitle,
+                color = pixelLightGreen,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            // 구분선
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(pixelBrown)
+                    .padding(bottom = 12.dp)
+            )
+
+            // 멤버 목록
+            if (completers.isEmpty()) {
+                Text(
+                    text = "이날 챌린지를 완료한 멤버가 없습니다.",
+                    color = pixelText,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (completers.size > 5) 180.dp else (completers.size * 30).dp) // 최대 높이 설정
+                        .clip(RoundedCornerShape(0.dp)) // 각진 모서리
+                        .background(Color.Black.copy(alpha = 0.3f)) // 목록 배경
+                        .border(2.dp, pixelBrown) // 목록 테두리
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(completers) { member ->
+                        Text(
+                            text = "🐾 ${member.nickname}", // 발바닥 아이콘 추가
+                            color = pixelText,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 닫기 버튼
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = pixelLightGreen,
+                    contentColor = pixelDarkGreen
+                ),
+                shape = RoundedCornerShape(0.dp), // 각진 버튼
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .border(2.dp, pixelBorder) // 버튼 테두리
+            ) {
+                Text(
+                    text = "닫기",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
 
 // 이하 다른 @Composable 함수들은 변경 없음
 @Composable
@@ -267,19 +458,18 @@ fun RankingItem(
     rank: Int,
     name: String,
     status: String,
-    progress: Float // 0.0f ~ 1.0f 사이의 값
+    progress: Float
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        verticalAlignment = Alignment.Top // 컨텐츠를 위쪽으로 정렬
+        verticalAlignment = Alignment.Top
     ) {
-        // 1. 순위 표시 (노란색 박스)
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .background(Color(0xFFFFC107)), // 노란색
+                .background(Color(0xFFFFC107)),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -292,9 +482,8 @@ fun RankingItem(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // 2. 이름, 상태, 프로그레스 바 (세로 정렬)
         Column(
-            modifier = Modifier.weight(1f) // 남은 공간을 모두 차지
+            modifier = Modifier.weight(1f)
         ) {
             Text(
                 text = name,
@@ -309,14 +498,13 @@ fun RankingItem(
                 color = Color.Gray
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // 3. 프로그레스 바
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(12.dp)
                     .clip(RoundedCornerShape(6.dp)),
-                color = Color(0xFF4CAF50), // 초록색
+                color = Color(0xFF4CAF50),
                 trackColor = Color.DarkGray
             )
         }
@@ -324,19 +512,24 @@ fun RankingItem(
 }
 
 @Composable
-private fun c(
+private fun StudyCalendar(
     selectedDate: LocalDate,
-//    dailyStats: Map<String, DailyStat>,
+    completedDays: Set<Int>,
     tappedDate: LocalDate?,
     onDateTap: (LocalDate) -> Unit
-){
+) {
     val today = LocalDate.now()
     val currentMonth = YearMonth.from(selectedDate)
 
     val firstDayOfMonth = currentMonth.atDay(1)
     val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
     val daysInMonth = currentMonth.lengthOfMonth()
-    val calendarDays = (0 until firstDayOfWeek).map<Int?, LocalDate?> { null } + (1..daysInMonth).map { firstDayOfMonth.withDayOfMonth(it) }
+    val calendarDays =
+        (0 until firstDayOfWeek).map<Int?, LocalDate?> { null } + (1..daysInMonth).map {
+            firstDayOfMonth.withDayOfMonth(
+                it
+            )
+        }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(7),
@@ -346,10 +539,10 @@ private fun c(
         items(calendarDays.size) { index ->
             val date = calendarDays[index]
             if (date != null) {
-//                val hasRecord = (dailyStats[date.toString()]?.totalStudyTimeInMinutes ?: 0) > 0
-                d(
+                val hasRecord = completedDays.contains(date.dayOfMonth)
+                CalendarDay(
                     date = date,
-//                    hasRecord = hasRecord,
+                    hasRecord = hasRecord,
                     isToday = date == today,
                     isSelected = date == tappedDate,
                     onClick = { onDateTap(date) }
@@ -364,9 +557,9 @@ private fun c(
 
 
 @Composable
-private fun d(
+private fun CalendarDay(
     date: LocalDate,
-//    hasRecord: Boolean,
+    hasRecord: Boolean,
     isToday: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -399,13 +592,13 @@ private fun d(
             )
         }
 
-//        if (hasRecord) {
-//            Text(
-//                text = "🐾",
-//                fontSize = 28.sp,
-//                color = Color(0xFFFBBF24).copy(alpha = 0.6f),
-//            )
-//        }
+        if (hasRecord) {
+            Text(
+                text = "🐾",
+                fontSize = 28.sp,
+                color = Color(0xFFFBBF24).copy(alpha = 0.6f),
+            )
+        }
         Text(
             text = date.dayOfMonth.toString(),
             color = dayColor,
