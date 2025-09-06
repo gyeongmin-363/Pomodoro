@@ -3,6 +3,7 @@ package com.malrang.pomodoro.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Message
 import com.malrang.pomodoro.dataclass.ui.StudyRoomUiState
 import com.malrang.pomodoro.networkRepo.*
 import kotlinx.coroutines.Job
@@ -39,22 +40,35 @@ class StudyRoomViewModel(
 
     private var chatJob: Job? = null
 
-    fun subscribeToMessages(studyRoomId: String) {
-        chatJob?.cancel() // 이전 구독이 있다면 취소
-        chatJob = viewModelScope.launch {
-            networkRepo.getChatMessagesFlow(studyRoomId)
-                .catch { /* 에러 처리 */ }
-                .collect { messages ->
-                    _chatMessages.value = messages
-                }
-        }
-
+    fun disSubscribeMessage(){
+        chatJob?.cancel()
+        _chatMessages.value = emptyList<ChatMessage>()
     }
 
-    fun sendChatMessage(studyRoomId: String, userId: String, message: String) {
+    fun subscribeToMessages(studyRoomId: String) {
+        chatJob?.cancel() // 이전 구독이 있다면 취소
+
+        // 로딩 시작
+        _studyRoomUiState.update { it.copy(isChatLoading = true) }
+
+        chatJob = viewModelScope.launch {
+            networkRepo.getChatMessagesFlow(studyRoomId)
+                .catch {
+                    // 에러 처리
+                    _studyRoomUiState.update { it.copy(isChatLoading = false) }
+                }
+                .collect { messages ->
+                    _chatMessages.value = messages
+                    // 데이터 수집 완료 후 로딩 종료
+                    _studyRoomUiState.update { it.copy(isChatLoading = false) }
+                }
+        }
+    }
+
+    fun sendChatMessage(studyRoomId: String, userId: String, message: String, nickname : String) {
         viewModelScope.launch {
             try {
-                networkRepo.sendChatMessage(studyRoomId, userId, message)
+                networkRepo.sendChatMessage(studyRoomId, userId, message, nickname)
             } catch (e: Exception) {
                 // 에러 처리
             }

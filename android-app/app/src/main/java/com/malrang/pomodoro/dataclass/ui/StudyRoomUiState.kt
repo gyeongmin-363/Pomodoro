@@ -30,5 +30,6 @@ data class StudyRoomUiState(
     val showCreateStudyRoomDialog: Boolean = false,       // 스터디룸 생성 다이얼로그 표시 여부
     val showJoinStudyRoomDialog: StudyRoom? = null,       // 참여할 스터디룸 정보 (null이 아니면 다이얼로그 표시)
 
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = true, //UserScreen에서 채팅방 불러오기 로딩
+    val isChatLoading: Boolean = false, // 채팅 로딩 상태 추가
 )

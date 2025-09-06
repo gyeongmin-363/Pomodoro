@@ -155,7 +155,6 @@ fun PomodoroApp(
                     ChatScreen(
                         studyRoomId = studyRoomId,
                         studyRoomViewModel = roomVm, // 기존 ViewModel 인스턴스 주입
-                        authViewModel = authVm      // 기존 ViewModel 인스턴스 주입
                     )
                 }
             }
