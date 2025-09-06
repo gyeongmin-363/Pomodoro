@@ -3,7 +3,6 @@ package com.malrang.pomodoro.dataclass.ui
 import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
-import com.malrang.pomodoro.networkRepo.HabitProgress
 import com.malrang.pomodoro.networkRepo.Animal
 
 /**
@@ -20,12 +19,13 @@ data class StudyRoomUiState(
     val currentUser: User? = null,
     val currentStudyRoom: StudyRoom? = null,
     val currentRoomMembers: List<StudyRoomMember> = emptyList(),
-    val userHabitProgress: List<HabitProgress> = emptyList(),
     val allAnimals: List<Animal> = emptyList(),
 
     // [UserScreen에서 사용할 상태]
     val createdStudyRooms: List<StudyRoom> = emptyList(), // 사용자가 생성한 스터디룸 목록
     val joinedStudyRooms: List<StudyRoom> = emptyList(),  // 사용자가 참여만 한 스터디룸 목록
     val showCreateStudyRoomDialog: Boolean = false,       // 스터디룸 생성 다이얼로그 표시 여부
-    val showJoinStudyRoomDialog: StudyRoom? = null       // 참여할 스터디룸 정보 (null이 아니면 다이얼로그 표시)
+    val showJoinStudyRoomDialog: StudyRoom? = null,       // 참여할 스터디룸 정보 (null이 아니면 다이얼로그 표시)
+
+    val isLoading: Boolean = true,
 )

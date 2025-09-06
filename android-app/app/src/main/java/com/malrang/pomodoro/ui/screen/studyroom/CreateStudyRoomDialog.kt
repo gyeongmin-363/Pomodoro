@@ -33,7 +33,7 @@ fun CreateStudyRoomDialog(
     onDismiss: () -> Unit
 ) {
     var roomName by remember { mutableStateOf("") }
-    var habitDays by remember { mutableStateOf("") }
+    var roomInform by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -42,17 +42,28 @@ fun CreateStudyRoomDialog(
             Column {
                 OutlinedTextField(
                     value = roomName,
-                    onValueChange = { roomName = it },
-                    label = { Text("스터디룸 이름") },
-                    modifier = Modifier.fillMaxWidth()
+                    onValueChange = {
+                        if (it.length <= 20) { // 20자 이하로 제한
+                            roomName = it
+                        }
+                    },
+                    label = { Text("스터디룸 이름 (${roomName.length}/20)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true // 한 줄로 제한
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = habitDays,
-                    onValueChange = { habitDays = it },
-                    label = { Text("습관 일수 (예: 30)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    value = roomInform,
+                    onValueChange = {
+                        // 줄바꿈 문자의 개수와 텍스트 길이를 동시에 제한
+                        if (it.count { char -> char == '\n' } < 10 && it.length <= 100) {
+                            roomInform = it
+                        }
+                    },
+                    label = { Text("설명 (${roomInform.length}/100)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 1,
+                    maxLines = 10 // 최대 10줄
                 )
             }
         },
@@ -62,14 +73,14 @@ fun CreateStudyRoomDialog(
                     val newRoom = StudyRoom(
                         id = UUID.randomUUID().toString(),
                         name = roomName,
-                        habit_days = habitDays.toIntOrNull() ?: 0,
+                        inform = roomInform,
                         creator_id = currentUser.id
                     )
                     viewModel.createStudyRoom(newRoom)
                 },
-                enabled = roomName.isNotBlank() && habitDays.isNotBlank()
+                enabled = roomName.isNotBlank() && roomInform.isNotBlank() && roomName.length <= 20 && roomInform.length <= 100
             ) {
-                Text("생성") // 버튼 텍스트 변경
+                Text("생성")
             }
         },
         dismissButton = {
@@ -79,4 +90,3 @@ fun CreateStudyRoomDialog(
         }
     )
 }
-

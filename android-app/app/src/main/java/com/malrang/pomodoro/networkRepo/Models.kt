@@ -36,7 +36,7 @@ data class Animal(
 data class StudyRoom(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
-    val habit_days: Int, // habitDays -> habit_days
+    val inform: String? = null,
     val creator_id: String? = null
 )
 
@@ -59,13 +59,15 @@ data class StudyRoomMember(
  */
 @Keep
 @Serializable
-data class HabitProgress(
+data class HabitSummary(
     val id: String,
     val study_room_id: String? = null,
     val user_id: String? = null,
-    val day_number: Int,
-    val is_done: Boolean = false
+    val year_month: String,        // "2025-09" 형태
+    val daily_progress: String,    // "1010010..." 형태, 각 자리 = 하루 인증 여부
+    val updated_at: String? = null // ISO timestamp, optional
 )
+
 
 // 간단히 id만 매핑 받는 용도
 @Keep
