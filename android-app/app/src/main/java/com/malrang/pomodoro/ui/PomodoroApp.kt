@@ -26,7 +26,7 @@ import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
 import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
 import com.malrang.pomodoro.ui.screen.stats.StatsScreen
 import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomDetailScreen
-import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomScreen
+import com.malrang.pomodoro.ui.screen.studyroom.ChallengeScreen
 import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
@@ -89,7 +89,14 @@ fun PomodoroApp(
                 composable(Screen.Collection.name) { CollectionScreen(vm) }
                 composable(Screen.Settings.name) { SettingsScreen(vm) }
                 composable(Screen.Stats.name) { StatsScreen(vm) }
-                composable(Screen.Whitelist.name) { WhitelistScreen(vm) }
+
+                // ✅ WhitelistScreen 호출 시 onNavigateBack 콜백 전달
+                composable(Screen.Whitelist.name) {
+                    WhitelistScreen(
+                        viewModel = vm,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
                 composable(Screen.Permission.name) { PermissionScreen(vm) }
 
                 // 딥링크 처리
@@ -113,11 +120,11 @@ fun PomodoroApp(
                     )
                 ) { backStackEntry ->
                     val inviteId = backStackEntry.arguments?.getString("inviteId")
-                    StudyRoomScreen(
+                    ChallengeScreen(
                         authVM = authVm,
                         roomVM = roomVm,
                         inviteStudyRoomId = inviteId, // ✅ 여기서 uuid 주입됨
-                        onNavigateBack = { navController.popBackStack() }
+                        onNavigateBack = { vm.navigateTo(Screen.Main) }
                     )
                 }
 

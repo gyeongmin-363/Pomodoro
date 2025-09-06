@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import java.time.LocalDate
 
@@ -43,7 +44,7 @@ fun StatsScreen(vm: PomodoroViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1E1B4B))
+            .background(backgroundColor)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
