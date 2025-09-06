@@ -14,6 +14,7 @@ googleGmsGoogleServices = "4.4.3"
 googleFirebaseCrashlytics = "3.0.6"
 animationCore = "1.9.0"
 foundation = "1.9.0"
+litertMetadata = "1.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
