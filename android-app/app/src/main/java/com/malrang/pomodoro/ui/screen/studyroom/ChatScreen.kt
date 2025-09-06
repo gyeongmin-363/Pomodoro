@@ -21,17 +21,23 @@ import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 fun ChatScreen(
     studyRoomId: String,
     studyRoomViewModel: StudyRoomViewModel, // ViewModel을 매개변수로 받습니다.
-    authViewModel: AuthViewModel,           // ViewModel을 매개변수로 받습니다.
 ) {
     // ViewModel의 StateFlow를 구독하여 chatMessages 상태를 가져옵니다.
     val chatMessages by studyRoomViewModel.chatMessages.collectAsState()
     val uiState by studyRoomViewModel.studyRoomUiState.collectAsState()
     val currentUser = uiState.currentUser
+    val membersMap = uiState.currentRoomMembers.associate { it.user_id to it.nickname }
     var messageText by remember { mutableStateOf("") }
 
     // ChatScreen이 보일 때 메시지 구독을 시작합니다.
     LaunchedEffect(studyRoomId) {
         studyRoomViewModel.subscribeToMessages(studyRoomId)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            studyRoomViewModel.disSubscribeMessage()
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -41,14 +47,28 @@ fun ChatScreen(
                 .padding(horizontal = 8.dp),
             reverseLayout = true // 채팅은 아래부터 쌓이도록 설정
         ) {
-            items(chatMessages.reversed()) { message -> // 최신 메시지가 아래에 보이도록 reversed()
-                // TODO: 채팅 UI를 더 예쁘게 꾸며보세요. (예: 보낸 사람/받는 사람 구분)
-                Text(
-                    text = "${message.user_id.take(8)}: ${message.message}", // 유저 ID가 너무 길 수 있으니 앞부분만 표시
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                )
+            if(uiState.isChatLoading){
+                item{
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+            else {
+                items(chatMessages.reversed()) { message -> // 최신 메시지가 아래에 보이도록 reversed()
+                    // TODO: 채팅 UI를 더 예쁘게 꾸며보세요. (예: 보낸 사람/받는 사람 구분)
+                    Text(
+                        text = "${message.nickname}: ${message.message}",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    )
+                }
             }
         }
         Row(
@@ -68,12 +88,12 @@ fun ChatScreen(
                 onClick = {
                     currentUser?.id?.let { userId ->
                         if (messageText.isNotBlank()) {
-                            studyRoomViewModel.sendChatMessage(studyRoomId, userId, messageText)
+                            studyRoomViewModel.sendChatMessage(studyRoomId, userId, messageText, membersMap[userId].toString())
                             messageText = ""
                         }
                     }
                 },
-                enabled = messageText.isNotBlank()
+                enabled = messageText.isNotBlank() && !uiState.isChatLoading
             ) {
                 Text("전송")
             }

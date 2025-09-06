@@ -272,11 +272,12 @@ class StudyRoomRepository(
      * @param userId 메시지를 보내는 사용자 ID
      * @param message 보낼 메시지 내용
      */
-    suspend fun sendChatMessage(studyRoomId: String, userId: String, message: String) {
+    suspend fun sendChatMessage(studyRoomId: String, userId: String, message: String, nickname : String) {
         val chatMessage = mapOf(
             "study_room_id" to studyRoomId,
             "user_id" to userId,
-            "message" to message
+            "message" to message,
+            "nickname" to nickname
         )
         // created_at은 데이터베이스에서 default 값으로 자동 생성되도록 값을 보내지 않습니다.
         postgrest["chat_messages"].insert(chatMessage)
