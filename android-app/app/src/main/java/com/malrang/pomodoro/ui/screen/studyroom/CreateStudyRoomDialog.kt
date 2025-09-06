@@ -78,7 +78,7 @@ fun CreateStudyRoomDialog(
                     )
                     viewModel.createStudyRoom(newRoom)
                 },
-                enabled = roomName.isNotBlank() && roomInform.isNotBlank() && roomName.length <= 20 && roomInform.length <= 100
+                enabled = roomName.isNotBlank() && roomName.length <= 20 && roomInform.length <= 100
             ) {
                 Text("생성")
             }
