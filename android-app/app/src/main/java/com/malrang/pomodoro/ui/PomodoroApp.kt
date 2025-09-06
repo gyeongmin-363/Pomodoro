@@ -32,6 +32,7 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.pomodoro.BackPressExit
+import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
 
 /**
  * 앱의 메인 컴포저블 함수입니다.
@@ -89,6 +90,7 @@ fun PomodoroApp(
                 composable(Screen.Collection.name) { CollectionScreen(vm) }
                 composable(Screen.Settings.name) { SettingsScreen(vm) }
                 composable(Screen.Stats.name) { StatsScreen(vm) }
+                composable(Screen.AccountSettings.name) { AccountSettingsScreen(authViewModel = authVm) }
 
                 // ✅ WhitelistScreen 호출 시 onNavigateBack 콜백 전달
                 composable(Screen.Whitelist.name) {

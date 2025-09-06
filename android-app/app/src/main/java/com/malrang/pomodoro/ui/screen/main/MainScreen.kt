@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
@@ -135,6 +136,13 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                             viewModel.navigateTo(Screen.StudyRoom)
                             scope.launch { drawerState.close() }
                         },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("계정 설정") },
+                        selected = false,
+                        onClick = { viewModel.navigateTo(Screen.AccountSettings) },
+                        icon = { Icon(Icons.Filled.AccountCircle, contentDescription = "계정 설정") },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
                 }
