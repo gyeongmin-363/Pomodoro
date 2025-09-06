@@ -6,6 +6,7 @@ import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.ExternalAuthAction
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.serializer.JacksonSerializer
 import io.ktor.client.engine.okhttp.OkHttp
 
@@ -28,6 +29,7 @@ object SupabaseProvider {
                 defaultExternalAuthAction = ExternalAuthAction.CustomTabs()
                 // 필요시 flowType = FlowType.PKCE
             }
+            install(Realtime)
         }
     }
 }

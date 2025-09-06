@@ -33,6 +33,7 @@ import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.pomodoro.BackPressExit
 import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
+import com.malrang.pomodoro.ui.screen.studyroom.ChatScreen
 
 /**
  * 앱의 메인 컴포저블 함수입니다.
@@ -139,7 +140,22 @@ fun PomodoroApp(
                     StudyRoomDetailScreen(
                         roomId = roomId,
                         roomVm = roomVm,
-                        onNavigateBack = { navController.popBackStack() }
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToChat = { studyRoomId ->
+                            navController.navigate("chat/$studyRoomId")
+                        }
+                    )
+                }
+
+                composable(
+                    route = "chat/{studyRoomId}",
+                    arguments = listOf(navArgument("studyRoomId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val studyRoomId = backStackEntry.arguments?.getString("studyRoomId") ?: ""
+                    ChatScreen(
+                        studyRoomId = studyRoomId,
+                        studyRoomViewModel = roomVm, // 기존 ViewModel 인스턴스 주입
+                        authViewModel = authVm      // 기존 ViewModel 인스턴스 주입
                     )
                 }
             }

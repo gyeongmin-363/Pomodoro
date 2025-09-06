@@ -1,10 +1,21 @@
 package com.malrang.pomodoro.networkRepo
 
+import android.R.attr.order
+import android.util.Log
 import com.malrang.pomodoro.networkRepo.SupabaseProvider.client
+import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.Postgrest
-import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
-import kotlin.text.get
+import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperation
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.PostgresChangeFilter
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
+import io.github.jan.supabase.realtime.selectAsFlow
+import kotlinx.coroutines.flow.Flow
 
 class StudyRoomRepository(
     private val postgrest: Postgrest,
@@ -234,6 +245,41 @@ class StudyRoomRepository(
                 }
             }
             .decodeSingleOrNull<Animal>()
+    }
+
+    // MARK: - Chat
+
+    /**
+     *
+     * 채팅 메시지 목록을 실시간 Flow로 가져옵니다.
+     * 데이터베이스에 변경이 생길 때마다 새로운 목록을 emit합니다.
+     * @param studyRoomId 메시지를 조회할 스터디룸의 ID
+     * @return ChatMessage 흐름
+     */
+    @OptIn(SupabaseExperimental::class)
+    fun getChatMessagesFlow(studyRoomId: String): Flow<List<ChatMessage>> {
+        return postgrest["chat_messages"]
+            .selectAsFlow(
+                primaryKey = ChatMessage::id, // 데이터 구분을 위한 기본 키
+                filter = FilterOperation("study_room_id", FilterOperator.EQ, studyRoomId)
+            )
+
+    }
+
+    /**
+     * 새로운 채팅 메시지를 전송합니다.
+     * @param studyRoomId 메시지를 보낼 스터디룸 ID
+     * @param userId 메시지를 보내는 사용자 ID
+     * @param message 보낼 메시지 내용
+     */
+    suspend fun sendChatMessage(studyRoomId: String, userId: String, message: String) {
+        val chatMessage = mapOf(
+            "study_room_id" to studyRoomId,
+            "user_id" to userId,
+            "message" to message
+        )
+        // created_at은 데이터베이스에서 default 값으로 자동 생성되도록 값을 보내지 않습니다.
+        postgrest["chat_messages"].insert(chatMessage)
     }
 }
 

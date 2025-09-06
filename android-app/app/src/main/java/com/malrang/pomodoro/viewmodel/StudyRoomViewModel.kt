@@ -1,14 +1,19 @@
 package com.malrang.pomodoro.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.ui.StudyRoomUiState
 import com.malrang.pomodoro.networkRepo.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -26,6 +31,35 @@ class StudyRoomViewModel(
     // 네비게이션 이벤트를 위한 SharedFlow
     private val _navigationEvents = MutableSharedFlow<String>()
     val navigationEvents = _navigationEvents.asSharedFlow()
+
+    // MARK: - Chat
+
+    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+
+    private var chatJob: Job? = null
+
+    fun subscribeToMessages(studyRoomId: String) {
+        chatJob?.cancel() // 이전 구독이 있다면 취소
+        chatJob = viewModelScope.launch {
+            networkRepo.getChatMessagesFlow(studyRoomId)
+                .catch { /* 에러 처리 */ }
+                .collect { messages ->
+                    _chatMessages.value = messages
+                }
+        }
+
+    }
+
+    fun sendChatMessage(studyRoomId: String, userId: String, message: String) {
+        viewModelScope.launch {
+            try {
+                networkRepo.sendChatMessage(studyRoomId, userId, message)
+            } catch (e: Exception) {
+                // 에러 처리
+            }
+        }
+    }
 
     /**
      * 딥링크를 통해 전달된 스터디룸 ID를 받아 참여 다이얼로그를 표시하도록 상태를 업데이트합니다.

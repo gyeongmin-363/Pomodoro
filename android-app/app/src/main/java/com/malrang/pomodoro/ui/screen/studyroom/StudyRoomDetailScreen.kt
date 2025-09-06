@@ -27,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -77,7 +79,8 @@ import java.util.Locale
 fun StudyRoomDetailScreen(
     roomId: String?,
     roomVm: StudyRoomViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToChat: (String) -> Unit
 ) {
     val context = LocalContext.current
     var tappedDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -145,12 +148,23 @@ fun StudyRoomDetailScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    room?.name ?: "스터디룸 로딩 중...",
+                    room?.name ?: "로딩 중...",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Row {
+                    // 채팅 버튼
+                    IconButton(onClick = {
+                        roomId?.let { onNavigateToChat(it) }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.MailOutline,
+                            contentDescription = "채팅하기",
+                            tint = Color.White
+                        )
+                    }
+
                     IconButton(onClick = {
                         val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
                         val sendIntent: Intent = Intent().apply {
