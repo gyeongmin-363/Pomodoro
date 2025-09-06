@@ -1,6 +1,5 @@
 package com.malrang.pomodoro.ui.screen.studyroom
 
-import android.R.attr.onClick
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,10 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,9 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,10 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.malrang.pomodoro.dataclass.ui.DailyStat
-import com.malrang.pomodoro.ui.screen.stats.DayCell
-import com.malrang.pomodoro.ui.screen.stats.ExpandableCalendarView
-import com.malrang.pomodoro.ui.screen.stats.MonthlyCalendarGrid
+import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
 import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import java.time.DayOfWeek
@@ -82,52 +73,96 @@ fun StudyRoomDetailScreen(
     val context = LocalContext.current
     var tappedDate by remember { mutableStateOf<LocalDate?>(null) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    val headerText = "${selectedDate.year}년 ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}"
-
-    // ✅ 1. 버튼의 상태(완료 여부)를 관리할 변수를 추가합니다.
-    var isChallengeCompleted by remember { mutableStateOf(false) }
-
-
-    LaunchedEffect(roomId) {
-        if (roomId != null) {
-            roomVm.loadStudyRoomById(roomId)
-            roomVm.loadStudyRoomMembers(roomId)
-        }
-    }
-
+    val headerText =
+        "${selectedDate.year}년 ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}"
     val uiState by roomVm.studyRoomUiState.collectAsState()
     val room = uiState.currentStudyRoom
     val members = uiState.currentRoomMembers
+    val currentUser = uiState.currentUser
+    val habitProgressMap = uiState.habitProgressMap
+
+
+    // ✅ roomId가 변경되거나, 달력의 월(selectedDate)이 변경될 때 데이터를 새로고침합니다.
+    LaunchedEffect(roomId, selectedDate) {
+        if (roomId != null) {
+            roomVm.loadStudyRoomById(roomId)
+            roomVm.loadStudyRoomMembers(roomId)
+            roomVm.loadHabitSummaryForMonth(roomId, selectedDate)
+        }
+    }
+
+    // ✅ 랭킹 계산 로직: 멤버 목록과 습관 진행 현황을 조합하여 랭킹 리스트를 생성합니다.
+    val rankingList by remember(members, habitProgressMap, selectedDate) {
+        mutableStateOf(
+            members.map { member ->
+                val progress = habitProgressMap[member.user_id]
+                val completedDays = progress?.daily_progress?.count { it == '1' } ?: 0
+                val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
+                val progressValue = if (totalDaysInMonth > 0) completedDays.toFloat() / totalDaysInMonth else 0f
+                StudyRoomMemberWithProgress(member, completedDays, progressValue)
+            }.sortedByDescending { it.completedDays }
+        )
+    }
+
+    // ✅ 오늘 챌린지를 완료했는지 확인합니다.
+    val isChallengeCompletedToday = remember(habitProgressMap, currentUser) {
+        val today = LocalDate.now()
+        val userProgress = habitProgressMap[currentUser?.id]
+        if (userProgress != null && userProgress.year_month == today.format(
+                java.time.format.DateTimeFormatter.ofPattern(
+                    "yyyy-MM"
+                )
+            )
+        ) {
+            userProgress.daily_progress.getOrNull(today.dayOfMonth - 1) == '1'
+        } else {
+            false
+        }
+    }
 
     // Box를 사용하여 컨텐츠와 버튼을 겹치게 배치합니다.
-    Box(modifier = Modifier.fillMaxSize().background(backgroundColor)){
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(backgroundColor)) {
         val scrollState = rememberScrollState()
-        // ✅ 2. Column에 verticalScroll과 하단 padding을 추가하여
-        // 스크롤이 가능하게 하고, 버튼에 내용이 가려지지 않도록 합니다.
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(bottom = 80.dp) // 버튼이 차지할 공간 확보
-        ){
+        ) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(room?.name ?: "스터디룸 로딩 중...", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    room?.name ?: "스터디룸 로딩 중...",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
                 Row {
                     IconButton(onClick = {
                         val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
                         val sendIntent: Intent = Intent().apply {
                             action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl")
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl"
+                            )
                             type = "text/plain"
                         }
                         val shareIntent = Intent.createChooser(sendIntent, "스터디룸 공유")
                         context.startActivity(shareIntent)
                     }) {
-                        Icon(Icons.Default.Share, contentDescription = "스터디룸 공유", tint = Color.White)
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "스터디룸 공유",
+                            tint = Color.White
+                        )
                     }
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -160,7 +195,6 @@ fun StudyRoomDetailScreen(
                         color = Color.White
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    // 멤버 목록은 LazyColumn 대신 Column으로 변경하여 전체 스크롤에 포함시킵니다.
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -185,7 +219,11 @@ fun StudyRoomDetailScreen(
                         IconButton(onClick = {
                             selectedDate = selectedDate.minusMonths(1)
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "이전", tint = Color.White)
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = "이전",
+                                tint = Color.White
+                            )
                         }
                         Text(
                             text = headerText,
@@ -196,7 +234,11 @@ fun StudyRoomDetailScreen(
                         IconButton(onClick = {
                             selectedDate = selectedDate.plusMonths(1)
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "다음", tint = Color.White)
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "다음",
+                                tint = Color.White
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -221,38 +263,53 @@ fun StudyRoomDetailScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    c(
-                        selectedDate,
-                        tappedDate,
+                    // ✅ 현재 로그인한 유저의 완료 기록을 Set으로 만들어 전달
+                    val completedDaysSet = remember(habitProgressMap, currentUser) {
+                        habitProgressMap[currentUser?.id]?.daily_progress?.mapIndexedNotNull { index, c ->
+                            if (c == '1') index + 1 else null
+                        }?.toSet() ?: emptySet()
+                    }
+
+                    StudyCalendar(
+                        selectedDate = selectedDate,
+                        tappedDate = tappedDate,
+                        completedDays = completedDaysSet,
                         onDateTap = { date -> tappedDate = date }
                     )
                 } //달력 끝
 
-                RankingItem(rank = 1, name = "홍길동", status = "26일 완료", progress = 0.8f)
+                // ✅ 랭킹 UI에 동적 데이터 적용
+                Column {
+                    rankingList.forEachIndexed { index, item ->
+                        RankingItem(
+                            rank = index + 1,
+                            name = item.member.nickname,
+                            status = "${item.completedDays}일 완료",
+                            progress = item.progress
+                        )
+                    }
+                }
 
-                // TODO: 여기에 스터디룸 관련 추가 UI(채팅, 현황 등)를 구현할 수 있습니다.
             }
         }
 
-        // ✅ 3. 화면 하단에 고정될 버튼을 추가합니다.
+        // ✅ 화면 하단 고정 버튼 로직 수정
         Button(
-            // 버튼 클릭 시 상태를 true로 변경
-            onClick = { isChallengeCompleted = true },
+            onClick = { if (roomId != null) roomVm.completeTodayChallenge(roomId) },
             modifier = Modifier
-                .align(Alignment.BottomCenter) // Box의 하단 중앙에 위치
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            // isChallengeCompleted가 true이면 버튼 비활성화
-            enabled = !isChallengeCompleted,
+            // isChallengeCompletedToday 값에 따라 버튼 활성화/비활성화
+            enabled = !isChallengeCompletedToday,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4CAF50), // 활성 상태 색상
-                disabledContainerColor = Color.Gray // 비활성 상태 색상
+                containerColor = Color(0xFF4CAF50),
+                disabledContainerColor = Color.Gray
             )
         ) {
             Text(
-                // isChallengeCompleted 값에 따라 텍스트 변경
-                text = if (isChallengeCompleted) "오늘 챌린지 완료됨!" else "오늘 챌린지 완료하기",
+                text = if (isChallengeCompletedToday) "오늘 챌린지 완료됨!" else "오늘 챌린지 완료하기",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -324,32 +381,38 @@ fun RankingItem(
 }
 
 @Composable
-private fun c(
+private fun StudyCalendar(
     selectedDate: LocalDate,
-//    dailyStats: Map<String, DailyStat>,
+    completedDays: Set<Int>, // ✅ 완료된 날짜(일)를 Set으로 받음
     tappedDate: LocalDate?,
     onDateTap: (LocalDate) -> Unit
-){
+) {
     val today = LocalDate.now()
     val currentMonth = YearMonth.from(selectedDate)
 
     val firstDayOfMonth = currentMonth.atDay(1)
     val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
     val daysInMonth = currentMonth.lengthOfMonth()
-    val calendarDays = (0 until firstDayOfWeek).map<Int?, LocalDate?> { null } + (1..daysInMonth).map { firstDayOfMonth.withDayOfMonth(it) }
+    val calendarDays =
+        (0 until firstDayOfWeek).map<Int?, LocalDate?> { null } + (1..daysInMonth).map {
+            firstDayOfMonth.withDayOfMonth(
+                it
+            )
+        }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(7),
         userScrollEnabled = false,
-        modifier = Modifier.height(240.dp)
+        modifier = Modifier.height(240.dp) // 달력 높이 고정
     ) {
         items(calendarDays.size) { index ->
             val date = calendarDays[index]
             if (date != null) {
-//                val hasRecord = (dailyStats[date.toString()]?.totalStudyTimeInMinutes ?: 0) > 0
-                d(
+                // ✅ 해당 날짜가 완료되었는지 확인
+                val hasRecord = completedDays.contains(date.dayOfMonth)
+                CalendarDay(
                     date = date,
-//                    hasRecord = hasRecord,
+                    hasRecord = hasRecord,
                     isToday = date == today,
                     isSelected = date == tappedDate,
                     onClick = { onDateTap(date) }
@@ -364,9 +427,9 @@ private fun c(
 
 
 @Composable
-private fun d(
+private fun CalendarDay(
     date: LocalDate,
-//    hasRecord: Boolean,
+    hasRecord: Boolean, // ✅ hasRecord 파라미터 추가
     isToday: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -399,13 +462,14 @@ private fun d(
             )
         }
 
-//        if (hasRecord) {
-//            Text(
-//                text = "🐾",
-//                fontSize = 28.sp,
-//                color = Color(0xFFFBBF24).copy(alpha = 0.6f),
-//            )
-//        }
+        // ✅ hasRecord가 true이면 발바닥 아이콘 표시
+        if (hasRecord) {
+            Text(
+                text = "🐾",
+                fontSize = 28.sp,
+                color = Color(0xFFFBBF24).copy(alpha = 0.6f),
+            )
+        }
         Text(
             text = date.dayOfMonth.toString(),
             color = dayColor,
