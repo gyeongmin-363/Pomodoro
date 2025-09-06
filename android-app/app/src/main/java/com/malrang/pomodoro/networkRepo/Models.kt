@@ -75,3 +75,12 @@ data class HabitSummary(
 data class StudyRoomMemberRef(
     val study_room_id: String
 )
+
+/**
+ * UI에서 랭킹을 표시하기 위해 멤버 정보와 월별 진행 상황을 결합한 데이터 클래스
+ */
+data class StudyRoomMemberWithProgress(
+    val member: StudyRoomMember,
+    val completedDays: Int,
+    val progress: Float
+)

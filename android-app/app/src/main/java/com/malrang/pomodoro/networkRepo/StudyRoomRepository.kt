@@ -4,6 +4,7 @@ import com.malrang.pomodoro.networkRepo.SupabaseProvider.client
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlin.text.get
 
 class StudyRoomRepository(
     private val postgrest: Postgrest,
@@ -182,7 +183,32 @@ class StudyRoomRepository(
     }
 
 
-    // MARK: - HabitProgress Functions TODO
+    // MARK: - HabitSummary Functions
+
+    /**
+     * 특정 스터디룸의 특정 월에 대한 모든 멤버의 습관 진행 상황을 가져옵니다.
+     * @param studyRoomId 스터디룸 ID
+     * @param yearMonth "YYYY-MM" 형식의 조회할 연월
+     * @return HabitSummary 객체 리스트
+     */
+    suspend fun getHabitProgressForMonth(studyRoomId: String, yearMonth: String): List<HabitSummary> {
+        return postgrest["habit_summary"]
+            .select {
+                filter {
+                    eq("study_room_id", studyRoomId)
+                    eq("year_month", yearMonth)
+                }
+            }
+            .decodeList()
+    }
+
+    /**
+     * 습관 진행 상황을 추가하거나 업데이트합니다. (Upsert)
+     * @param progress 업데이트할 HabitSummary 객체
+     */
+    suspend fun upsertHabitProgress(progress: HabitSummary) {
+        postgrest["habit_summary"].upsert(progress)
+    }
 
 
     // MARK: - Animal Functions (주로 읽기 전용)
