@@ -28,14 +28,14 @@ fun StudyRoomItem(room: StudyRoom, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(16.dp) // 내부 여백
     ) {
-        // 스터디룸 이름
+        // 챌린지룸 이름
         Text(
             text = room.name,
             fontWeight = FontWeight.Bold,
             color = Color.White // 텍스트 색상
         )
         Spacer(modifier = Modifier.height(8.dp))
-        // 스터디룸 설명
+        // 챌린지룸 설명
         Text(
             text = room.inform ?: "",
             color = Color.LightGray // 텍스트 색상

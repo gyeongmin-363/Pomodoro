@@ -56,12 +56,7 @@ fun ExpandableCalendarView(
         }
     }
 
-    val headerText = if (isExpanded) {
-        "${selectedDate.year}년 ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}"
-    } else {
-        val weekOfMonth = selectedDate.get(WeekFields.of(Locale.KOREAN).weekOfMonth())
-        "${selectedDate.year}년 ${selectedDate.monthValue}월 ${weekOfMonth}째주"
-    }
+    val headerText = "${selectedDate.year}년 ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}"
 
     Card(
         modifier = Modifier.fillMaxWidth(),

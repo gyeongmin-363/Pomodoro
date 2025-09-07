@@ -94,6 +94,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:serializer-jackson-android:3.2.2")
     implementation ("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:realtime-kt")
 
     implementation("io.ktor:ktor-client-okhttp:3.2.2")
     implementation("io.ktor:ktor-client-core:3.2.2")

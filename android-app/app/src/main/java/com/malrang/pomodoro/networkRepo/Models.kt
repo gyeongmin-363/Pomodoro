@@ -68,6 +68,17 @@ data class HabitSummary(
     val updated_at: String? = null // ISO timestamp, optional
 )
 
+@Keep
+@Serializable
+data class ChatMessage(
+    val id: Long? = null,
+    val created_at: String,
+    val study_room_id: String,
+    val user_id: String,
+    val message: String,
+    val nickname : String
+)
+
 
 // 간단히 id만 매핑 받는 용도
 @Keep

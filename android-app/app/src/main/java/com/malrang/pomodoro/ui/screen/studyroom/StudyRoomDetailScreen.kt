@@ -27,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -70,14 +72,15 @@ import java.util.Locale
 
 
 /**
- * 스터디룸 상세 정보를 표시하는 화면 Composable
+ * 챌린지룸 상세 정보를 표시하는 화면 Composable
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudyRoomDetailScreen(
     roomId: String?,
     roomVm: StudyRoomViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToChat: (String) -> Unit
 ) {
     val context = LocalContext.current
     var tappedDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -145,28 +148,39 @@ fun StudyRoomDetailScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    room?.name ?: "스터디룸 로딩 중...",
+                    room?.name ?: "로딩 중...",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Row {
+                    // 채팅 버튼
+                    IconButton(onClick = {
+                        roomId?.let { onNavigateToChat(it) }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.MailOutline,
+                            contentDescription = "채팅하기",
+                            tint = Color.White
+                        )
+                    }
+
                     IconButton(onClick = {
                         val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
                         val sendIntent: Intent = Intent().apply {
                             action = Intent.ACTION_SEND
                             putExtra(
                                 Intent.EXTRA_TEXT,
-                                "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl"
+                                "[픽뽀] '${room?.name}' 챌린지룸에 참여해보세요!\n$shareUrl"
                             )
                             type = "text/plain"
                         }
-                        val shareIntent = Intent.createChooser(sendIntent, "스터디룸 공유")
+                        val shareIntent = Intent.createChooser(sendIntent, "챌린지룸 공유")
                         context.startActivity(shareIntent)
                     }) {
                         Icon(
                             Icons.Default.Share,
-                            contentDescription = "스터디룸 공유",
+                            contentDescription = "챌린지룸 공유",
                             tint = Color.White
                         )
                     }
@@ -502,8 +516,8 @@ fun RankingItem(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(12.dp)
-                    .clip(RoundedCornerShape(6.dp)),
+                    .height(12.dp),
+//                    .clip(RoundedCornerShape(6.dp)),
                 color = Color(0xFF4CAF50),
                 trackColor = Color.DarkGray
             )

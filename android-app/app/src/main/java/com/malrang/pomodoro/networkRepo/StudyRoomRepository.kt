@@ -1,10 +1,21 @@
 package com.malrang.pomodoro.networkRepo
 
+import android.R.attr.order
+import android.util.Log
 import com.malrang.pomodoro.networkRepo.SupabaseProvider.client
+import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.Postgrest
-import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
-import kotlin.text.get
+import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperation
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.PostgresChangeFilter
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
+import io.github.jan.supabase.realtime.selectAsFlow
+import kotlinx.coroutines.flow.Flow
 
 class StudyRoomRepository(
     private val postgrest: Postgrest,
@@ -13,8 +24,8 @@ class StudyRoomRepository(
     // MARK: - StudyRoom Functions
 
     /**
-     * 새로운 스터디룸을 생성합니다.
-     * @param studyRoom 생성할 스터디룸 객체
+     * 새로운 챌린지룸을 생성합니다.
+     * @param studyRoom 생성할 챌린지룸 객체
      * @return 생성된 StudyRoom 객체
      */
     suspend fun createStudyRoom(studyRoom: StudyRoom): StudyRoom? {
@@ -26,8 +37,8 @@ class StudyRoomRepository(
     }
 
     /**
-     * 특정 ID의 스터디룸 정보를 가져옵니다.
-     * @param roomId 가져올 스터디룸의 ID
+     * 특정 ID의 챌린지룸 정보를 가져옵니다.
+     * @param roomId 가져올 챌린지룸의 ID
      * @return StudyRoom 객체 (없으면 null)
      */
     suspend fun getStudyRoomById(roomId: String): StudyRoom? {
@@ -41,7 +52,7 @@ class StudyRoomRepository(
     }
 
     /**
-     * 모든 스터디룸 목록을 가져옵니다.
+     * 모든 챌린지룸 목록을 가져옵니다.
      * @return StudyRoom 객체 리스트
      */
     suspend fun getAllStudyRooms(): List<StudyRoom> {
@@ -49,7 +60,7 @@ class StudyRoomRepository(
     }
 
     /**
-     * 특정 사용자가 생성한 모든 스터디룸 목록을 가져옵니다.
+     * 특정 사용자가 생성한 모든 챌린지룸 목록을 가져옵니다.
      * @param creatorId 생성자의 사용자 ID
      * @return StudyRoom 객체 리스트
      */
@@ -89,8 +100,8 @@ class StudyRoomRepository(
 
 
     /**
-     * 스터디룸 정보를 업데이트합니다.
-     * @param roomId 업데이트할 스터디룸의 ID
+     * 챌린지룸 정보를 업데이트합니다.
+     * @param roomId 업데이트할 챌린지룸의 ID
      * @param updatedStudyRoom 업데이트될 정보가 담긴 객체
      */
     suspend fun updateStudyRoom(roomId: String, updatedStudyRoom: StudyRoom) {
@@ -103,8 +114,8 @@ class StudyRoomRepository(
     }
 
     /**
-     * 스터디룸을 삭제합니다.
-     * @param roomId 삭제할 스터디룸의 ID
+     * 챌린지룸을 삭제합니다.
+     * @param roomId 삭제할 챌린지룸의 ID
      */
     suspend fun deleteStudyRoom(roomId: String) {
         postgrest["study_rooms"]
@@ -118,7 +129,7 @@ class StudyRoomRepository(
     // MARK: - StudyRoomMember Functions
 
     /**
-     * 스터디룸에 새로운 멤버를 추가합니다.
+     * 챌린지룸에 새로운 멤버를 추가합니다.
      * @param member 추가할 멤버 객체
      */
     suspend fun addMemberToStudyRoom(member: StudyRoomMember) {
@@ -126,8 +137,8 @@ class StudyRoomRepository(
     }
 
     /**
-     * 특정 스터디룸의 모든 멤버 목록을 가져옵니다.
-     * @param studyRoomId 멤버를 조회할 스터디룸의 ID
+     * 특정 챌린지룸의 모든 멤버 목록을 가져옵니다.
+     * @param studyRoomId 멤버를 조회할 챌린지룸의 ID
      * @return StudyRoomMember 객체 리스트
      */
     suspend fun getStudyRoomMembers(studyRoomId: String): List<StudyRoomMember> {
@@ -170,7 +181,7 @@ class StudyRoomRepository(
     }
 
     /**
-     * 스터디룸에서 멤버를 삭제합니다.
+     * 챌린지룸에서 멤버를 삭제합니다.
      * @param memberId 삭제할 멤버의 ID
      */
     suspend fun removeMemberFromStudyRoom(memberId: String) {
@@ -186,8 +197,8 @@ class StudyRoomRepository(
     // MARK: - HabitSummary Functions
 
     /**
-     * 특정 스터디룸의 특정 월에 대한 모든 멤버의 습관 진행 상황을 가져옵니다.
-     * @param studyRoomId 스터디룸 ID
+     * 특정 챌린지룸의 특정 월에 대한 모든 멤버의 습관 진행 상황을 가져옵니다.
+     * @param studyRoomId 챌린지룸 ID
      * @param yearMonth "YYYY-MM" 형식의 조회할 연월
      * @return HabitSummary 객체 리스트
      */
@@ -234,6 +245,42 @@ class StudyRoomRepository(
                 }
             }
             .decodeSingleOrNull<Animal>()
+    }
+
+    // MARK: - Chat
+
+    /**
+     *
+     * 채팅 메시지 목록을 실시간 Flow로 가져옵니다.
+     * 데이터베이스에 변경이 생길 때마다 새로운 목록을 emit합니다.
+     * @param studyRoomId 메시지를 조회할 챌린지룸의 ID
+     * @return ChatMessage 흐름
+     */
+    @OptIn(SupabaseExperimental::class)
+    fun getChatMessagesFlow(studyRoomId: String): Flow<List<ChatMessage>> {
+        return postgrest["chat_messages"]
+            .selectAsFlow(
+                primaryKey = ChatMessage::id, // 데이터 구분을 위한 기본 키
+                filter = FilterOperation("study_room_id", FilterOperator.EQ, studyRoomId)
+            )
+
+    }
+
+    /**
+     * 새로운 채팅 메시지를 전송합니다.
+     * @param studyRoomId 메시지를 보낼 챌린지룸 ID
+     * @param userId 메시지를 보내는 사용자 ID
+     * @param message 보낼 메시지 내용
+     */
+    suspend fun sendChatMessage(studyRoomId: String, userId: String, message: String, nickname : String) {
+        val chatMessage = mapOf(
+            "study_room_id" to studyRoomId,
+            "user_id" to userId,
+            "message" to message,
+            "nickname" to nickname
+        )
+        // created_at은 데이터베이스에서 default 값으로 자동 생성되도록 값을 보내지 않습니다.
+        postgrest["chat_messages"].insert(chatMessage)
     }
 }
 

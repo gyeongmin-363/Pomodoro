@@ -1,14 +1,20 @@
 package com.malrang.pomodoro.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Message
 import com.malrang.pomodoro.dataclass.ui.StudyRoomUiState
 import com.malrang.pomodoro.networkRepo.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -27,12 +33,54 @@ class StudyRoomViewModel(
     private val _navigationEvents = MutableSharedFlow<String>()
     val navigationEvents = _navigationEvents.asSharedFlow()
 
+    // MARK: - Chat
+
+    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+
+    private var chatJob: Job? = null
+
+    fun disSubscribeMessage(){
+        chatJob?.cancel()
+        _chatMessages.value = emptyList<ChatMessage>()
+    }
+
+    fun subscribeToMessages(studyRoomId: String) {
+        chatJob?.cancel() // 이전 구독이 있다면 취소
+
+        // 로딩 시작
+        _studyRoomUiState.update { it.copy(isChatLoading = true) }
+
+        chatJob = viewModelScope.launch {
+            networkRepo.getChatMessagesFlow(studyRoomId)
+                .catch {
+                    // 에러 처리
+                    _studyRoomUiState.update { it.copy(isChatLoading = false) }
+                }
+                .collect { messages ->
+                    _chatMessages.value = messages
+                    // 데이터 수집 완료 후 로딩 종료
+                    _studyRoomUiState.update { it.copy(isChatLoading = false) }
+                }
+        }
+    }
+
+    fun sendChatMessage(studyRoomId: String, userId: String, message: String, nickname : String) {
+        viewModelScope.launch {
+            try {
+                networkRepo.sendChatMessage(studyRoomId, userId, message, nickname)
+            } catch (e: Exception) {
+                // 에러 처리
+            }
+        }
+    }
+
     /**
-     * 딥링크를 통해 전달된 스터디룸 ID를 받아 참여 다이얼로그를 표시하도록 상태를 업데이트합니다.
+     * 딥링크를 통해 전달된 챌린지룸 ID를 받아 참여 다이얼로그를 표시하도록 상태를 업데이트합니다.
      */
     fun handleInviteLink(studyRoomId: String) {
         viewModelScope.launch {
-            // 1. 유효한 스터디룸 ID인지 서버에서 확인합니다.
+            // 1. 유효한 챌린지룸 ID인지 서버에서 확인합니다.
             val room = networkRepo.getStudyRoomById(studyRoomId)
             if (room != null) {
                 // 2. 현재 로그인한 사용자인지 확인합니다.
@@ -47,13 +95,13 @@ class StudyRoomViewModel(
                 val isMember = members.any { it.user_id == userId }
 
                 if (isMember) {
-                    // TODO: 이미 참여한 스터디룸이라는 토스트 메시지 등을 보여줄 수 있습니다.
+                    // TODO: 이미 참여한 챌린지룸이라는 토스트 메시지 등을 보여줄 수 있습니다.
                 } else {
                     // 4. 참여 다이얼로그를 띄우도록 상태를 업데이트합니다.
                     _studyRoomUiState.update { it.copy(showJoinStudyRoomDialog = room) }
                 }
             } else {
-                // TODO: 존재하지 않는 스터디룸이라는 메시지를 표시할 수 있습니다.
+                // TODO: 존재하지 않는 챌린지룸이라는 메시지를 표시할 수 있습니다.
             }
         }
     }
@@ -81,12 +129,12 @@ class StudyRoomViewModel(
     // MARK: - StudyRoom Functions
 
     /**
-     * 새로운 스터디룸을 생성하고 목록을 새로고침합니다.
+     * 새로운 챌린지룸을 생성하고 목록을 새로고침합니다.
      * 기존의 createStudyRoomAndJoin 함수를 대체합니다.
      */
     fun createStudyRoom(studyRoom: StudyRoom) {
         viewModelScope.launch {
-            // 1. 서버에 스터디룸을 생성합니다.
+            // 1. 서버에 챌린지룸을 생성합니다.
             val createdRoom = networkRepo.createStudyRoom(studyRoom)
 
             if (createdRoom != null) {
@@ -94,7 +142,7 @@ class StudyRoomViewModel(
                 studyRoom.creator_id?.let { loadUserStudyRooms(it) } // 목록 새로고침
                 showCreateStudyRoomDialog(false) // 생성 다이얼로그 닫기
             } else {
-                // 스터디룸 생성 실패 처리
+                // 챌린지룸 생성 실패 처리
             }
         }
     }
@@ -147,7 +195,7 @@ class StudyRoomViewModel(
 
     // MARK: - HabitSummary Functions
     /**
-     * 특정 월의 스터디룸 멤버들의 챌린지 수행 현황을 불러옵니다.
+     * 특정 월의 챌린지룸 멤버들의 챌린지 수행 현황을 불러옵니다.
      */
     fun loadHabitSummaryForMonth(studyRoomId: String, date: LocalDate) {
         viewModelScope.launch {
