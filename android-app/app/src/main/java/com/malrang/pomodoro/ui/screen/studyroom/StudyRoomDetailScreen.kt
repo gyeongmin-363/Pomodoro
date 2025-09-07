@@ -1,6 +1,7 @@
 package com.malrang.pomodoro.ui.screen.studyroom
 
 import android.content.Intent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,11 +29,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +65,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -153,47 +160,73 @@ fun StudyRoomDetailScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(start = 16.dp, end = 4.dp, top = 16.dp, bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    room?.name ?: "로딩 중...",
+                    text = room?.name ?: "로딩 중...",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-                Row {
-                    // 채팅 버튼
-                    IconButton(onClick = {
-                        roomId?.let { onNavigateToChat(it) }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.MailOutline,
-                            contentDescription = "채팅하기",
-                            tint = Color.White
-                        )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    var menuExpanded by remember { mutableStateOf(false) }
+
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "더보기",
+                                tint = Color.White
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("채팅하기") },
+                                onClick = {
+                                    roomId?.let { onNavigateToChat(it) }
+                                    menuExpanded = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.MailOutline,
+                                        contentDescription = "채팅하기"
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("챌린지룸 공유") },
+                                onClick = {
+                                    val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
+                                    val sendIntent: Intent = Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "[픽뽀] '${room?.name}' 챌린지룸에 참여해보세요!\n$shareUrl"
+                                        )
+                                        type = "text/plain"
+                                    }
+                                    val shareIntent = Intent.createChooser(sendIntent, "챌린지룸 공유")
+                                    context.startActivity(shareIntent)
+                                    menuExpanded = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        contentDescription = "챌린지룸 공유"
+                                    )
+                                }
+                            )
+                        }
                     }
 
-                    IconButton(onClick = {
-                        val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
-                        val sendIntent: Intent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "[픽뽀] '${room?.name}' 챌린지룸에 참여해보세요!\n$shareUrl"
-                            )
-                            type = "text/plain"
-                        }
-                        val shareIntent = Intent.createChooser(sendIntent, "챌린지룸 공유")
-                        context.startActivity(shareIntent)
-                    }) {
-                        Icon(
-                            Icons.Default.Share,
-                            contentDescription = "챌린지룸 공유",
-                            tint = Color.White
-                        )
-                    }
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -213,31 +246,72 @@ fun StudyRoomDetailScreen(
                 }
             } else {
                 Column(Modifier.padding(horizontal = 16.dp)) {
-                    if(room.inform != null){
-                        Text(
-                            text = room.inform,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.Gray
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
+                    // ✅ 설명란 확장/축소 기능 추가
+                    if (!room.inform.isNullOrBlank()) {
+                        var isDescriptionExpanded by remember { mutableStateOf(false) }
+                        var isExpandable by remember { mutableStateOf(false) }
 
-                    }
-                    Text(
-                        text = "참여자 (${members.size}명)",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        members.forEach { member ->
-                            Text(
-                                text = "- ${member.nickname}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
+                        Column(
+                            modifier = Modifier.animateContentSize()
+                        ) {
+                            if (isDescriptionExpanded) {
+                                // 확장된 상태: 전체 텍스트와 위쪽 화살표 버튼
+                                Text(
+                                    text = room.inform,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.Gray,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (isExpandable) {
+                                    IconButton(
+                                        onClick = { isDescriptionExpanded = !isDescriptionExpanded },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "설명 축소",
+                                            tint = Color.Gray
+                                        )
+                                    }
+                                }
+                            } else {
+                                // 축소된 상태: 한 줄 텍스트와 오른쪽 아래 화살표 버튼
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = room.inform,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Color.Gray,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier
+                                            .weight(1f) // 텍스트가 남은 공간을 채우도록
+                                            .padding(end = if (isExpandable) 4.dp else 0.dp), // 아이콘과의 간격
+                                        onTextLayout = { textLayoutResult ->
+                                            isExpandable = textLayoutResult.hasVisualOverflow
+                                        }
+                                    )
+                                    if (isExpandable) {
+                                        IconButton(
+                                            onClick = { isDescriptionExpanded = !isDescriptionExpanded },
+                                            modifier = Modifier.size(28.dp) // 작은 크기로 조절
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "설명 확장",
+                                                tint = Color.Gray,
+                                                modifier = Modifier.size(20.dp) // 아이콘 크기 조절
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
 
@@ -313,17 +387,43 @@ fun StudyRoomDetailScreen(
                     )
                 } //달력 끝
 
-                // 랭킹 UI에 동적 데이터 적용
-                Column {
-                    val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
-                    rankingList.forEach { item ->
-                        RankingItem(
-                            name = item.member.nickname,
-                            completedDays = item.completedDays,
-                            totalDaysInMonth = totalDaysInMonth,
-                            progress = item.progress,
-                            animalId = item.member.animal
+                var isParticipantListExpanded by remember { mutableStateOf(true) }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isParticipantListExpanded = !isParticipantListExpanded }
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = "참여자 (${members.size}명)",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { isParticipantListExpanded = !isParticipantListExpanded }) {
+                        Icon(
+                            imageVector = if (isParticipantListExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (isParticipantListExpanded) "참여자 목록 축소" else "참여자 목록 확장",
+                            tint = Color.White
                         )
+                    }
+                }
+
+                // 랭킹 UI에 동적 데이터 적용
+                Column(modifier = Modifier.animateContentSize()) {
+                    if (isParticipantListExpanded) {
+                        val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
+                        rankingList.forEach { item ->
+                            RankingItem(
+                                name = item.member.nickname,
+                                completedDays = item.completedDays,
+                                totalDaysInMonth = totalDaysInMonth,
+                                progress = item.progress,
+                                animalId = item.member.animal
+                            )
+                        }
                     }
                 }
             }
@@ -536,25 +636,15 @@ fun RankingItem(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = buildAnnotatedString {
-                    withStyle(
-                        style = SpanStyle(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                    ) {
-                        append(name)
-                    }
-                    withStyle(
-                        style = SpanStyle(
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-                    ) {
-                        append(" ($completedDays / $totalDaysInMonth 일 완료)")
-                    }
-                }
+                text = name,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+            Text(
+                text = "($completedDays / $totalDaysInMonth 일 완료)",
+                fontSize = 14.sp,
+                color = Color.Gray
             )
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
