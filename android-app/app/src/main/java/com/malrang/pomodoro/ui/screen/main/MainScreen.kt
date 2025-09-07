@@ -162,7 +162,10 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             ) {
                 OutlinedTextField(
                     value = newPresetName,
-                    onValueChange = { newPresetName = it },
+                    onValueChange = {
+                        if (it.length <= 10) { // 10자 이하로 제한
+                            newPresetName = it
+                        }},
                     label = { Text("새 이름") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
