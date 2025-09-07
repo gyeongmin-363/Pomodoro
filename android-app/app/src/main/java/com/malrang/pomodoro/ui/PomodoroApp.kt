@@ -34,6 +34,7 @@ import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.pomodoro.BackPressExit
 import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
 import com.malrang.pomodoro.ui.screen.studyroom.ChatScreen
+import com.malrang.pomodoro.ui.screen.studyroom.DeleteStudyRoomScreen
 
 /**
  * 앱의 메인 컴포저블 함수입니다.
@@ -65,10 +66,16 @@ fun PomodoroApp(
         }
     }
 
-    // ✅ [추가] StudyRoomViewModel의 네비게이션 이벤트를 처리합니다.
+    // ✅ [수정] StudyRoomViewModel의 네비게이션 이벤트를 처리합니다.
     LaunchedEffect(Unit) {
         roomVm.navigationEvents.collect { route ->
-            navController.navigate(route)
+            if (route == "navigate_back") {
+                // "navigate_back" 이벤트는 이전 화면으로 돌아가도록 처리
+                navController.popBackStack()
+            } else {
+                // 그 외의 이벤트는 해당 경로로 이동
+                navController.navigate(route)
+            }
         }
     }
 
@@ -130,7 +137,8 @@ fun PomodoroApp(
                         authVM = authVm,
                         roomVM = roomVm,
                         inviteStudyRoomId = inviteId, // ✅ 여기서 uuid 주입됨
-                        onNavigateBack = { vm.navigateTo(Screen.Main) }
+                        onNavigateBack = { vm.navigateTo(Screen.Main) },
+                        onNavigateToDelete = { navController.navigate(Screen.DeleteStudyRoom.name) }
                     )
                 }
 
@@ -158,6 +166,13 @@ fun PomodoroApp(
                     ChatScreen(
                         studyRoomId = studyRoomId,
                         studyRoomViewModel = roomVm, // 기존 ViewModel 인스턴스 주입
+                    )
+                }
+
+                composable(Screen.DeleteStudyRoom.name) {
+                    DeleteStudyRoomScreen(
+                        roomVM = roomVm,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }
