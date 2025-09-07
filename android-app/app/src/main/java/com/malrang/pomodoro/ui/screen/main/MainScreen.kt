@@ -11,11 +11,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -53,8 +51,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
@@ -101,10 +97,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
 
 
     // 1. 픽셀 아트 스타일 색상
-    val drawerBackgroundColor = Color(0xFF2E253A) // 어두운 보라색 배경
     val drawerContentColor = Color(0xFFF0F0F0)   // 밝은 텍스트/아이콘 색상
-    val drawerSelectedContainerColor = Color(0xFF4A3F55) // 선택된 아이템 배경
-    val drawerSelectedContentColor = Color(0xFFF9A825) // 선택된 아이템 텍스트/아이콘 (노란색)
 
     // 3. 드로어 메뉴 아이템 리스트
     val drawerItems = listOf(
@@ -174,10 +167,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                                 unselectedContainerColor = Color.Transparent, // 기본 배경 투명
                                 unselectedIconColor = drawerContentColor,
                                 unselectedTextColor = drawerContentColor,
-                                // 필요하다면 선택 시 색상도 정의
-                                selectedContainerColor = drawerSelectedContainerColor,
-                                selectedIconColor = drawerSelectedContentColor,
-                                selectedTextColor = drawerSelectedContentColor
                             )
                         )
                     }
