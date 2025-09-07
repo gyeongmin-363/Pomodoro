@@ -15,18 +15,6 @@ data class User(
     val name: String // auth.users.user_metadata 에서 가져온 이름
 )
 
-/**
- * public.animals 테이블에 매핑되는 데이터 클래스
- */
-@Keep
-@Serializable
-data class Animal(
-    val id: Long,
-    val name: String? = null,
-    val rarity: String? = null,
-    val image_url: String? = null
-)
-
 
 /**
  * public.study_rooms 테이블에 매핑되는 데이터 클래스
@@ -50,7 +38,7 @@ data class StudyRoomMember(
     val study_room_id: String? = null,
     val user_id: String? = null,
     val nickname: String,
-    val animal: Long? = null,
+    val animal: String? = null,
     val is_admin: Boolean = false
 )
 

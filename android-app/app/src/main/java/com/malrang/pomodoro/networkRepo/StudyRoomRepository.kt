@@ -221,32 +221,6 @@ class StudyRoomRepository(
         postgrest["habit_summary"].upsert(progress)
     }
 
-
-    // MARK: - Animal Functions (주로 읽기 전용)
-
-    /**
-     * 모든 동물 목록을 가져옵니다.
-     * @return Animal 객체 리스트
-     */
-    suspend fun getAllAnimals(): List<Animal> {
-        return postgrest["animals"].select().decodeList<Animal>()
-    }
-
-    /**
-     * 특정 ID의 동물 정보를 가져옵니다.
-     * @param animalId 가져올 동물의 ID
-     * @return Animal 객체 (없으면 null)
-     */
-    suspend fun getAnimalById(animalId: Long): Animal? {
-        return postgrest["animals"]
-            .select {
-                filter {
-                    eq("id", animalId)
-                }
-            }
-            .decodeSingleOrNull<Animal>()
-    }
-
     // MARK: - Chat
 
     /**

@@ -20,7 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.malrang.pomodoro.networkRepo.Animal
+import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.User
@@ -32,7 +32,7 @@ import java.util.UUID
 fun JoinStudyRoomDialog(
     room: StudyRoom,
     currentUser: User,
-    allAnimals: List<Animal>,
+    collectedAnimals: Set<Animal>,
     viewModel: StudyRoomViewModel,
     onDismiss: () -> Unit
 ) {
@@ -66,7 +66,7 @@ fun JoinStudyRoomDialog(
                     OutlinedTextField(
                         modifier = Modifier.menuAnchor(),
                         readOnly = true,
-                        value = selectedAnimal?.name ?: "동물 선택 (선택사항)",
+                        value = selectedAnimal?.displayName ?: "동물 선택 (선택사항)",
                         onValueChange = {},
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     )
@@ -74,9 +74,9 @@ fun JoinStudyRoomDialog(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        allAnimals.forEach { animal ->
+                        collectedAnimals.forEach { animal ->
                             DropdownMenuItem(
-                                text = { Text(animal.name ?: "이름 없음") },
+                                text = { Text(animal.displayName) },
                                 onClick = {
                                     selectedAnimal = animal
                                     expanded = false

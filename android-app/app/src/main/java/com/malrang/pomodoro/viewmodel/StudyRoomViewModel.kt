@@ -109,7 +109,6 @@ class StudyRoomViewModel(
     fun onUserAuthenticated(user: User) {
         _studyRoomUiState.update { it.copy(currentUser = user) }
         loadUserStudyRooms(user.id)
-        loadAllAnimals()
     }
 
     fun onUserNotAuthenticated() {
@@ -248,15 +247,6 @@ class StudyRoomViewModel(
     }
 
 
-    // MARK: - Animal Functions
-
-    fun loadAllAnimals() {
-        viewModelScope.launch {
-            val animals = networkRepo.getAllAnimals()
-            _studyRoomUiState.update { it.copy(allAnimals = animals) }
-        }
-    }
-
     // MARK: - UI Control Functions
 
     fun loadUserStudyRooms(userId: String) {
@@ -302,9 +292,36 @@ class StudyRoomViewModel(
 
     fun joinStudyRoom(member: StudyRoomMember) {
         viewModelScope.launch {
+            // 1. 기존 로직: 스터디룸 멤버로 추가
             networkRepo.addMemberToStudyRoom(member)
+
+            // 2. HabitSummary 초기 데이터 생성 로직
+            val userId = member.user_id ?: return@launch
+            val studyRoomId = member.study_room_id ?: return@launch
+
+            // 현재 날짜를 기준으로 연도-월 및 해당 월의 일수 계산
+            val today = LocalDate.now()
+            val yearMonth = today.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+            val daysInMonth = YearMonth.from(today).lengthOfMonth()
+
+            // 월의 일수만큼 "0"으로 채워진 초기 진행률 문자열 생성
+            val initialDailyProgress = "0".repeat(daysInMonth)
+
+            // DB에 추가할 HabitSummary 객체 생성
+            val initialProgress = HabitSummary(
+                id = UUID.randomUUID().toString(),
+                study_room_id = studyRoomId,
+                user_id = userId,
+                year_month = yearMonth,
+                daily_progress = initialDailyProgress
+            )
+
+            // 3. 생성된 초기 데이터를 DB에 삽입
+            networkRepo.upsertHabitProgress(initialProgress)
+
+            // 4. 기존 로직: 참여 다이얼로그 닫기 및 유저의 스터디룸 목록 새로고침
             dismissJoinStudyRoomDialog()
-            member.user_id?.let { loadUserStudyRooms(it) }
+            loadUserStudyRooms(userId)
         }
     }
 }

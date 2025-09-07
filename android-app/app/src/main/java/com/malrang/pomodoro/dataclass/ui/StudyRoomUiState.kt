@@ -3,7 +3,6 @@ package com.malrang.pomodoro.dataclass.ui
 import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
-import com.malrang.pomodoro.networkRepo.Animal
 import com.malrang.pomodoro.networkRepo.HabitSummary
 
 /**
@@ -20,7 +19,6 @@ data class StudyRoomUiState(
     val currentUser: User? = null,
     val currentStudyRoom: StudyRoom? = null,
     val currentRoomMembers: List<StudyRoomMember> = emptyList(),
-    val allAnimals: List<Animal> = emptyList(),
     // 멤버들의 챌린지 현황을 user_id를 키로 하여 저장하는 맵
     val habitProgressMap: Map<String, HabitSummary> = emptyMap(),
 

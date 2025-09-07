@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import java.time.LocalDate
 import java.time.format.TextStyle
-import java.time.temporal.WeekFields
 import java.util.Locale
 
 @Composable
@@ -117,9 +116,11 @@ fun ExpandableCalendarView(
             if (isExpanded) {
                 MonthlyCalendarGrid(
                     selectedDate = selectedDate,
-                    dailyStats = dailyStats,
                     tappedDate = tappedDate,
-                    onDateTap = { date -> tappedDate = date }
+                    onDateTap = { date -> tappedDate = date },
+                    hasRecord = { date ->
+                        (dailyStats[date.toString()]?.totalStudyTimeInMinutes ?: 0) > 0
+                    }
                 )
             } else {
                 WeeklyCalendarGrid(selectedDate = selectedDate, dailyStats = dailyStats)

@@ -1,6 +1,8 @@
 package com.malrang.pomodoro.ui.screen.studyroom
 
 import android.content.Intent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,31 +18,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,23 +53,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
+import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
+import com.malrang.pomodoro.ui.screen.stats.MonthlyCalendarGrid
 import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 
 /**
@@ -143,47 +154,73 @@ fun StudyRoomDetailScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(start = 16.dp, end = 4.dp, top = 16.dp, bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    room?.name ?: "로딩 중...",
+                    text = room?.name ?: "로딩 중...",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-                Row {
-                    // 채팅 버튼
-                    IconButton(onClick = {
-                        roomId?.let { onNavigateToChat(it) }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.MailOutline,
-                            contentDescription = "채팅하기",
-                            tint = Color.White
-                        )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    var menuExpanded by remember { mutableStateOf(false) }
+
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "더보기",
+                                tint = Color.White
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("채팅하기") },
+                                onClick = {
+                                    roomId?.let { onNavigateToChat(it) }
+                                    menuExpanded = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.MailOutline,
+                                        contentDescription = "채팅하기"
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("챌린지룸 공유") },
+                                onClick = {
+                                    val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
+                                    val sendIntent: Intent = Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "[픽뽀] '${room?.name}' 챌린지룸에 참여해보세요!\n$shareUrl"
+                                        )
+                                        type = "text/plain"
+                                    }
+                                    val shareIntent = Intent.createChooser(sendIntent, "챌린지룸 공유")
+                                    context.startActivity(shareIntent)
+                                    menuExpanded = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        contentDescription = "챌린지룸 공유"
+                                    )
+                                }
+                            )
+                        }
                     }
 
-                    IconButton(onClick = {
-                        val shareUrl = "https://pixbbo.netlify.app/study-room/$roomId"
-                        val sendIntent: Intent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "[픽뽀] '${room?.name}' 챌린지룸에 참여해보세요!\n$shareUrl"
-                            )
-                            type = "text/plain"
-                        }
-                        val shareIntent = Intent.createChooser(sendIntent, "챌린지룸 공유")
-                        context.startActivity(shareIntent)
-                    }) {
-                        Icon(
-                            Icons.Default.Share,
-                            contentDescription = "챌린지룸 공유",
-                            tint = Color.White
-                        )
-                    }
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -203,31 +240,72 @@ fun StudyRoomDetailScreen(
                 }
             } else {
                 Column(Modifier.padding(horizontal = 16.dp)) {
-                    if(room.inform != null){
-                        Text(
-                            text = room.inform,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.Gray
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
+                    // ✅ 설명란 확장/축소 기능 추가
+                    if (!room.inform.isNullOrBlank()) {
+                        var isDescriptionExpanded by remember { mutableStateOf(false) }
+                        var isExpandable by remember { mutableStateOf(false) }
 
-                    }
-                    Text(
-                        text = "참여자 (${members.size}명)",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        members.forEach { member ->
-                            Text(
-                                text = "- ${member.nickname}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
+                        Column(
+                            modifier = Modifier.animateContentSize()
+                        ) {
+                            if (isDescriptionExpanded) {
+                                // 확장된 상태: 전체 텍스트와 위쪽 화살표 버튼
+                                Text(
+                                    text = room.inform,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.Gray,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (isExpandable) {
+                                    IconButton(
+                                        onClick = { isDescriptionExpanded = !isDescriptionExpanded },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "설명 축소",
+                                            tint = Color.Gray
+                                        )
+                                    }
+                                }
+                            } else {
+                                // 축소된 상태: 한 줄 텍스트와 오른쪽 아래 화살표 버튼
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = room.inform,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Color.Gray,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier
+                                            .weight(1f) // 텍스트가 남은 공간을 채우도록
+                                            .padding(end = if (isExpandable) 4.dp else 0.dp), // 아이콘과의 간격
+                                        onTextLayout = { textLayoutResult ->
+                                            isExpandable = textLayoutResult.hasVisualOverflow
+                                        }
+                                    )
+                                    if (isExpandable) {
+                                        IconButton(
+                                            onClick = { isDescriptionExpanded = !isDescriptionExpanded },
+                                            modifier = Modifier.size(28.dp) // 작은 크기로 조절
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "설명 확장",
+                                                tint = Color.Gray,
+                                                modifier = Modifier.size(20.dp) // 아이콘 크기 조절
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
 
@@ -289,29 +367,64 @@ fun StudyRoomDetailScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val completedDaysSet = remember(habitProgressMap, currentUser) {
-                        habitProgressMap[currentUser?.id]?.daily_progress?.mapIndexedNotNull { index, c ->
-                            if (c == '1') index + 1 else null
-                        }?.toSet() ?: emptySet()
+                    val completedDaysSet = remember(habitProgressMap, currentUser, selectedDate) {
+                        val progress = habitProgressMap[currentUser?.id]
+                        if (progress != null && YearMonth.parse(progress.year_month) == YearMonth.from(selectedDate)) {
+                            progress.daily_progress.mapIndexedNotNull { index, c ->
+                                if (c == '1') index + 1 else null
+                            }.toSet()
+                        } else {
+                            emptySet()
+                        }
                     }
 
-                    StudyCalendar(
+                    MonthlyCalendarGrid(
                         selectedDate = selectedDate,
                         tappedDate = tappedDate,
-                        completedDays = completedDaysSet,
-                        onDateTap = { date -> tappedDate = date }
+                        onDateTap = { date -> tappedDate = date },
+                        hasRecord = { date ->
+                            completedDaysSet.contains(date.dayOfMonth)
+                        }
                     )
                 } //달력 끝
 
-                // 랭킹 UI에 동적 데이터 적용
-                Column {
-                    rankingList.forEachIndexed { index, item ->
-                        RankingItem(
-                            rank = index + 1,
-                            name = item.member.nickname,
-                            status = "${item.completedDays}일 완료",
-                            progress = item.progress
+                var isParticipantListExpanded by remember { mutableStateOf(true) }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isParticipantListExpanded = !isParticipantListExpanded }
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = "참여자 (${members.size}명)",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { isParticipantListExpanded = !isParticipantListExpanded }) {
+                        Icon(
+                            imageVector = if (isParticipantListExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (isParticipantListExpanded) "참여자 목록 축소" else "참여자 목록 확장",
+                            tint = Color.White
                         )
+                    }
+                }
+
+                // 랭킹 UI에 동적 데이터 적용
+                Column(modifier = Modifier.animateContentSize()) {
+                    if (isParticipantListExpanded) {
+                        val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
+                        rankingList.forEach { item ->
+                            RankingItem(
+                                name = item.member.nickname,
+                                completedDays = item.completedDays,
+                                totalDaysInMonth = totalDaysInMonth,
+                                progress = item.progress,
+                                animalId = item.member.animal
+                            )
+                        }
                     }
                 }
             }
@@ -466,13 +579,13 @@ fun CompletionStatusDialog(
 }
 
 
-// 이하 다른 @Composable 함수들은 변경 없음
 @Composable
 fun RankingItem(
-    rank: Int,
     name: String,
-    status: String,
-    progress: Float
+    completedDays: Int,
+    totalDaysInMonth: Int,
+    progress: Float,
+    animalId: String?
 ) {
     Row(
         modifier = Modifier
@@ -480,19 +593,43 @@ fun RankingItem(
             .padding(16.dp),
         verticalAlignment = Alignment.Top
     ) {
+        val animal = animalId?.let { AnimalsTable.byId(it) }
+        val spriteData = animal?.let { SpriteMap.map[it] }
+
         Box(
-            modifier = Modifier
-                .size(56.dp)
-                .background(Color(0xFFFFC107)),
+            modifier = Modifier.size(56.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "$rank",
-                color = Color.Black,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            if (spriteData != null) {
+                val imageBitmap = ImageBitmap.imageResource(id = spriteData.idleRes)
+                val frameWidth = imageBitmap.width / spriteData.idleCols
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawImage(
+                        image = imageBitmap,
+                        srcOffset = IntOffset.Zero,
+                        srcSize = IntSize(frameWidth, imageBitmap.height),
+                        dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                        filterQuality = FilterQuality.None
+                    )
+                }
+            } else {
+                // Fallback to the original rank display
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF676767)),
+                    contentAlignment = Alignment.Center
+                ) {
+//                    Text(
+//                        text = "$rank",
+//                        color = Color.Black,
+//                        fontSize = 24.sp,
+//                        fontWeight = FontWeight.Bold
+//                    )
+                }
+            }
         }
+
 
         Spacer(modifier = Modifier.width(16.dp))
 
@@ -505,9 +642,8 @@ fun RankingItem(
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = status,
+                text = "($completedDays / $totalDaysInMonth 일 완료)",
                 fontSize = 14.sp,
                 color = Color.Gray
             )
@@ -517,106 +653,11 @@ fun RankingItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(12.dp),
-//                    .clip(RoundedCornerShape(6.dp)),
                 color = Color(0xFF4CAF50),
-                trackColor = Color.DarkGray
+                trackColor = Color.DarkGray,
+                strokeCap = StrokeCap.Butt,
+                gapSize = 0.dp
             )
         }
-    }
-}
-
-@Composable
-private fun StudyCalendar(
-    selectedDate: LocalDate,
-    completedDays: Set<Int>,
-    tappedDate: LocalDate?,
-    onDateTap: (LocalDate) -> Unit
-) {
-    val today = LocalDate.now()
-    val currentMonth = YearMonth.from(selectedDate)
-
-    val firstDayOfMonth = currentMonth.atDay(1)
-    val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
-    val daysInMonth = currentMonth.lengthOfMonth()
-    val calendarDays =
-        (0 until firstDayOfWeek).map<Int?, LocalDate?> { null } + (1..daysInMonth).map {
-            firstDayOfMonth.withDayOfMonth(
-                it
-            )
-        }
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(7),
-        userScrollEnabled = false,
-        modifier = Modifier.height(240.dp)
-    ) {
-        items(calendarDays.size) { index ->
-            val date = calendarDays[index]
-            if (date != null) {
-                val hasRecord = completedDays.contains(date.dayOfMonth)
-                CalendarDay(
-                    date = date,
-                    hasRecord = hasRecord,
-                    isToday = date == today,
-                    isSelected = date == tappedDate,
-                    onClick = { onDateTap(date) }
-                )
-            } else {
-                Spacer(modifier = Modifier.size(40.dp))
-            }
-        }
-    }
-
-}
-
-
-@Composable
-private fun CalendarDay(
-    date: LocalDate,
-    hasRecord: Boolean,
-    isToday: Boolean,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val dayColor = when (date.dayOfWeek) {
-        DayOfWeek.SATURDAY -> Color(0xFF64B5F6)
-        DayOfWeek.SUNDAY -> Color(0xFFE57373)
-        else -> Color.White
-    }
-
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .padding(4.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.3f), CircleShape)
-            )
-        } else if (isToday) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
-            )
-        }
-
-        if (hasRecord) {
-            Text(
-                text = "🐾",
-                fontSize = 28.sp,
-                color = Color(0xFFFBBF24).copy(alpha = 0.6f),
-            )
-        }
-        Text(
-            text = date.dayOfMonth.toString(),
-            color = dayColor,
-            fontWeight = FontWeight.Medium
-        )
     }
 }

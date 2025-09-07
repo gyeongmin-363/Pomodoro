@@ -47,6 +47,7 @@ fun PortraitMainScreen(
     onPresetToRenameChange: (WorkPreset) -> Unit,
     onShowResetConfirmChange: (Boolean) -> Unit,
     onShowSkipConfirmChange: (Boolean) -> Unit,
+    onSelectPreset: (String) -> Unit,
     contentColor: Color,
     secondaryTextColor: Color,
     highlightColor: Color,
@@ -80,7 +81,7 @@ fun PortraitMainScreen(
                     WorkPresetsManager(
                         presets = state.workPresets,
                         currentPresetId = state.currentWorkId,
-                        onPresetSelected = { viewModel.selectWorkPreset(it) },
+                        onPresetSelected = onSelectPreset,
                         onAddPreset = { viewModel.addWorkPreset() },
                         onDeletePreset = { preset -> onPresetToDeleteChange(preset) },
                         onRenamePreset = { preset -> onPresetToRenameChange(preset) },
