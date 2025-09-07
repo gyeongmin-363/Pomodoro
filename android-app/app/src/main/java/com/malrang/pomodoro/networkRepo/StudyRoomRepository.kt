@@ -211,6 +211,26 @@ class StudyRoomRepository(
     }
 
     /**
+     * 멤버의 닉네임과 동물을 변경합니다.
+     * @param memberId 변경할 멤버의 ID
+     * @param newNickname 새로운 닉네임
+     * @param newAnimalId 새로운 동물의 ID (nullable)
+     */
+    suspend fun updateMemberInfo(memberId: String, newNickname: String, newAnimalId: String?) {
+        postgrest["study_room_members"]
+            .update(
+                {
+                    set("nickname", newNickname)
+                    set("animal", newAnimalId)
+                }
+            ) {
+                filter {
+                    eq("id", memberId)
+                }
+            }
+    }
+
+    /**
      * 챌린지룸에서 멤버를 삭제합니다. (memberId 기반)
      * @param memberId 삭제할 멤버의 ID
      */

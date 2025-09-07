@@ -27,12 +27,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -40,13 +42,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -74,8 +80,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.malrang.pomodoro.R
+import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
+import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
 import com.malrang.pomodoro.ui.screen.stats.MonthlyCalendarGrid
@@ -88,6 +96,172 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.roundToInt
 
+/**
+ * 방 정보 수정을 위한 다이얼로그. CreateStudyRoomDialog 형식을 사용합니다.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditStudyRoomInfoDialog(
+    room: StudyRoom,
+    viewModel: StudyRoomViewModel,
+    onDismiss: () -> Unit
+) {
+    var roomName by remember { mutableStateOf(room.name) }
+    var roomInform by remember { mutableStateOf(room.inform ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("챌린지룸 정보 수정") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = roomName,
+                    onValueChange = {
+                        if (it.length <= 20) { // 20자 이하로 제한
+                            roomName = it
+                        }
+                    },
+                    label = { Text("챌린지룸 이름 (${roomName.length}/20)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true // 한 줄로 제한
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = roomInform,
+                    onValueChange = {
+                        // 줄바꿈 문자의 개수와 텍스트 길이를 동시에 제한
+                        if (it.count { char -> char == '\n' } < 10 && it.length <= 100) {
+                            roomInform = it
+                        }
+                    },
+                    label = { Text("설명 (${roomInform.length}/100)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 1,
+                    maxLines = 10 // 최대 10줄
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val updatedRoom = room.copy(
+                        name = roomName,
+                        inform = roomInform
+                    )
+                    viewModel.updateStudyRoom(room.id, updatedRoom)
+                    onDismiss()
+                },
+                enabled = roomName.isNotBlank() && roomName.length <= 20 && roomInform.length <= 100
+            ) {
+                Text("수정")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
+}
+
+/**
+ * 챌린지룸 내 내 정보(닉네임, 동물) 수정을 위한 다이얼로그. JoinStudyRoomDialog 형식을 사용합니다.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditMyInfoDialog(
+    member: StudyRoomMember,
+    collectedAnimals: Set<Animal>,
+    viewModel: StudyRoomViewModel,
+    onDismiss: () -> Unit
+) {
+    var nickname by remember { mutableStateOf(member.nickname) }
+    // Find the initial Animal object from the member's animal ID
+    val initialAnimal = remember(member.animal, collectedAnimals) {
+        collectedAnimals.find { it.id == member.animal }
+    }
+    var selectedAnimal by remember { mutableStateOf(initialAnimal) }
+    var expanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("내 정보 수정") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = nickname,
+                    onValueChange = {
+                        if (it.length <= 10) { // 10자 이하로 제한
+                            nickname = it
+                        }
+                    },
+                    label = { Text("닉네임 (${nickname.length}/10)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true // 한 줄로 제한
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier.menuAnchor(),
+                        readOnly = true,
+                        value = selectedAnimal?.displayName ?: "동물 선택 (선택사항)",
+                        onValueChange = {},
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("선택 안함") },
+                            onClick = {
+                                selectedAnimal = null
+                                expanded = false
+                            }
+                        )
+                        collectedAnimals.forEach { animal ->
+                            DropdownMenuItem(
+                                text = { Text(animal.displayName) },
+                                onClick = {
+                                    selectedAnimal = animal
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    member.study_room_id?.let {
+                        viewModel.updateMyInfoInRoom(
+                            memberId = member.id,
+                            studyRoomId = it,
+                            newNickname = nickname,
+                            newAnimalId = selectedAnimal?.id
+                        )
+                    }
+                    onDismiss()
+                },
+                enabled = nickname.isNotBlank()
+            ) {
+                Text("수정")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
+}
+
 
 /**
  * 챌린지룸 상세 정보를 표시하는 화면 Composable
@@ -97,6 +271,7 @@ import kotlin.math.roundToInt
 fun StudyRoomDetailScreen(
     roomId: String?,
     roomVm: StudyRoomViewModel,
+    collectAnimal : Set<Animal>,
     onNavigateBack: () -> Unit,
     onNavigateToChat: (String) -> Unit
 ) {
@@ -113,6 +288,8 @@ fun StudyRoomDetailScreen(
 
     var showDelegateDialog by remember { mutableStateOf(false) }
     var showLeaveConfirmDialog by remember { mutableStateOf(false) }
+    var showEditMyInfoDialog by remember { mutableStateOf(false) }
+    var showEditRoomInfoDialog by remember { mutableStateOf(false) }
 
 
     // roomId가 변경되거나, 달력의 월(selectedDate)이 변경될 때 데이터를 새로고침합니다.
@@ -242,6 +419,41 @@ fun StudyRoomDetailScreen(
 
                             // 방장/멤버에 따라 다른 메뉴 아이템 표시
                             val isCreator = room?.creator_id == currentUser?.id
+
+                            // 내 정보 수정
+                            DropdownMenuItem(
+                                text = { Text("내 정보 수정") },
+                                onClick = {
+                                    showEditMyInfoDialog = true
+                                    menuExpanded = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Outlined.Person,
+                                        contentDescription = "내 정보 수정"
+                                    )
+                                }
+                            )
+
+                            // 방 정보 수정 (방장일 경우)
+                            if (isCreator) {
+                                DropdownMenuItem(
+                                    text = { Text("방 정보 수정") },
+                                    onClick = {
+                                        showEditRoomInfoDialog = true
+                                        menuExpanded = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "방 정보 수정"
+                                        )
+                                    }
+                                )
+                            }
+
+                            HorizontalDivider()
+
                             val hasOtherMembers = members.any { it.user_id != currentUser?.id }
 
                             if (isCreator && hasOtherMembers) {
@@ -527,6 +739,30 @@ fun StudyRoomDetailScreen(
                 date = tappedDate!!,
                 completers = completers,
                 onDismiss = { tappedDate = null }
+            )
+        }
+
+        val myMemberInfo = remember(members, currentUser) {
+            members.find { it.user_id == currentUser?.id }
+        }
+
+        if (showEditMyInfoDialog && myMemberInfo != null) {
+            // JoinStudyRoomDialog 형식을 따르기 위해 collectedAnimals 파라미터가 필요합니다.
+            // 현재 화면에서는 사용자가 수집한 동물 목록 데이터가 없으므로 빈 목록을 전달합니다.
+            // 실제 구현 시에는 이 부분에 사용자 동물 데이터를 전달해야 합니다.
+            EditMyInfoDialog(
+                member = myMemberInfo,
+                collectedAnimals = collectAnimal, // 빈 Set 전달
+                viewModel = roomVm,
+                onDismiss = { showEditMyInfoDialog = false }
+            )
+        }
+
+        if (showEditRoomInfoDialog && room != null) {
+            EditStudyRoomInfoDialog(
+                room = room,
+                viewModel = roomVm,
+                onDismiss = { showEditRoomInfoDialog = false }
             )
         }
 

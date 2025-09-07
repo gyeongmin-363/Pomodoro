@@ -151,6 +151,7 @@ fun PomodoroApp(
                     StudyRoomDetailScreen(
                         roomId = roomId,
                         roomVm = roomVm,
+                        collectAnimal = collectAnimal,
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateToChat = { studyRoomId ->
                             navController.navigate("chat/$studyRoomId")
