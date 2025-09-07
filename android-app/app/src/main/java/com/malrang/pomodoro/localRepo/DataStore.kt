@@ -45,13 +45,13 @@ object DSKeys {
     /** 알림 권한 거부 '횟수'를 저장하기 위한 Int 키 */
     val NOTIFICATION_PERMISSION_DENIAL_COUNT = intPreferencesKey("notification_permission_denial_count")
 
-    // [추가] 서비스 종료 시 복원을 위한 타이머 상태 저장 키
+    //  서비스 종료 시 복원을 위한 타이머 상태 저장 키
     val SAVED_TIME_LEFT = intPreferencesKey("saved_time_left")
     val SAVED_CURRENT_MODE = stringPreferencesKey("saved_current_mode")
     val SAVED_TOTAL_SESSIONS = intPreferencesKey("saved_total_sessions")
 }
 
-// [추가] 불러온 타이머 상태를 담기 위한 데이터 클래스
+//  불러온 타이머 상태를 담기 위한 데이터 클래스
 data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSessions: Int)
 
 
@@ -62,7 +62,6 @@ data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSe
 class PomodoroRepository(private val context: Context) {
     private val gson = Gson()
 
-    // ... (기존 함수 생략) ...
     suspend fun loadSeenIds(): Set<String> =
         context.dataStore.data.first()[DSKeys.SEEN_IDS] ?: emptySet()
     suspend fun saveSeenIds(ids: Set<String>) {
@@ -142,7 +141,7 @@ class PomodoroRepository(private val context: Context) {
     }
 
     /**
-     * [추가] 일시정지 시 타이머 상태를 DataStore에 저장합니다.
+     *  일시정지 시 타이머 상태를 DataStore에 저장합니다.
      */
     suspend fun saveTimerState(timeLeft: Int, currentMode: Mode, totalSessions: Int) {
         context.dataStore.edit { preferences ->
@@ -153,7 +152,7 @@ class PomodoroRepository(private val context: Context) {
     }
 
     /**
-     * [추가] 저장된 타이머 상태를 DataStore에서 불러옵니다.
+     *  저장된 타이머 상태를 DataStore에서 불러옵니다.
      * @return 저장된 상태가 있으면 SavedTimerState 객체를, 없으면 null을 반환합니다.
      */
     suspend fun loadTimerState(): SavedTimerState? {
@@ -170,7 +169,7 @@ class PomodoroRepository(private val context: Context) {
     }
 
     /**
-     * [추가] 저장된 타이머 상태를 DataStore에서 삭제합니다. (리셋 시 호출)
+     *  저장된 타이머 상태를 DataStore에서 삭제합니다. (리셋 시 호출)
      */
     suspend fun clearTimerState() {
         context.dataStore.edit { preferences ->
