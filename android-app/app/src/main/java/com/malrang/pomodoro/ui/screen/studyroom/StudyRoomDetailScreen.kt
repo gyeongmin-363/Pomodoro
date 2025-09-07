@@ -1,6 +1,7 @@
 package com.malrang.pomodoro.ui.screen.studyroom
 
 import android.content.Intent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,10 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,7 +39,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,13 +50,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
+import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
 import com.malrang.pomodoro.ui.theme.backgroundColor
@@ -69,6 +78,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 
 /**
@@ -305,12 +315,14 @@ fun StudyRoomDetailScreen(
 
                 // 랭킹 UI에 동적 데이터 적용
                 Column {
-                    rankingList.forEachIndexed { index, item ->
+                    val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
+                    rankingList.forEach { item ->
                         RankingItem(
-                            rank = index + 1,
                             name = item.member.nickname,
-                            status = "${item.completedDays}일 완료",
-                            progress = item.progress
+                            completedDays = item.completedDays,
+                            totalDaysInMonth = totalDaysInMonth,
+                            progress = item.progress,
+                            animalId = item.member.animal
                         )
                     }
                 }
@@ -466,13 +478,13 @@ fun CompletionStatusDialog(
 }
 
 
-// 이하 다른 @Composable 함수들은 변경 없음
 @Composable
 fun RankingItem(
-    rank: Int,
     name: String,
-    status: String,
-    progress: Float
+    completedDays: Int,
+    totalDaysInMonth: Int,
+    progress: Float,
+    animalId: String?
 ) {
     Row(
         modifier = Modifier
@@ -480,19 +492,43 @@ fun RankingItem(
             .padding(16.dp),
         verticalAlignment = Alignment.Top
     ) {
+        val animal = animalId?.let { AnimalsTable.byId(it) }
+        val spriteData = animal?.let { SpriteMap.map[it] }
+
         Box(
-            modifier = Modifier
-                .size(56.dp)
-                .background(Color(0xFFFFC107)),
+            modifier = Modifier.size(56.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "$rank",
-                color = Color.Black,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            if (spriteData != null) {
+                val imageBitmap = ImageBitmap.imageResource(id = spriteData.idleRes)
+                val frameWidth = imageBitmap.width / spriteData.idleCols
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawImage(
+                        image = imageBitmap,
+                        srcOffset = IntOffset.Zero,
+                        srcSize = IntSize(frameWidth, imageBitmap.height),
+                        dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                        filterQuality = FilterQuality.None
+                    )
+                }
+            } else {
+                // Fallback to the original rank display
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF676767)),
+                    contentAlignment = Alignment.Center
+                ) {
+//                    Text(
+//                        text = "$rank",
+//                        color = Color.Black,
+//                        fontSize = 24.sp,
+//                        fontWeight = FontWeight.Bold
+//                    )
+                }
+            }
         }
+
 
         Spacer(modifier = Modifier.width(16.dp))
 
@@ -500,16 +536,25 @@ fun RankingItem(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = name,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = status,
-                fontSize = 14.sp,
-                color = Color.Gray
+                text = buildAnnotatedString {
+                    withStyle(
+                        style = SpanStyle(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    ) {
+                        append(name)
+                    }
+                    withStyle(
+                        style = SpanStyle(
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    ) {
+                        append(" ($completedDays / $totalDaysInMonth 일 완료)")
+                    }
+                }
             )
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
@@ -517,9 +562,10 @@ fun RankingItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(12.dp),
-//                    .clip(RoundedCornerShape(6.dp)),
                 color = Color(0xFF4CAF50),
-                trackColor = Color.DarkGray
+                trackColor = Color.DarkGray,
+                strokeCap = StrokeCap.Butt,
+                gapSize = 0.dp
             )
         }
     }

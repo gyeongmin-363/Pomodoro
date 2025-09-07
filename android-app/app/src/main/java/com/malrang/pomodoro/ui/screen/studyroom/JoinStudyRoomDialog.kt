@@ -66,7 +66,7 @@ fun JoinStudyRoomDialog(
                     OutlinedTextField(
                         modifier = Modifier.menuAnchor(),
                         readOnly = true,
-                        value = selectedAnimal?.name ?: "동물 선택 (선택사항)",
+                        value = selectedAnimal?.displayName ?: "동물 선택 (선택사항)",
                         onValueChange = {},
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     )
@@ -76,7 +76,7 @@ fun JoinStudyRoomDialog(
                     ) {
                         collectedAnimals.forEach { animal ->
                             DropdownMenuItem(
-                                text = { Text(animal.name) },
+                                text = { Text(animal.displayName) },
                                 onClick = {
                                     selectedAnimal = animal
                                     expanded = false
