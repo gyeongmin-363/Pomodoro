@@ -75,6 +75,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
     var showResetConfirm by remember { mutableStateOf(false) }
     var showSkipConfirm by remember { mutableStateOf(false) }
+    var presetIdToSelect by remember { mutableStateOf<String?>(null) }
+
 
     // 배경에 따른 컨텐츠 색상 결정
     val contentColor = if (state.useGrassBackground) Color.Black else Color.White
@@ -149,6 +151,23 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             }
         }
     ) {
+        if (presetIdToSelect != null) {
+            PixelArtConfirmDialog(
+                onDismissRequest = { presetIdToSelect = null },
+                title = "Work 변경",
+                confirmText = "확인",
+                onConfirm = {
+                    viewModel.selectWorkPreset(presetIdToSelect!!)
+                    presetIdToSelect = null
+                }
+            ) {
+                Text(
+                    "Work를 변경하면 현재 진행상황이 초기화됩니다. 계속하시겠습니까?",
+                    color = secondaryTextColor
+                )
+            }
+        }
+
         if (presetToRename != null) {
             PixelArtConfirmDialog(
                 onDismissRequest = { presetToRename = null },
@@ -290,6 +309,13 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 scope.launch { drawerState.open() }
             }
 
+            val onSelectPreset: (String) -> Unit = { presetId ->
+                if (state.currentWorkId != presetId) {
+                    presetIdToSelect = presetId
+                }
+            }
+
+
             val configuration = LocalConfiguration.current
             when (configuration.orientation) {
                 Configuration.ORIENTATION_LANDSCAPE -> {
@@ -305,6 +331,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                         },
                         onShowResetConfirmChange = { showResetConfirm = it },
                         onShowSkipConfirmChange = { showSkipConfirm = it },
+                        onSelectPreset = onSelectPreset,
                         contentColor = contentColor,
                         secondaryTextColor = secondaryTextColor,
                         highlightColor = highlightColor,
@@ -325,6 +352,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                         },
                         onShowResetConfirmChange = { showResetConfirm = it },
                         onShowSkipConfirmChange = { showSkipConfirm = it },
+                        onSelectPreset = onSelectPreset,
                         contentColor = contentColor,
                         secondaryTextColor = secondaryTextColor,
                         highlightColor = highlightColor,
