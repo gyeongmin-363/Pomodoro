@@ -65,10 +65,16 @@ fun PomodoroApp(
         }
     }
 
-    // ✅ [추가] StudyRoomViewModel의 네비게이션 이벤트를 처리합니다.
+    // ✅ [수정] StudyRoomViewModel의 네비게이션 이벤트를 처리합니다.
     LaunchedEffect(Unit) {
         roomVm.navigationEvents.collect { route ->
-            navController.navigate(route)
+            if (route == "navigate_back") {
+                // "navigate_back" 이벤트는 이전 화면으로 돌아가도록 처리
+                navController.popBackStack()
+            } else {
+                // 그 외의 이벤트는 해당 경로로 이동
+                navController.navigate(route)
+            }
         }
     }
 

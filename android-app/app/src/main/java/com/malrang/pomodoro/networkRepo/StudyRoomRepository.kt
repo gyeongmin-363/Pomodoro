@@ -114,6 +114,20 @@ class StudyRoomRepository(
     }
 
     /**
+     * 챌린지룸의 방장을 변경합니다.
+     * @param roomId 변경할 챌린지룸의 ID
+     * @param newCreatorId 새로운 방장의 사용자 ID
+     */
+    suspend fun updateRoomCreator(roomId: String, newCreatorId: String) {
+        postgrest["study_rooms"]
+            .update({ set("creator_id", newCreatorId) }) {
+                filter {
+                    eq("id", roomId)
+                }
+            }
+    }
+
+    /**
      * 챌린지룸을 삭제합니다.
      * @param roomId 삭제할 챌린지룸의 ID
      */
@@ -181,7 +195,7 @@ class StudyRoomRepository(
     }
 
     /**
-     * 챌린지룸에서 멤버를 삭제합니다.
+     * 챌린지룸에서 멤버를 삭제합니다. (memberId 기반)
      * @param memberId 삭제할 멤버의 ID
      */
     suspend fun removeMemberFromStudyRoom(memberId: String) {
@@ -189,6 +203,31 @@ class StudyRoomRepository(
             .delete {
                 filter {
                     eq("id", memberId)
+                }
+            }
+    }
+
+    /**
+     * 챌린지룸에서 특정 사용자를 삭제하고, 관련 habit_summary 데이터도 함께 삭제합니다.
+     * @param roomId 챌린지룸의 ID
+     * @param userId 삭제할 사용자의 ID
+     */
+    suspend fun removeMemberFromStudyRoomByUserId(roomId: String, userId: String) {
+        // 1. 해당 사용자의 habit_summary 데이터 먼저 삭제
+        postgrest["habit_summary"]
+            .delete {
+                filter {
+                    eq("study_room_id", roomId)
+                    eq("user_id", userId)
+                }
+            }
+
+        // 2. study_room_members 테이블에서 사용자 삭제
+        postgrest["study_room_members"]
+            .delete {
+                filter {
+                    eq("study_room_id", roomId)
+                    eq("user_id", userId)
                 }
             }
     }
@@ -257,4 +296,3 @@ class StudyRoomRepository(
         postgrest["chat_messages"].insert(chatMessage)
     }
 }
-
