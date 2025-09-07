@@ -516,8 +516,8 @@ fun RankingItem(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(12.dp)
-                    .clip(RoundedCornerShape(6.dp)),
+                    .height(12.dp),
+//                    .clip(RoundedCornerShape(6.dp)),
                 color = Color(0xFF4CAF50),
                 trackColor = Color.DarkGray
             )
