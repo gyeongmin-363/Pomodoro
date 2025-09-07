@@ -72,7 +72,7 @@ import java.util.Locale
 
 
 /**
- * 스터디룸 상세 정보를 표시하는 화면 Composable
+ * 챌린지룸 상세 정보를 표시하는 화면 Composable
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -171,16 +171,16 @@ fun StudyRoomDetailScreen(
                             action = Intent.ACTION_SEND
                             putExtra(
                                 Intent.EXTRA_TEXT,
-                                "[뽀모도로 스터디] '${room?.name}' 스터디룸에 참여해보세요!\n$shareUrl"
+                                "[픽뽀] '${room?.name}' 챌린지룸에 참여해보세요!\n$shareUrl"
                             )
                             type = "text/plain"
                         }
-                        val shareIntent = Intent.createChooser(sendIntent, "스터디룸 공유")
+                        val shareIntent = Intent.createChooser(sendIntent, "챌린지룸 공유")
                         context.startActivity(shareIntent)
                     }) {
                         Icon(
                             Icons.Default.Share,
-                            contentDescription = "스터디룸 공유",
+                            contentDescription = "챌린지룸 공유",
                             tint = Color.White
                         )
                     }

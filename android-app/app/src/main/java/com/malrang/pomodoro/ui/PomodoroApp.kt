@@ -131,7 +131,7 @@ fun PomodoroApp(
                     )
                 }
 
-                // 스터디룸 상세 화면을 위한 composable 경로
+                // 챌린지룸 상세 화면을 위한 composable 경로
                 composable(
                     route = "studyRoomDetail/{roomId}",
                     arguments = listOf(navArgument("roomId") { type = NavType.StringType })

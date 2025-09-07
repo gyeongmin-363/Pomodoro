@@ -219,7 +219,7 @@ fun ChallengeScreen(
     }
 
 
-    // 스터디룸 생성 다이얼로그
+    // 챌린지룸 생성 다이얼로그
     if (uiState.showCreateStudyRoomDialog) {
         currentUser?.let { user ->
             CreateStudyRoomDialog(
@@ -230,7 +230,7 @@ fun ChallengeScreen(
         }
     }
 
-    // 스터디룸 참여 다이얼로그
+    // 챌린지룸 참여 다이얼로그
     uiState.showJoinStudyRoomDialog?.let { room ->
         currentUser?.let { user ->
             JoinStudyRoomDialog(

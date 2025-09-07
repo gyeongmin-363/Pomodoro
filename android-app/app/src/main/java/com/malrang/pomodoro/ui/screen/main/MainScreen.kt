@@ -129,8 +129,8 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
                     NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.ThumbUp, contentDescription = "스터디룸") },
-                        label = { Text("스터디룸") },
+                        icon = { Icon(Icons.Default.ThumbUp, contentDescription = "챌린지룸") },
+                        label = { Text("챌린지룸") },
                         selected = false,
                         onClick = {
                             viewModel.navigateTo(Screen.StudyRoom)
