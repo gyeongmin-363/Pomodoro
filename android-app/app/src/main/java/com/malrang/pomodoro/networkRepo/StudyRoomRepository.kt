@@ -1,19 +1,10 @@
 package com.malrang.pomodoro.networkRepo
 
-import android.R.attr.order
-import android.util.Log
-import com.malrang.pomodoro.networkRepo.SupabaseProvider.client
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.query.Columns
-import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
-import io.github.jan.supabase.realtime.PostgresAction
-import io.github.jan.supabase.realtime.PostgresChangeFilter
-import io.github.jan.supabase.realtime.channel
-import io.github.jan.supabase.realtime.postgresChangeFlow
-import io.github.jan.supabase.realtime.realtime
 import io.github.jan.supabase.realtime.selectAsFlow
 import kotlinx.coroutines.flow.Flow
 
@@ -114,10 +105,49 @@ class StudyRoomRepository(
     }
 
     /**
-     * 챌린지룸을 삭제합니다.
+     * 챌린지룸의 방장을 변경합니다.
+     * @param roomId 변경할 챌린지룸의 ID
+     * @param newCreatorId 새로운 방장의 사용자 ID
+     */
+    suspend fun updateRoomCreator(roomId: String, newCreatorId: String) {
+        postgrest["study_rooms"]
+            .update({ set("creator_id", newCreatorId) }) {
+                filter {
+                    eq("id", roomId)
+                }
+            }
+    }
+
+    /**
+     * 챌린지룸과 관련된 모든 하위 데이터(채팅, 멤버, 진행상황)를 삭제한 후, 챌린지룸을 삭제합니다.
      * @param roomId 삭제할 챌린지룸의 ID
      */
     suspend fun deleteStudyRoom(roomId: String) {
+        // 1. chat_messages 에서 해당 챌린지룸의 모든 메시지 삭제
+        postgrest["chat_messages"]
+            .delete {
+                filter {
+                    eq("study_room_id", roomId)
+                }
+            }
+
+        // 2. habit_summary 에서 해당 챌린지룸의 모든 진행 상황 데이터 삭제
+        postgrest["habit_summary"]
+            .delete {
+                filter {
+                    eq("study_room_id", roomId)
+                }
+            }
+
+        // 3. study_room_members 에서 해당 챌린지룸의 모든 멤버 삭제
+        postgrest["study_room_members"]
+            .delete {
+                filter {
+                    eq("study_room_id", roomId)
+                }
+            }
+
+        // 4. 모든 관련 데이터가 삭제된 후, study_rooms 에서 챌린지룸 최종 삭제
         postgrest["study_rooms"]
             .delete {
                 filter {
@@ -181,7 +211,7 @@ class StudyRoomRepository(
     }
 
     /**
-     * 챌린지룸에서 멤버를 삭제합니다.
+     * 챌린지룸에서 멤버를 삭제합니다. (memberId 기반)
      * @param memberId 삭제할 멤버의 ID
      */
     suspend fun removeMemberFromStudyRoom(memberId: String) {
@@ -189,6 +219,31 @@ class StudyRoomRepository(
             .delete {
                 filter {
                     eq("id", memberId)
+                }
+            }
+    }
+
+    /**
+     * 챌린지룸에서 특정 사용자를 삭제하고, 관련 habit_summary 데이터도 함께 삭제합니다.
+     * @param roomId 챌린지룸의 ID
+     * @param userId 삭제할 사용자의 ID
+     */
+    suspend fun removeMemberFromStudyRoomByUserId(roomId: String, userId: String) {
+        // 1. 해당 사용자의 habit_summary 데이터 먼저 삭제
+        postgrest["habit_summary"]
+            .delete {
+                filter {
+                    eq("study_room_id", roomId)
+                    eq("user_id", userId)
+                }
+            }
+
+        // 2. study_room_members 테이블에서 사용자 삭제
+        postgrest["study_room_members"]
+            .delete {
+                filter {
+                    eq("study_room_id", roomId)
+                    eq("user_id", userId)
                 }
             }
     }
@@ -257,4 +312,3 @@ class StudyRoomRepository(
         postgrest["chat_messages"].insert(chatMessage)
     }
 }
-

@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -42,7 +43,6 @@ import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.AuthViewModel
-import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -53,7 +53,8 @@ fun ChallengeScreen(
     authVM: AuthViewModel,
     roomVM: StudyRoomViewModel,
     inviteStudyRoomId: String?,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToDelete: () -> Unit
 ) {
     val authState by authVM.uiState.collectAsState()
 
@@ -106,12 +107,24 @@ fun ChallengeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("챌린지룸", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "돌아가기",
-                        tint = Color.White
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // 👇 '내 챌린지룸' 탭일 때만 삭제 버튼 표시
+                    if (selectedTabIndex == 0) {
+                        IconButton(onClick = onNavigateToDelete) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "챌린지룸 삭제",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "돌아가기",
+                            tint = Color.White
+                        )
+                    }
                 }
             }
             TabRow(

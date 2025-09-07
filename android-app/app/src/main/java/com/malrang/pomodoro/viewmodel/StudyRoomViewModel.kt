@@ -1,20 +1,16 @@
 package com.malrang.pomodoro.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import co.touchlab.kermit.Message
 import com.malrang.pomodoro.dataclass.ui.StudyRoomUiState
 import com.malrang.pomodoro.networkRepo.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -32,6 +28,48 @@ class StudyRoomViewModel(
     // 네비게이션 이벤트를 위한 SharedFlow
     private val _navigationEvents = MutableSharedFlow<String>()
     val navigationEvents = _navigationEvents.asSharedFlow()
+
+    /**
+     * 사용자가 생성한 챌린지룸 중 멤버가 없는 (삭제 가능한) 챌린지룸 목록을 불러옵니다.
+     */
+    fun loadDeletableStudyRooms() {
+        _studyRoomUiState.value.currentUser?.id?.let { userId ->
+            _studyRoomUiState.update { it.copy(isLoading = true) }
+            viewModelScope.launch {
+                val createdRooms = networkRepo.findStudyRoomsByCreator(userId)
+                val deletableRooms = mutableListOf<StudyRoom>()
+
+                for (room in createdRooms) {
+                    val members = networkRepo.getStudyRoomMembers(room.id)
+                    // 멤버가 없을 경우 삭제 가능 목록에 추가
+                    if (members.size <= 1) {
+                        deletableRooms.add(room)
+                    }
+                }
+                _studyRoomUiState.update {
+                    it.copy(
+                        deletableStudyRooms = deletableRooms,
+                        isLoading = false
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * ID 목록을 받아 여러 챌린지룸을 삭제합니다.
+     */
+    fun deleteStudyRooms(roomIds: List<String>) {
+        viewModelScope.launch {
+            roomIds.forEach { roomId ->
+                networkRepo.deleteStudyRoom(roomId)
+            }
+            // 삭제 후 메인 챌린지룸 목록을 새로고침합니다.
+            _studyRoomUiState.value.currentUser?.id?.let {
+                loadUserStudyRooms(it)
+            }
+        }
+    }
 
     // MARK: - Chat
 
@@ -160,23 +198,8 @@ class StudyRoomViewModel(
         }
     }
 
-    fun deleteStudyRoom(roomId: String) {
-        viewModelScope.launch {
-            networkRepo.deleteStudyRoom(roomId)
-            if (_studyRoomUiState.value.currentStudyRoom?.id == roomId) {
-                _studyRoomUiState.update { it.copy(currentStudyRoom = null, currentRoomMembers = emptyList()) }
-            }
-        }
-    }
 
     // MARK: - StudyRoomMember Functions
-
-    fun addMemberToStudyRoom(member: StudyRoomMember) {
-        viewModelScope.launch {
-            networkRepo.addMemberToStudyRoom(member)
-            loadStudyRoomMembers(member.study_room_id!!)
-        }
-    }
 
     fun loadStudyRoomMembers(studyRoomId: String) {
         viewModelScope.launch {
@@ -185,10 +208,25 @@ class StudyRoomViewModel(
         }
     }
 
-    fun removeMemberFromStudyRoom(memberId: String, studyRoomId: String) {
+
+    /**
+     * 현재 사용자가 스터디룸에서 나갑니다.
+     */
+    fun leaveStudyRoom(roomId: String) {
         viewModelScope.launch {
-            networkRepo.removeMemberFromStudyRoom(memberId)
-            loadStudyRoomMembers(studyRoomId)
+            val userId = _studyRoomUiState.value.currentUser?.id ?: return@launch
+            networkRepo.removeMemberFromStudyRoomByUserId(roomId, userId)
+            // 방 나간 후 이전 화면으로 이동
+            _navigationEvents.emit("navigate_back")
+        }
+    }
+
+    /**
+     * 방장을 다른 멤버에게 위임
+     */
+    fun delegateAdmin(roomId: String, newCreatorId: String) {
+        viewModelScope.launch {
+            networkRepo.updateRoomCreator(roomId, newCreatorId)
         }
     }
 
