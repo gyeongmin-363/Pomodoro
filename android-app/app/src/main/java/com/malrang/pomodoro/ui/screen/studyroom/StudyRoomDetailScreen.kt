@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,7 +51,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,6 +84,7 @@ import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
+import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.ui.screen.stats.MonthlyCalendarGrid
 import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
@@ -97,9 +96,8 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * 방 정보 수정을 위한 다이얼로그. CreateStudyRoomDialog 형식을 사용합니다.
+ * 방 정보 수정을 위한 다이얼로그. PixelArtConfirmDialog를 사용합니다.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditStudyRoomInfoDialog(
     room: StudyRoom,
@@ -109,63 +107,52 @@ fun EditStudyRoomInfoDialog(
     var roomName by remember { mutableStateOf(room.name) }
     var roomInform by remember { mutableStateOf(room.inform ?: "") }
 
-    AlertDialog(
+    PixelArtConfirmDialog(
         onDismissRequest = onDismiss,
-        title = { Text("챌린지룸 정보 수정") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = roomName,
-                    onValueChange = {
-                        if (it.length <= 20) { // 20자 이하로 제한
-                            roomName = it
-                        }
-                    },
-                    label = { Text("챌린지룸 이름 (${roomName.length}/20)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true // 한 줄로 제한
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = roomInform,
-                    onValueChange = {
-                        // 줄바꿈 문자의 개수와 텍스트 길이를 동시에 제한
-                        if (it.count { char -> char == '\n' } < 10 && it.length <= 100) {
-                            roomInform = it
-                        }
-                    },
-                    label = { Text("설명 (${roomInform.length}/100)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 1,
-                    maxLines = 10 // 최대 10줄
-                )
-            }
+        title = "챌린지룸 정보 수정",
+        confirmText = "수정",
+        onConfirm = {
+            val updatedRoom = room.copy(
+                name = roomName,
+                inform = roomInform
+            )
+            viewModel.updateStudyRoom(room.id, updatedRoom)
+            onDismiss()
         },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val updatedRoom = room.copy(
-                        name = roomName,
-                        inform = roomInform
-                    )
-                    viewModel.updateStudyRoom(room.id, updatedRoom)
-                    onDismiss()
+        confirmButtonEnabled = roomName.isNotBlank() && roomName.length <= 20 && roomInform.length <= 100
+    ) {
+        Column {
+            OutlinedTextField(
+                value = roomName,
+                onValueChange = {
+                    if (it.length <= 20) { // 20자 이하로 제한
+                        roomName = it
+                    }
                 },
-                enabled = roomName.isNotBlank() && roomName.length <= 20 && roomInform.length <= 100
-            ) {
-                Text("수정")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
+                label = { Text("챌린지룸 이름 (${roomName.length}/20)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true // 한 줄로 제한
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = roomInform,
+                onValueChange = {
+                    // 줄바꿈 문자의 개수와 텍스트 길이를 동시에 제한
+                    if (it.count { char -> char == '\n' } < 10 && it.length <= 100) {
+                        roomInform = it
+                    }
+                },
+                label = { Text("설명 (${roomInform.length}/100)") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 1,
+                maxLines = 10 // 최대 10줄
+            )
         }
-    )
+    }
 }
 
 /**
- * 챌린지룸 내 내 정보(닉네임, 동물) 수정을 위한 다이얼로그. JoinStudyRoomDialog 형식을 사용합니다.
+ * 챌린지룸 내 내 정보(닉네임, 동물) 수정을 위한 다이얼로그. PixelArtConfirmDialog를 사용합니다.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,83 +170,72 @@ fun EditMyInfoDialog(
     var selectedAnimal by remember { mutableStateOf(initialAnimal) }
     var expanded by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    PixelArtConfirmDialog(
         onDismissRequest = onDismiss,
-        title = { Text("내 정보 수정") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = nickname,
-                    onValueChange = {
-                        if (it.length <= 10) { // 10자 이하로 제한
-                            nickname = it
-                        }
-                    },
-                    label = { Text("닉네임 (${nickname.length}/10)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true // 한 줄로 제한
+        title = "내 정보 수정",
+        confirmText = "수정",
+        onConfirm = {
+            member.study_room_id?.let {
+                viewModel.updateMyInfoInRoom(
+                    memberId = member.id,
+                    studyRoomId = it,
+                    newNickname = nickname,
+                    newAnimalId = selectedAnimal?.id
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+            }
+            onDismiss()
+        },
+        confirmButtonEnabled = nickname.isNotBlank()
+    ) {
+        Column {
+            OutlinedTextField(
+                value = nickname,
+                onValueChange = {
+                    if (it.length <= 10) { // 10자 이하로 제한
+                        nickname = it
+                    }
+                },
+                label = { Text("닉네임 (${nickname.length}/10)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true // 한 줄로 제한
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-                ExposedDropdownMenuBox(
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                OutlinedTextField(
+                    modifier = Modifier.menuAnchor(),
+                    readOnly = true,
+                    value = selectedAnimal?.displayName ?: "동물 선택 (선택사항)",
+                    onValueChange = {},
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                )
+                ExposedDropdownMenu(
                     expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
+                    onDismissRequest = { expanded = false }
                 ) {
-                    OutlinedTextField(
-                        modifier = Modifier.menuAnchor(),
-                        readOnly = true,
-                        value = selectedAnimal?.displayName ?: "동물 선택 (선택사항)",
-                        onValueChange = {},
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    DropdownMenuItem(
+                        text = { Text("선택 안함") },
+                        onClick = {
+                            selectedAnimal = null
+                            expanded = false
+                        }
                     )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
+                    collectedAnimals.forEach { animal ->
                         DropdownMenuItem(
-                            text = { Text("선택 안함") },
+                            text = { Text(animal.displayName) },
                             onClick = {
-                                selectedAnimal = null
+                                selectedAnimal = animal
                                 expanded = false
                             }
                         )
-                        collectedAnimals.forEach { animal ->
-                            DropdownMenuItem(
-                                text = { Text(animal.displayName) },
-                                onClick = {
-                                    selectedAnimal = animal
-                                    expanded = false
-                                }
-                            )
-                        }
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    member.study_room_id?.let {
-                        viewModel.updateMyInfoInRoom(
-                            memberId = member.id,
-                            studyRoomId = it,
-                            newNickname = nickname,
-                            newAnimalId = selectedAnimal?.id
-                        )
-                    }
-                    onDismiss()
-                },
-                enabled = nickname.isNotBlank()
-            ) {
-                Text("수정")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
         }
-    )
+    }
 }
 
 
@@ -982,7 +958,7 @@ fun RankingItem(
 }
 
 /**
- * 방장 위임 시 멤버를 선택하는 다이얼로그
+ * 방장 위임 시 멤버를 선택하는 다이얼로그. PixelArtConfirmDialog를 사용합니다.
  */
 @Composable
 fun DelegateAdminDialog(
@@ -992,53 +968,46 @@ fun DelegateAdminDialog(
 ) {
     var selectedUserId by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
+    PixelArtConfirmDialog(
         onDismissRequest = onDismiss,
-        title = { Text("방장 위임하기") },
-        text = {
-            Column {
-                Text("새로운 방장을 선택해주세요. 방장을 위임하면 회원님은 방에서 나가게 됩니다.")
-                Spacer(modifier = Modifier.height(16.dp))
-                LazyColumn {
-                    items(members) { member ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedUserId = member.user_id }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (selectedUserId == member.user_id),
-                                onClick = { selectedUserId = member.user_id }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(member.nickname)
-                        }
+        title = "방장 위임하기",
+        confirmText = "확인",
+        onConfirm = { selectedUserId?.let { onConfirm(it) } },
+        confirmButtonEnabled = selectedUserId != null
+    ) {
+        Column {
+            Text(
+                text = "새로운 방장을 선택해주세요. 방장을 위임하면 회원님은 방에서 나가게 됩니다.",
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            LazyColumn {
+                items(members) { member ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedUserId = member.user_id }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (selectedUserId == member.user_id),
+                            onClick = { selectedUserId = member.user_id }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = member.nickname,
+                            color = Color.White
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    selectedUserId?.let { onConfirm(it) }
-                },
-                enabled = selectedUserId != null
-            ) {
-                Text("확인")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("취소")
-            }
         }
-    )
+    }
 }
 
 /**
- * 작업을 재확인하는 공용 다이얼로그
+ * 작업을 재확인하는 공용 다이얼로그. PixelArtConfirmDialog를 사용합니다.
  */
 @Composable
 fun ConfirmationDialog(
@@ -1047,23 +1016,17 @@ fun ConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    PixelArtConfirmDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = title) },
-        text = { Text(text = text) },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onConfirm()
-                }
-            ) {
-                Text("확인")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("취소")
-            }
-        }
-    )
+        title = title,
+        confirmText = "확인",
+        onConfirm = onConfirm,
+        confirmButtonEnabled = true
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
