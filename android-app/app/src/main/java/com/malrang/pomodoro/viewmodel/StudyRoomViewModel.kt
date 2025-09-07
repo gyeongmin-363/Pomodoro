@@ -208,6 +208,21 @@ class StudyRoomViewModel(
         }
     }
 
+    /**
+     * 챌린지룸 내의 내 정보를 수정합니다.
+     * @param memberId 수정할 멤버의 ID
+     * @param studyRoomId 현재 챌린지룸의 ID (UI 새로고침용)
+     * @param newNickname 새로운 닉네임
+     * @param newAnimalId 새로운 동물 ID
+     */
+    fun updateMyInfoInRoom(memberId: String, studyRoomId: String, newNickname: String, newAnimalId: String?) {
+        viewModelScope.launch {
+            networkRepo.updateMemberInfo(memberId, newNickname, newAnimalId)
+            // UI 갱신을 위해 멤버 목록을 다시 불러옵니다.
+            loadStudyRoomMembers(studyRoomId)
+        }
+    }
+
 
     /**
      * 현재 사용자가 스터디룸에서 나갑니다.

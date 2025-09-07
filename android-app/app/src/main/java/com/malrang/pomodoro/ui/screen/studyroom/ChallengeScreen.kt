@@ -15,26 +15,32 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -90,6 +96,12 @@ fun ChallengeScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("내 챌린지룸", "참여 챌린지룸")
 
+    // ✨ 검색 기능: 검색어 입력을 위한 상태 변수
+    var searchQuery by remember { mutableStateOf("") }
+    // ✨ 검색 기능: 검색 UI 활성화 상태를 위한 변수
+    var isSearchActive by remember { mutableStateOf(false) }
+
+
     // FloatingActionButton은 Scaffold와 함께 사용하는 것이 일반적이지만,
     // 현재 구조를 유지하기 위해 Box로 감싸 화면 위에 표시되도록 합니다.
     Box(modifier = Modifier.fillMaxSize()) {
@@ -101,15 +113,39 @@ fun ChallengeScreen(
             // ❌ [제거] 중첩 스크롤을 유발하는 원인이므로 제거합니다.
             // .verticalScroll(rememberScrollState())
         ){
+            // ✨ 검색 기능: 상단 바 UI를 isSearchActive 상태에 따라 동적으로 변경
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("챌린지룸", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                if (isSearchActive) {
+                    // ✨ 검색 활성화 상태 UI: 검색창 표시
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("챌린지룸 이름으로 검색...") },
+                        textStyle = TextStyle(color = Color.White),
+//                        colors = TextFieldDefaults.outlinedTextFieldColors(
+//                            focusedBorderColor = Color.White,
+//                            unfocusedBorderColor = Color.Gray,
+//                            cursorColor = Color.White,
+//                            placeholderColor = Color.LightGray
+//                        ),
+                        singleLine = true
+                    )
+                } else {
+                    // ✨ 검색 비활성화 상태 UI: 제목 표시
+                    Text("챌린지룸", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
+
                     // 👇 '내 챌린지룸' 탭일 때만 삭제 버튼 표시
-                    if (selectedTabIndex == 0) {
+                    if (!isSearchActive && selectedTabIndex == 0) {
                         IconButton(onClick = onNavigateToDelete) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
@@ -118,12 +154,30 @@ fun ChallengeScreen(
                             )
                         }
                     }
-                    IconButton(onClick = onNavigateBack) {
+
+                    // ✨ 검색 아이콘: 클릭 시 isSearchActive 상태를 토글. 아이콘 모양도 상태에 따라 변경
+                    IconButton(onClick = {
+                        isSearchActive = !isSearchActive
+                        if (!isSearchActive) {
+                            searchQuery = "" // 검색창이 닫힐 때 검색어 초기화
+                        }
+                    }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "돌아가기",
+                            imageVector = if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                            contentDescription = if (isSearchActive) "검색 닫기" else "검색 열기",
                             tint = Color.White
                         )
+                    }
+
+                    // ✨ 검색 중이 아닐 때만 삭제, 뒤로가기 버튼 표시
+                    if (!isSearchActive) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "돌아가기",
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -142,6 +196,7 @@ fun ChallengeScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+
 
             if (currentUser == null) {
                 Box(
@@ -166,34 +221,25 @@ fun ChallengeScreen(
                 when (selectedTabIndex) {
                     // "내가 생성한 챌린지룸" 탭
                     0 -> {
-                        if (createdRooms.isNotEmpty()) {
-                            LazyColumn(
-                                modifier = Modifier
-                                    // ❗ [수정] fillMaxSize() 대신 weight(1f)를 사용해 남은 공간을 모두 차지하도록 합니다.
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                            ) {
-                                items(createdRooms) { room ->
-                                    StudyRoomItem(room = room, onClick = {
-                                        roomVM.onJoinStudyRoom(room)
-                                    })
-                                }
-                                item {
-                                    Spacer(Modifier.height(16.dp))
-                                }
-                            }
-                        } else {
+                        // ✨ 검색 기능: 생성한 챌린지룸 목록을 검색어로 필터링
+                        val filteredCreatedRooms = createdRooms.filter {
+                            it.name.contains(searchQuery, ignoreCase = true)
+                        }
+
+                        if (createdRooms.isEmpty()) {
                             EmptyStateMessage(
                                 message = "생성한 챌린지룸이 없습니다.\nFAB를 눌러 챌린지룸을 만들어보세요!",
                                 // ❗ [수정] weight(1f)를 적용하여 남은 공간을 모두 차지하도록 합니다.
                                 modifier = Modifier.weight(1f)
                             )
+                        } else if (searchQuery.isNotEmpty() && filteredCreatedRooms.isEmpty()) {
+                            // ✨ 검색 기능: 검색 결과가 없을 때 메시지 표시
+                            EmptyStateMessage(
+                                message = "검색 결과가 없습니다.",
+                                modifier = Modifier.weight(1f)
+                            )
                         }
-                    }
-                    // "내가 참여한 챌린지룸" 탭
-                    1 -> {
-                        if (joinedRooms.isNotEmpty()) {
+                        else {
                             LazyColumn(
                                 modifier = Modifier
                                     // ❗ [수정] fillMaxSize() 대신 weight(1f)를 사용해 남은 공간을 모두 차지하도록 합니다.
@@ -201,7 +247,7 @@ fun ChallengeScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
                             ) {
-                                items(joinedRooms) { room ->
+                                items(filteredCreatedRooms) { room ->
                                     StudyRoomItem(room = room, onClick = {
                                         roomVM.onJoinStudyRoom(room)
                                     })
@@ -210,12 +256,45 @@ fun ChallengeScreen(
                                     Spacer(Modifier.height(16.dp))
                                 }
                             }
-                        } else {
+                        }
+                    }
+                    // "내가 참여한 챌린지룸" 탭
+                    1 -> {
+                        // ✨ 검색 기능: 참여한 챌린지룸 목록을 검색어로 필터링
+                        val filteredJoinedRooms = joinedRooms.filter {
+                            it.name.contains(searchQuery, ignoreCase = true)
+                        }
+
+                        if (joinedRooms.isEmpty()) {
                             EmptyStateMessage(
                                 message = "참여한 챌린지룸이 없습니다.",
                                 // ❗ [수정] weight(1f)를 적용하여 남은 공간을 모두 차지하도록 합니다.
                                 modifier = Modifier.weight(1f)
                             )
+                        } else if (searchQuery.isNotEmpty() && filteredJoinedRooms.isEmpty()) {
+                            // ✨ 검색 기능: 검색 결과가 없을 때 메시지 표시
+                            EmptyStateMessage(
+                                message = "검색 결과가 없습니다.",
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    // ❗ [수정] fillMaxSize() 대신 weight(1f)를 사용해 남은 공간을 모두 차지하도록 합니다.
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            ) {
+                                items(filteredJoinedRooms) { room ->
+                                    StudyRoomItem(room = room, onClick = {
+                                        roomVM.onJoinStudyRoom(room)
+                                    })
+                                }
+                                item {
+                                    Spacer(Modifier.height(16.dp))
+                                }
+                            }
                         }
                     }
                 }
