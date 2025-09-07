@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
+import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
@@ -124,17 +125,29 @@ class PomodoroRepository(private val context: Context) {
     private fun createDefaultPresets(): List<WorkPreset> {
         return listOf(
             WorkPreset(
-                name = "영어 공부",
+                name = "기본 뽀모도로",
                 settings = Settings(
-                    studyTime = 20, shortBreakTime = 5, longBreakTime = 5,
-                    longBreakInterval = 3, soundEnabled = false, vibrationEnabled = false, autoStart = false
+                    studyTime = 25,
+                    shortBreakTime = 5,
+                    longBreakTime = 15,
+                    longBreakInterval = 4,
+                    soundEnabled = true,
+                    vibrationEnabled = true,
+                    autoStart = true,
+                    blockMode = BlockMode.PARTIAL
                 )
             ),
             WorkPreset(
-                name = "코딩 공부",
+                name = "집중 몰입",
                 settings = Settings(
-                    studyTime = 30, shortBreakTime = 2, longBreakTime = 3,
-                    longBreakInterval = 2, soundEnabled = true, vibrationEnabled = true, autoStart = true
+                    studyTime = 50,
+                    shortBreakTime = 10,
+                    longBreakTime = 30,
+                    longBreakInterval = 2,
+                    soundEnabled = true,
+                    vibrationEnabled = true,
+                    autoStart = true, // 긴 세션에서는 수동 시작을 선호할 수 있습니다.
+                    blockMode = BlockMode.PARTIAL
                 )
             )
         )
