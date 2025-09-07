@@ -50,6 +50,8 @@ fun PomodoroApp(
 ) {
     // 1. 두 ViewModel의 상태를 모두 관찰합니다.
     val authState by authVm.uiState.collectAsState()
+    val pomoState by vm.uiState.collectAsState()
+    val collectAnimal = pomoState.collectedAnimals
     val context = LocalContext.current
 
     val navController = rememberNavController()
@@ -124,6 +126,7 @@ fun PomodoroApp(
                 ) { backStackEntry ->
                     val inviteId = backStackEntry.arguments?.getString("inviteId")
                     ChallengeScreen(
+                        collectAnimal = collectAnimal,
                         authVM = authVm,
                         roomVM = roomVm,
                         inviteStudyRoomId = inviteId, // ✅ 여기서 uuid 주입됨

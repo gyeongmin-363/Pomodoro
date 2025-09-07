@@ -38,15 +38,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.AuthViewModel
+import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import kotlinx.serialization.json.jsonPrimitive
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChallengeScreen(
+    collectAnimal : Set<Animal>,
     authVM: AuthViewModel,
     roomVM: StudyRoomViewModel,
     inviteStudyRoomId: String?,
@@ -236,7 +239,7 @@ fun ChallengeScreen(
             JoinStudyRoomDialog(
                 room = room,
                 currentUser = user,
-                allAnimals = uiState.allAnimals,
+                collectedAnimals = collectAnimal,
                 viewModel = roomVM,
                 onDismiss = { roomVM.dismissJoinStudyRoomDialog() }
             )

@@ -109,7 +109,6 @@ class StudyRoomViewModel(
     fun onUserAuthenticated(user: User) {
         _studyRoomUiState.update { it.copy(currentUser = user) }
         loadUserStudyRooms(user.id)
-        loadAllAnimals()
     }
 
     fun onUserNotAuthenticated() {
@@ -247,15 +246,6 @@ class StudyRoomViewModel(
         }
     }
 
-
-    // MARK: - Animal Functions
-
-    fun loadAllAnimals() {
-        viewModelScope.launch {
-            val animals = networkRepo.getAllAnimals()
-            _studyRoomUiState.update { it.copy(allAnimals = animals) }
-        }
-    }
 
     // MARK: - UI Control Functions
 
