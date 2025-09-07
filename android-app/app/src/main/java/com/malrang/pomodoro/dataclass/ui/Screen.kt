@@ -19,5 +19,6 @@ enum class Screen {
     /** 권한 설정 화면 */
     Permission,
     StudyRoom,
-    AccountSettings // 계정 설정 화면 추가
+    AccountSettings, // 계정 설정 화면 추가
+    DeleteStudyRoom
 }

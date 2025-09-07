@@ -12,7 +12,6 @@ import com.malrang.pomodoro.networkRepo.HabitSummary
  * @property currentUser 현재 로그인한 사용자의 정보입니다.
  * @property currentStudyRoom 현재 참여하고 있는 챌린지룸의 정보입니다.
  * @property currentRoomMembers 현재 챌린지룸의 멤버 목록입니다.
- * @property allAnimals 데이터베이스에 있는 모든 동물 목록입니다. (앱 전역에서 사용)
  * @property habitProgressMap 현재 챌린지룸 멤버들의 월별 챌린지 현황 맵입니다. (Key: user_id, Value: HabitSummary)
  */
 data class StudyRoomUiState(
@@ -30,4 +29,5 @@ data class StudyRoomUiState(
 
     val isLoading: Boolean = true, //UserScreen에서 채팅방 불러오기 로딩
     val isChatLoading: Boolean = false, // 채팅 로딩 상태 추가
+    val deletableStudyRooms: List<StudyRoom> = emptyList()
 )
