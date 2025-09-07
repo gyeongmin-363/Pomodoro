@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -31,16 +32,20 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -104,6 +109,10 @@ fun StudyRoomDetailScreen(
     val currentUser = uiState.currentUser
     val habitProgressMap = uiState.habitProgressMap
 
+    var showDelegateDialog by remember { mutableStateOf(false) }
+    var showLeaveConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
 
     // roomId가 변경되거나, 달력의 월(selectedDate)이 변경될 때 데이터를 새로고침합니다.
     LaunchedEffect(roomId, selectedDate) {
@@ -111,6 +120,15 @@ fun StudyRoomDetailScreen(
             roomVm.loadStudyRoomById(roomId)
             roomVm.loadStudyRoomMembers(roomId)
             roomVm.loadHabitSummaryForMonth(roomId, selectedDate)
+        }
+    }
+
+    // ViewModel의 네비게이션 이벤트를 감지하여 화면을 전환합니다.
+    LaunchedEffect(Unit) {
+        roomVm.navigationEvents.collect { event ->
+            if (event == "navigate_back") {
+                onNavigateBack()
+            }
         }
     }
 
@@ -218,6 +236,44 @@ fun StudyRoomDetailScreen(
                                     )
                                 }
                             )
+
+                            HorizontalDivider()
+
+                            // 방장/멤버에 따라 다른 메뉴 아이템 표시
+                            val isCreator = room?.creator_id == currentUser?.id
+                            val hasOtherMembers = members.any { it.user_id != currentUser?.id }
+
+                            if (isCreator && hasOtherMembers) {
+                                // 방장이면서 다른 멤버가 있을 경우: 방장 위임하고 나가기
+                                DropdownMenuItem(
+                                    text = { Text("방장 위임하고 나가기") },
+                                    onClick = {
+                                        showDelegateDialog = true
+                                        menuExpanded = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Warning,
+                                            contentDescription = "방장 위임"
+                                        )
+                                    }
+                                )
+                            } else {
+                                // 그 외의 모든 경우 (멤버이거나, 방장이지만 혼자 있는 경우): 방 나가기
+                                DropdownMenuItem(
+                                    text = { Text("방 나가기") },
+                                    onClick = {
+                                        showLeaveConfirmDialog = true
+                                        menuExpanded = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.ExitToApp,
+                                            contentDescription = "방 나가기"
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
 
@@ -472,6 +528,45 @@ fun StudyRoomDetailScreen(
                 onDismiss = { tappedDate = null }
             )
         }
+
+        // 방장 위임 다이얼로그
+        if (showDelegateDialog) {
+            val otherMembers = members.filter { it.user_id != currentUser?.id }
+            DelegateAdminDialog(
+                members = otherMembers,
+                onDismiss = { showDelegateDialog = false },
+                onConfirm = { newAdminId ->
+                    roomId?.let { roomVm.delegateAdmin(it, newAdminId) }
+                    showDelegateDialog = false
+                }
+            )
+        }
+
+        // 방 나가기 확인 다이얼로그
+        if (showLeaveConfirmDialog) {
+            ConfirmationDialog(
+                title = "방 나가기",
+                text = "정말로 이 방을 나가시겠습니까?",
+                onDismiss = { showLeaveConfirmDialog = false },
+                onConfirm = {
+                    roomId?.let { roomVm.leaveStudyRoom(it) }
+                    showLeaveConfirmDialog = false
+                }
+            )
+        }
+
+        // 방 삭제 확인 다이얼로그
+        if (showDeleteConfirmDialog) {
+            ConfirmationDialog(
+                title = "방 삭제하기",
+                text = "정말로 이 방을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+                onDismiss = { showDeleteConfirmDialog = false },
+                onConfirm = {
+                    roomId?.let { roomVm.deleteStudyRoom(it) }
+                    showDeleteConfirmDialog = false
+                }
+            )
+        }
     }
 }
 
@@ -660,4 +755,91 @@ fun RankingItem(
             )
         }
     }
+}
+
+/**
+ * 방장 위임 시 멤버를 선택하는 다이얼로그
+ */
+@Composable
+fun DelegateAdminDialog(
+    members: List<StudyRoomMember>,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedUserId by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("방장 위임하기") },
+        text = {
+            Column {
+                Text("새로운 방장을 선택해주세요. 방장을 위임하면 회원님은 방에서 나가게 됩니다.")
+                Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn {
+                    items(members) { member ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedUserId = member.user_id }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (selectedUserId == member.user_id),
+                                onClick = { selectedUserId = member.user_id }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(member.nickname)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    selectedUserId?.let { onConfirm(it) }
+                },
+                enabled = selectedUserId != null
+            ) {
+                Text("확인")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
+}
+
+/**
+ * 작업을 재확인하는 공용 다이얼로그
+ */
+@Composable
+fun ConfirmationDialog(
+    title: String,
+    text: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title) },
+        text = { Text(text = text) },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm()
+                }
+            ) {
+                Text("확인")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
 }

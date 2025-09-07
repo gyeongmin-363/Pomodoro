@@ -1,20 +1,16 @@
 package com.malrang.pomodoro.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import co.touchlab.kermit.Message
 import com.malrang.pomodoro.dataclass.ui.StudyRoomUiState
 import com.malrang.pomodoro.networkRepo.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -166,6 +162,8 @@ class StudyRoomViewModel(
             if (_studyRoomUiState.value.currentStudyRoom?.id == roomId) {
                 _studyRoomUiState.update { it.copy(currentStudyRoom = null, currentRoomMembers = emptyList()) }
             }
+            // 방 삭제 후 이전 화면으로 이동
+            _navigationEvents.emit("navigate_back")
         }
     }
 
@@ -189,6 +187,27 @@ class StudyRoomViewModel(
         viewModelScope.launch {
             networkRepo.removeMemberFromStudyRoom(memberId)
             loadStudyRoomMembers(studyRoomId)
+        }
+    }
+
+    /**
+     * 현재 사용자가 스터디룸에서 나갑니다.
+     */
+    fun leaveStudyRoom(roomId: String) {
+        viewModelScope.launch {
+            val userId = _studyRoomUiState.value.currentUser?.id ?: return@launch
+            networkRepo.removeMemberFromStudyRoomByUserId(roomId, userId)
+            // 방 나간 후 이전 화면으로 이동
+            _navigationEvents.emit("navigate_back")
+        }
+    }
+
+    /**
+     * 방장을 다른 멤버에게 위임
+     */
+    fun delegateAdmin(roomId: String, newCreatorId: String) {
+        viewModelScope.launch {
+            networkRepo.updateRoomCreator(roomId, newCreatorId)
         }
     }
 
