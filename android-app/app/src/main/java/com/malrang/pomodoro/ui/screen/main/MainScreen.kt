@@ -131,7 +131,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
                     NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.ThumbUp, contentDescription = "챌린지룸") },
+                        icon = { Icon(painterResource(R.drawable.ic_military_tech_24px), contentDescription = "챌린지룸") },
                         label = { Text("챌린지룸") },
                         selected = false,
                         onClick = {

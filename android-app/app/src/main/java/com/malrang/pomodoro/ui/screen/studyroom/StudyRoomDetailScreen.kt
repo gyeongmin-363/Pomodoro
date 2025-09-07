@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
@@ -252,7 +254,7 @@ fun StudyRoomDetailScreen(
                                     },
                                     leadingIcon = {
                                         Icon(
-                                            Icons.Default.Warning,
+                                            painterResource(R.drawable.ic_user_attributes_24px),
                                             contentDescription = "방장 위임"
                                         )
                                     }
