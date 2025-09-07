@@ -18,11 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -61,12 +58,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -77,9 +71,9 @@ import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
+import com.malrang.pomodoro.ui.screen.stats.MonthlyCalendarGrid
 import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -373,17 +367,24 @@ fun StudyRoomDetailScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val completedDaysSet = remember(habitProgressMap, currentUser) {
-                        habitProgressMap[currentUser?.id]?.daily_progress?.mapIndexedNotNull { index, c ->
-                            if (c == '1') index + 1 else null
-                        }?.toSet() ?: emptySet()
+                    val completedDaysSet = remember(habitProgressMap, currentUser, selectedDate) {
+                        val progress = habitProgressMap[currentUser?.id]
+                        if (progress != null && YearMonth.parse(progress.year_month) == YearMonth.from(selectedDate)) {
+                            progress.daily_progress.mapIndexedNotNull { index, c ->
+                                if (c == '1') index + 1 else null
+                            }.toSet()
+                        } else {
+                            emptySet()
+                        }
                     }
 
-                    StudyCalendar(
+                    MonthlyCalendarGrid(
                         selectedDate = selectedDate,
                         tappedDate = tappedDate,
-                        completedDays = completedDaysSet,
-                        onDateTap = { date -> tappedDate = date }
+                        onDateTap = { date -> tappedDate = date },
+                        hasRecord = { date ->
+                            completedDaysSet.contains(date.dayOfMonth)
+                        }
                     )
                 } //달력 끝
 
@@ -658,101 +659,5 @@ fun RankingItem(
                 gapSize = 0.dp
             )
         }
-    }
-}
-
-@Composable
-private fun StudyCalendar(
-    selectedDate: LocalDate,
-    completedDays: Set<Int>,
-    tappedDate: LocalDate?,
-    onDateTap: (LocalDate) -> Unit
-) {
-    val today = LocalDate.now()
-    val currentMonth = YearMonth.from(selectedDate)
-
-    val firstDayOfMonth = currentMonth.atDay(1)
-    val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
-    val daysInMonth = currentMonth.lengthOfMonth()
-    val calendarDays =
-        (0 until firstDayOfWeek).map<Int?, LocalDate?> { null } + (1..daysInMonth).map {
-            firstDayOfMonth.withDayOfMonth(
-                it
-            )
-        }
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(7),
-        userScrollEnabled = false,
-        modifier = Modifier.height(240.dp)
-    ) {
-        items(calendarDays.size) { index ->
-            val date = calendarDays[index]
-            if (date != null) {
-                val hasRecord = completedDays.contains(date.dayOfMonth)
-                CalendarDay(
-                    date = date,
-                    hasRecord = hasRecord,
-                    isToday = date == today,
-                    isSelected = date == tappedDate,
-                    onClick = { onDateTap(date) }
-                )
-            } else {
-                Spacer(modifier = Modifier.size(40.dp))
-            }
-        }
-    }
-
-}
-
-
-@Composable
-private fun CalendarDay(
-    date: LocalDate,
-    hasRecord: Boolean,
-    isToday: Boolean,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val dayColor = when (date.dayOfWeek) {
-        DayOfWeek.SATURDAY -> Color(0xFF64B5F6)
-        DayOfWeek.SUNDAY -> Color(0xFFE57373)
-        else -> Color.White
-    }
-
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .padding(4.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.3f), CircleShape)
-            )
-        } else if (isToday) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.15f), CircleShape)
-            )
-        }
-
-        if (hasRecord) {
-            Text(
-                text = "🐾",
-                fontSize = 28.sp,
-                color = Color(0xFFFBBF24).copy(alpha = 0.6f),
-            )
-        }
-        Text(
-            text = date.dayOfMonth.toString(),
-            color = dayColor,
-            fontWeight = FontWeight.Medium
-        )
     }
 }

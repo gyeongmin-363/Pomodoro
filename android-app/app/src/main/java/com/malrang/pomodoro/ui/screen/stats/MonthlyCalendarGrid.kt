@@ -8,16 +8,15 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.malrang.pomodoro.dataclass.ui.DailyStat
 import java.time.LocalDate
 import java.time.YearMonth
 
 @Composable
 fun MonthlyCalendarGrid(
     selectedDate: LocalDate,
-    dailyStats: Map<String, DailyStat>,
     tappedDate: LocalDate?,
-    onDateTap: (LocalDate) -> Unit
+    onDateTap: (LocalDate) -> Unit,
+    hasRecord: (LocalDate) -> Boolean
 ) {
     val today = LocalDate.now()
     val currentMonth = YearMonth.from(selectedDate)
@@ -35,11 +34,9 @@ fun MonthlyCalendarGrid(
         items(calendarDays.size) { index ->
             val date = calendarDays[index]
             if (date != null) {
-                // DailyStat 구조 변경에 따라 totalStudyTimeInMinutes 사용
-                val hasRecord = (dailyStats[date.toString()]?.totalStudyTimeInMinutes ?: 0) > 0
                 DayCell(
                     date = date,
-                    hasRecord = hasRecord,
+                    hasRecord = hasRecord(date),
                     isToday = date == today,
                     isSelected = date == tappedDate,
                     onClick = { onDateTap(date) }
@@ -50,4 +47,3 @@ fun MonthlyCalendarGrid(
         }
     }
 }
-
