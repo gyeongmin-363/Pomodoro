@@ -37,7 +37,7 @@ fun CreateStudyRoomDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("새 스터디룸 생성") },
+        title = { Text("새 챌린지룸 생성") },
         text = {
             Column {
                 OutlinedTextField(
@@ -47,7 +47,7 @@ fun CreateStudyRoomDialog(
                             roomName = it
                         }
                     },
-                    label = { Text("스터디룸 이름 (${roomName.length}/20)") },
+                    label = { Text("챌린지룸 이름 (${roomName.length}/20)") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true // 한 줄로 제한
                 )
