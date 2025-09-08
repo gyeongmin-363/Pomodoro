@@ -8,20 +8,19 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -43,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -59,8 +60,18 @@ import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
+import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.launch
+
+// 드로어 아이템을 위한 데이터 클래스
+private data class DrawerItem(
+    val iconRes: Int? = null,
+    val imageVector: ImageVector? = null,
+    val label: String,
+    val screen: Screen? = null,
+    val onCustomClick: (() -> Unit)? = null
+)
 
 @Composable
 fun MainScreen(viewModel: PomodoroViewModel) {
@@ -77,76 +88,88 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     var showSkipConfirm by remember { mutableStateOf(false) }
     var presetIdToSelect by remember { mutableStateOf<String?>(null) }
 
-
-    // 배경에 따른 컨텐츠 색상 결정
     val contentColor = if (state.useGrassBackground) Color.Black else Color.White
     val secondaryTextColor = Color.LightGray
-    val highlightColor = if (state.useGrassBackground) Color(0xFF01579B) else Color.Cyan // 잔디 배경일 때 더 어두운 파란색
+    val highlightColor = if (state.useGrassBackground) Color(0xFF01579B) else Color.Cyan
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+
+    // 1. 픽셀 아트 스타일 색상
+    val drawerContentColor = Color(0xFFF0F0F0)   // 밝은 텍스트/아이콘 색상
+
+    // 3. 드로어 메뉴 아이템 리스트
+    val drawerItems = listOf(
+        DrawerItem(iconRes = R.drawable.ic_collection, label = "동물 도감", screen = Screen.Collection),
+        DrawerItem(iconRes = R.drawable.ic_stats, label = "통계", screen = Screen.Stats),
+        DrawerItem(
+            iconRes = R.drawable.light_night,
+            label = "배경 변경",
+            onCustomClick = {
+                if (state.useGrassBackground) {
+                    Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
+                }
+                viewModel.toggleBackground()
+            }
+        ),
+        DrawerItem(iconRes = R.drawable.ic_military_tech_24px, label = "챌린지룸", screen = Screen.StudyRoom),
+        DrawerItem(imageVector = Icons.Filled.AccountCircle, label = "계정 설정", screen = Screen.AccountSettings)
+    )
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                modifier = Modifier.fillMaxWidth(0.7f)
+                drawerShape = RoundedCornerShape(0.dp),
+                modifier = Modifier.fillMaxWidth(0.7f),
+                drawerContainerColor = backgroundColor // 배경색 적용
             ) {
-                // 스크롤을 위해 Column과 verticalScroll Modifier 추가
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState())
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(top = 16.dp) // 상단 여백 추가
                 ) {
-                    Spacer(Modifier.height(12.dp))
-                    NavigationDrawerItem(
-                        icon = { Icon(painterResource(id = R.drawable.ic_collection), contentDescription = "동물 도감") },
-                        label = { Text("동물 도감") },
-                        selected = false,
-                        onClick = {
-                            viewModel.navigateTo(Screen.Collection)
-                            scope.launch { drawerState.close() }
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(painterResource(id = R.drawable.ic_stats), contentDescription = "통계") },
-                        label = { Text("통계") },
-                        selected = false,
-                        onClick = {
-                            viewModel.navigateTo(Screen.Stats)
-                            scope.launch { drawerState.close() }
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(painterResource(R.drawable.light_night), contentDescription = "배경 변경") },
-                        label = { Text("배경 변경") },
-                        selected = false,
-                        onClick = {
-                            if (state.useGrassBackground) {
-                                Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
-                            }
-                            viewModel.toggleBackground()
-                            scope.launch { drawerState.close() }
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
-                    NavigationDrawerItem(
-                        icon = { Icon(painterResource(R.drawable.ic_military_tech_24px), contentDescription = "챌린지룸") },
-                        label = { Text("챌린지룸") },
-                        selected = false,
-                        onClick = {
-                            viewModel.navigateTo(Screen.StudyRoom)
-                            scope.launch { drawerState.close() }
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("계정 설정") },
-                        selected = false,
-                        onClick = { viewModel.navigateTo(Screen.AccountSettings) },
-                        icon = { Icon(Icons.Filled.AccountCircle, contentDescription = "계정 설정") },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
+                    drawerItems.forEach { item ->
+                        NavigationDrawerItem(
+                            icon = {
+                                if (item.iconRes != null) {
+                                    Icon(
+                                        painterResource(id = item.iconRes),
+                                        contentDescription = item.label,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else if (item.imageVector != null) {
+                                    Icon(
+                                        item.imageVector,
+                                        contentDescription = item.label,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            },
+                            label = {
+                                Text(
+                                    text = item.label,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            },
+                            selected = false, // 선택 상태는 이 예제에서 사용하지 않음
+                            onClick = {
+                                item.screen?.let { viewModel.navigateTo(it) }
+                                item.onCustomClick?.invoke()
+                                scope.launch { drawerState.close() }
+                            },
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp, vertical = 4.dp)
+                                .border(2.dp, Color.White.copy(alpha = 0.7f)), // 픽셀 느낌을 위한 테두리
+                            shape = RectangleShape, // 각진 모양
+                            colors = NavigationDrawerItemDefaults.colors(
+                                unselectedContainerColor = Color.Transparent, // 기본 배경 투명
+                                unselectedIconColor = drawerContentColor,
+                                unselectedTextColor = drawerContentColor,
+                            )
+                        )
+                    }
                 }
             }
         }

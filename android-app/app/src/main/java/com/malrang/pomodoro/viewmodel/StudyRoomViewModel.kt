@@ -1,5 +1,10 @@
 package com.malrang.pomodoro.viewmodel
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.ui.StudyRoomUiState
@@ -13,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -106,12 +112,85 @@ class StudyRoomViewModel(
     fun sendChatMessage(studyRoomId: String, userId: String, message: String, nickname : String) {
         viewModelScope.launch {
             try {
-                networkRepo.sendChatMessage(studyRoomId, userId, message, nickname)
+                // 텍스트 메시지만 전송
+                networkRepo.sendChatMessage(studyRoomId, userId, message, nickname, null)
             } catch (e: Exception) {
                 // 에러 처리
             }
         }
     }
+
+    // UI에 토스트 메시지 등을 표시하기 위한 이벤트 채널
+    private val _uiEvents = MutableSharedFlow<String>()
+    val uiEvents = _uiEvents.asSharedFlow()
+
+    /**
+     * 이미지를 포함한 채팅 메시지를 전송합니다. (압축 및 리사이징 제거, 용량 제한 추가)
+     */
+    fun sendChatWithImage(
+        context: Context,
+        studyRoomId: String,
+        userId: String,
+        message: String,
+        nickname: String,
+        imageUri: Uri
+    ) {
+        viewModelScope.launch {
+            // 1. 이미지를 ByteArray로 변환하되, 50MB 용량을 초과하는지 확인합니다.
+            val imageBytes = getImageBytesIfUnderLimit(context, imageUri, 50)
+
+            if (imageBytes == null) {
+                // 용량 제한을 초과했거나 파일을 읽을 수 없는 경우, UI에 알림
+                _uiEvents.emit("50MB 이하의 이미지만 업로드할 수 있습니다.")
+                return@launch
+            }
+
+            try {
+                // 2. 원본 이미지를 스토리지에 업로드하고 직접 Public URL을 받습니다.
+                val imageUrl = networkRepo.uploadImage("chat-images", imageBytes)
+
+                // 3. 메시지와 이미지 URL을 DB에 저장합니다.
+                networkRepo.sendChatMessage(studyRoomId, userId, message, nickname, imageUrl)
+            } catch (e: Exception) {
+                _uiEvents.emit("이미지 업로드에 실패했습니다: ${e.message}")
+                // TODO: 업로드 또는 메시지 전송 실패 에러 처리
+            }
+        }
+    }
+
+    /**
+     * Uri로부터 파일 크기를 확인하고, 제한(limitMb) 이하일 경우에만 ByteArray로 반환합니다.
+     * @param context Context
+     * @param uri 이미지 Uri
+     * @param limitMb 최대 용량 (MB)
+     * @return 제한 용량 이하인 경우 이미지 데이터 (ByteArray), 초과 시 null
+     */
+    private fun getImageBytesIfUnderLimit(context: Context, uri: Uri, limitMb: Int): ByteArray? {
+        val contentResolver = context.contentResolver
+        try {
+            // 1. ContentResolver를 통해 파일 정보(특히 크기)를 조회합니다.
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (sizeIndex != -1) {
+                        val size = cursor.getLong(sizeIndex)
+                        val limitBytes = limitMb * 1024 * 1024
+                        // 2. 파일 크기가 제한을 초과하는지 확인합니다.
+                        if (size > limitBytes) {
+                            return null // 제한 초과 시 null 반환
+                        }
+                    }
+                }
+            }
+
+            // 3. 용량 제한을 통과한 경우, 파일 스트림을 열어 ByteArray로 변환합니다.
+            return contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
 
     /**
      * 딥링크를 통해 전달된 챌린지룸 ID를 받아 참여 다이얼로그를 표시하도록 상태를 업데이트합니다.

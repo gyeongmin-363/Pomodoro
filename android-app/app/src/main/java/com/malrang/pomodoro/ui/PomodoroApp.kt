@@ -167,6 +167,7 @@ fun PomodoroApp(
                     ChatScreen(
                         studyRoomId = studyRoomId,
                         studyRoomViewModel = roomVm, // 기존 ViewModel 인스턴스 주입
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 

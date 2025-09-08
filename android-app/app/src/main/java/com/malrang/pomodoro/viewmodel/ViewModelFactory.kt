@@ -9,6 +9,7 @@ import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.service.TimerServiceProvider
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 
 
 class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factory {
@@ -42,7 +43,10 @@ class AuthVMFactory(
 class StudyRoomVMFactory() : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(StudyRoomViewModel::class.java)) {
-            val studyRoomRepo = StudyRoomRepository(postgrest = SupabaseProvider.client.postgrest)
+            val studyRoomRepo = StudyRoomRepository(
+                postgrest = SupabaseProvider.client.postgrest,
+                storage = SupabaseProvider.client.storage
+            )
 
             @Suppress("UNCHECKED_CAST")
             return StudyRoomViewModel(studyRoomRepo) as T
