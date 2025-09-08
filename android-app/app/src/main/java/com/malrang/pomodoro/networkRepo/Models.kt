@@ -64,7 +64,8 @@ data class ChatMessage(
     val study_room_id: String,
     val user_id: String,
     val message: String,
-    val nickname : String
+    val nickname : String,
+    val image_url: String? = null
 )
 
 

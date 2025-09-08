@@ -8,6 +8,7 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.serializer.JacksonSerializer
+import io.github.jan.supabase.storage.Storage
 import io.ktor.client.engine.okhttp.OkHttp
 
 object SupabaseProvider {
@@ -30,6 +31,7 @@ object SupabaseProvider {
                 // 필요시 flowType = FlowType.PKCE
             }
             install(Realtime)
+            install(Storage)
         }
     }
 }
