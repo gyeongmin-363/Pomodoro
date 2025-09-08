@@ -205,7 +205,11 @@ fun ChallengeScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
-                    Text("사용자 정보를 불러오는 중...", modifier = Modifier.padding(top = 60.dp))
+                    Text(
+                        text = "사용자 정보를 불러오는 중...",
+                        modifier = Modifier.padding(top = 60.dp),
+                        color = Color.LightGray
+                    )
                 }
             }
             else if(isLoading){
@@ -214,7 +218,11 @@ fun ChallengeScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
-                    Text("챌린지룸 불러오는 중...", modifier = Modifier.padding(top = 60.dp))
+                    Text(
+                        text = "챌린지룸 불러오는 중...",
+                        modifier = Modifier.padding(top = 60.dp),
+                        color = Color.LightGray
+                    )
                 }
             }
             else {
@@ -229,7 +237,7 @@ fun ChallengeScreen(
 
                         if (createdRooms.isEmpty()) {
                             EmptyStateMessage(
-                                message = "생성한 챌린지룸이 없습니다.\nFAB를 눌러 챌린지룸을 만들어보세요!",
+                                message = "챌린지룸이 없습니다.\n+버튼을 눌러 챌린지룸을 만들어보세요!",
                                 // ❗ [수정] weight(1f)를 적용하여 남은 공간을 모두 차지하도록 합니다.
                                 modifier = Modifier.weight(1f)
                             )
