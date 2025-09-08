@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -284,58 +287,77 @@ fun ChatScreen(
 fun MessageBubble(
     message: ChatMessage,
     isMyMessage: Boolean,
-    onImageClick: (String) -> Unit // --- 이미지 클릭 이벤트를 처리할 콜백 추가 ---
+    onImageClick: (String) -> Unit
 ) {
+    // 메시지 소유자에 따라 컨테이너 색상과 테두리 색상 결정
+    val containerColor = if (isMyMessage) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+    val borderColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 4.dp, horizontal = 8.dp),
         horizontalArrangement = if (isMyMessage) Arrangement.End else Arrangement.Start
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(0.8f),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isMyMessage) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-            )
+        // Box를 사용하여 그림자 효과 구현
+        Box(
+            modifier = Modifier.fillMaxWidth(0.8f)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = message.nickname,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+            // 그림자 역할을 할 검은색 Box
+            Box(
+                modifier = Modifier
+                    .matchParentSize() // 컨텐츠 Box와 크기를 맞춤
+                    .background(Color.Black)
+            )
 
-                message.image_url?.let { imageUrl ->
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = "Chat image",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onImageClick(imageUrl) }, // --- 이미지 클릭 시 콜백 호출 ---
-                        contentScale = ContentScale.Crop,
-                        onSuccess = { Log.d("이미지 성공", imageUrl) },
-                        onError = { Log.d("이미지 에러", it.toString()) },
-                        onLoading = { Log.d("이미지 로딩", it.toString()) },
-                    )
-                    if (message.message.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-
-                if (message.message.isNotBlank()) {
+            // 실제 컨텐츠가 담길 Surface
+            Surface(
+                modifier = Modifier
+                    .offset(x = (-4).dp, y = (-4).dp) // 왼쪽 위로 오프셋하여 그림자가 보이게 함
+                    .border(width = 2.dp, color = borderColor, shape = RectangleShape)
+                    .clickable {
+                        // 이미지 URL이 있을 경우에만 클릭 이벤트 전달
+                        message.image_url?.let { onImageClick(it) }
+                    },
+                color = containerColor,
+                shape = RectangleShape // 완벽한 사각형 모양
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = message.message,
-                        style = MaterialTheme.typography.bodyMedium
+                        text = message.nickname,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    message.image_url?.let { imageUrl ->
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = "Chat image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RectangleShape), // 이미지도 각지게 처리
+                            contentScale = ContentScale.Crop,
+                            onSuccess = { Log.d("이미지 성공", imageUrl) },
+                            onError = { Log.d("이미지 에러", it.toString()) },
+                            onLoading = { Log.d("이미지 로딩", it.toString()) },
+                        )
+                        if (message.message.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+
+                    if (message.message.isNotBlank()) {
+                        Text(
+                            text = message.message,
+                        )
+                    }
                 }
             }
         }
     }
 }
+
 
 // --- 4. 전체 화면 이미지를 표시하는 Composable 추가 ---
 @Composable
