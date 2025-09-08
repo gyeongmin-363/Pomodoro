@@ -2,25 +2,30 @@ package com.malrang.pomodoro.ui.screen.studyroom
 
 import android.net.Uri
 import android.os.Build
-import android.widget.Toast
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.malrang.pomodoro.networkRepo.ChatMessage
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
@@ -38,13 +43,14 @@ fun ChatScreen(
     val membersMap = uiState.currentRoomMembers.associate { it.user_id to it.nickname }
     var messageText by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    // --- 1. 전체 화면 이미지 표시를 위한 상태 추가 ---
+    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
 
-    // --- 1. 스낵바 및 UI 이벤트 처리 설정 ---
+
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // ViewModel에서 오는 UI 이벤트를 수신하여 스낵바를 표시
     LaunchedEffect(Unit) {
         studyRoomViewModel.uiEvents.collect { eventMessage ->
             scope.launch {
@@ -52,7 +58,6 @@ fun ChatScreen(
             }
         }
     }
-    // --- 설정 끝 ---
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -73,122 +78,137 @@ fun ChatScreen(
         }
     }
 
-    // Scaffold를 사용하여 스낵바를 표시할 공간 확보
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            LazyColumn(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
-                reverseLayout = true
+                    .fillMaxSize()
+                    .padding(paddingValues)
             ) {
-                if (uiState.isChatLoading) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    reverseLayout = true
+                ) {
+                    if (uiState.isChatLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else {
+                        items(chatMessages.reversed()) { message ->
+                            val isMyMessage = message.user_id == currentUser?.id
+                            // --- 2. 이미지 클릭 콜백을 MessageBubble에 전달 ---
+                            MessageBubble(
+                                message = message,
+                                isMyMessage = isMyMessage,
+                                onImageClick = { imageUrl ->
+                                    fullScreenImageUrl = imageUrl
+                                }
+                            )
                         }
                     }
-                } else {
-                    // --- 3. 채팅 메시지에 이미지 표시 로직 추가 ---
-                    items(chatMessages.reversed()) { message ->
-                        val isMyMessage = message.user_id == currentUser?.id
-                        MessageBubble(message = message, isMyMessage = isMyMessage)
+                }
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (selectedImageUri != null) {
+                        Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                            AsyncImage(
+                                model = selectedImageUri,
+                                contentDescription = "Selected Image",
+                                modifier = Modifier
+                                    .height(150.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                            )
+                        }
                     }
-                    // --- 로직 추가 끝 ---
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            } else {
+                                galleryLauncher.launch("image/*")
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.AddCircle,
+                                contentDescription = "Attach Photo"
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = messageText,
+                            onValueChange = { messageText = it },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("메시지 입력") }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                currentUser?.id?.let { userId ->
+                                    val nickname = membersMap[userId].orEmpty()
+                                    if (selectedImageUri != null) {
+                                        studyRoomViewModel.sendChatWithImage(
+                                            context = context,
+                                            studyRoomId = studyRoomId,
+                                            userId = userId,
+                                            message = messageText,
+                                            nickname = nickname,
+                                            imageUri = selectedImageUri!!
+                                        )
+                                    } else {
+                                        if (messageText.isNotBlank()) {
+                                            studyRoomViewModel.sendChatMessage(
+                                                studyRoomId,
+                                                userId,
+                                                messageText,
+                                                nickname
+                                            )
+                                        }
+                                    }
+                                    messageText = ""
+                                    selectedImageUri = null
+                                }
+                            },
+                            enabled = (messageText.isNotBlank() || selectedImageUri != null) && !uiState.isChatLoading
+                        ) {
+                            Icon(imageVector = Icons.Default.Send, contentDescription = "Send")
+                        }
+                    }
                 }
             }
-
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (selectedImageUri != null) {
-                    Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
-                        AsyncImage(
-                            model = selectedImageUri,
-                            contentDescription = "Selected Image",
-                            modifier = Modifier
-                                .height(150.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        } else {
-                            galleryLauncher.launch("image/*")
-                        }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.AddCircle,
-                            contentDescription = "Attach Photo"
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("메시지 입력") }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            // --- 2. 이미지/텍스트 메시지 전송 로직 수정 ---
-                            currentUser?.id?.let { userId ->
-                                val nickname = membersMap[userId].orEmpty()
-                                if (selectedImageUri != null) {
-                                    studyRoomViewModel.sendChatWithImage(
-                                        context = context,
-                                        studyRoomId = studyRoomId,
-                                        userId = userId,
-                                        message = messageText,
-                                        nickname = nickname,
-                                        imageUri = selectedImageUri!!
-                                    )
-                                } else {
-                                    if (messageText.isNotBlank()) {
-                                        studyRoomViewModel.sendChatMessage(
-                                            studyRoomId,
-                                            userId,
-                                            messageText,
-                                            nickname
-                                        )
-                                    }
-                                }
-                                messageText = ""
-                                selectedImageUri = null
-                            }
-                            // --- 로직 수정 끝 ---
-                        },
-                        enabled = (messageText.isNotBlank() || selectedImageUri != null) && !uiState.isChatLoading
-                    ) {
-                        Icon(imageVector = Icons.Default.Send, contentDescription = "Send")
-                    }
-                }
+            // --- 3. 전체 화면 이미지 표시 로직 추가 ---
+            if (fullScreenImageUrl != null) {
+                FullScreenImage(
+                    imageUrl = fullScreenImageUrl!!,
+                    onDismiss = { fullScreenImageUrl = null }
+                )
             }
         }
     }
 }
 
 @Composable
-fun MessageBubble(message: ChatMessage, isMyMessage: Boolean) {
+fun MessageBubble(
+    message: ChatMessage,
+    isMyMessage: Boolean,
+    onImageClick: (String) -> Unit // --- 이미지 클릭 이벤트를 처리할 콜백 추가 ---
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -210,7 +230,6 @@ fun MessageBubble(message: ChatMessage, isMyMessage: Boolean) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // 이미지가 있을 경우 표시
                 message.image_url?.let { imageUrl ->
                     AsyncImage(
                         model = imageUrl,
@@ -218,22 +237,61 @@ fun MessageBubble(message: ChatMessage, isMyMessage: Boolean) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onImageClick(imageUrl) }, // --- 이미지 클릭 시 콜백 호출 ---
+                        contentScale = ContentScale.Crop,
+                        onSuccess = { Log.d("이미지 성공", imageUrl) },
+                        onError = { Log.d("이미지 에러", it.toString()) },
+                        onLoading = { Log.d("이미지 로딩", it.toString()) },
                     )
-                    // 이미지와 텍스트가 모두 있을 경우 간격 추가
                     if (message.message.isNotBlank()) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
 
-                // 텍스트 메시지가 있을 경우 표시
                 if (message.message.isNotBlank()) {
                     Text(
                         text = message.message,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
+            }
+        }
+    }
+}
+
+// --- 4. 전체 화면 이미지를 표시하는 Composable 추가 ---
+@Composable
+fun FullScreenImage(imageUrl: String, onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false) // 전체 화면으로 확장
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable { onDismiss() }, // 배경 클릭 시 닫기
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Full screen image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentScale = ContentScale.Fit, // 이미지가 잘리지 않도록 설정
+            )
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White
+                )
             }
         }
     }
