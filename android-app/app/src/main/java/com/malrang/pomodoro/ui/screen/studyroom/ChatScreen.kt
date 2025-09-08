@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -227,7 +230,8 @@ fun ChatScreen(
                     }) {
                         Icon(
                             imageVector = Icons.Default.AddCircle,
-                            contentDescription = "Attach Photo"
+                            contentDescription = "Attach Photo",
+                            tint = Color.White
                         )
                     }
 
@@ -235,7 +239,16 @@ fun ChatScreen(
                         value = messageText,
                         onValueChange = { messageText = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = {Text("메시지 입력")}
+                        placeholder = {Text("메시지 입력")},
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.White,
+                            unfocusedBorderColor = Color.Gray,
+                            cursorColor = Color.White,
+                            focusedLabelColor = Color.White,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        )
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -267,8 +280,15 @@ fun ChatScreen(
                         },
                         enabled = (messageText.isNotBlank() || selectedImageUri != null) && !uiState.isChatLoading,
                         shape = RectangleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF6B6B6B),
+                            contentColor = Color.White
+                        ),
                     ) {
-                        Icon(imageVector = Icons.Default.Send, contentDescription = "Send")
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "Send"
+                        )
                     }
                 }
             }
@@ -290,8 +310,8 @@ fun MessageBubble(
     onImageClick: (String) -> Unit
 ) {
     // 메시지 소유자에 따라 컨테이너 색상과 테두리 색상 결정
-    val containerColor = if (isMyMessage) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-    val borderColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val containerColor = if (isMyMessage) Color(0xFF312C77) else Color.LightGray
+    val borderColor = if (isMyMessage) Color.LightGray else Color(0xFF312C77)
 
     Row(
         modifier = Modifier
@@ -328,7 +348,7 @@ fun MessageBubble(
                 ) {
                     Text(
                         text = message.nickname,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if(isMyMessage) Color.LightGray else Color.DarkGray
                     )
                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -353,6 +373,7 @@ fun MessageBubble(
                     if (message.message.isNotBlank()) {
                         Text(
                             text = message.message,
+                            color = if(isMyMessage) Color.White else Color.Black
                         )
                     }
                 }
