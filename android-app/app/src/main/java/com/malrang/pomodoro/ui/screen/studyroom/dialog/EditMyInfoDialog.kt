@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.ui.screen.studyroom
+package com.malrang.pomodoro.ui.screen.studyroom.dialog
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,44 +18,47 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.networkRepo.StudyRoomMember
-import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
-import java.util.UUID
+import kotlin.collections.find
 
+/**
+ * 챌린지룸 내 내 정보(닉네임, 동물) 수정을 위한 다이얼로그. PixelArtConfirmDialog를 사용합니다.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JoinStudyRoomDialog(
-    room: StudyRoom,
-    currentUser: User,
+fun EditMyInfoDialog(
+    member: StudyRoomMember,
     collectedAnimals: Set<Animal>,
     viewModel: StudyRoomViewModel,
     onDismiss: () -> Unit
 ) {
-    var nickname by remember { mutableStateOf("") }
-    var selectedAnimal by remember { mutableStateOf<Animal?>(null) }
+    var nickname by remember { mutableStateOf(member.nickname) }
+    // Find the initial Animal object from the member's animal ID
+    val initialAnimal = remember(member.animal, collectedAnimals) {
+        collectedAnimals.find { it.id == member.animal }
+    }
+    var selectedAnimal by remember { mutableStateOf(initialAnimal) }
     var expanded by remember { mutableStateOf(false) }
 
     PixelArtConfirmDialog(
         onDismissRequest = onDismiss,
-        title = "${room.name} 프로필 설정",
-        confirmText = "참여",
-        confirmButtonEnabled = nickname.isNotBlank(),
+        title = "내 정보 수정",
+        confirmText = "수정",
         onConfirm = {
-            val member = StudyRoomMember(
-                id = UUID.randomUUID().toString(),
-                study_room_id = room.id,
-                user_id = currentUser.id,
-                nickname = nickname,
-                animal = selectedAnimal?.id
-            )
-            viewModel.joinStudyRoom(member)
-            onDismiss() // 참여하기 버튼 클릭 후 다이얼로그 닫기
-        }
+            member.study_room_id?.let {
+                viewModel.updateMyInfoInRoom(
+                    memberId = member.id,
+                    studyRoomId = it,
+                    newNickname = nickname,
+                    newAnimalId = selectedAnimal?.id
+                )
+            }
+            onDismiss()
+        },
+        confirmButtonEnabled = nickname.isNotBlank()
     ) {
-        // PixelArtConfirmDialog의 content 영역에 들어갈 UI 구성
         Column {
             OutlinedTextField(
                 value = nickname,
@@ -85,6 +88,13 @@ fun JoinStudyRoomDialog(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
+                    DropdownMenuItem(
+                        text = { Text("선택 안함") },
+                        onClick = {
+                            selectedAnimal = null
+                            expanded = false
+                        }
+                    )
                     collectedAnimals.forEach { animal ->
                         DropdownMenuItem(
                             text = { Text(animal.displayName) },
