@@ -143,7 +143,7 @@ class PomodoroRepository(private val context: Context) {
                     studyTime = 50,
                     shortBreakTime = 10,
                     longBreakTime = 30,
-                    longBreakInterval = 2,
+                    longBreakInterval = 4,
                     soundEnabled = true,
                     vibrationEnabled = true,
                     autoStart = true, // 긴 세션에서는 수동 시작을 선호할 수 있습니다.

@@ -128,6 +128,7 @@ fun StudyRoomDetailScreen(
     var showLeaveConfirmDialog by remember { mutableStateOf(false) }
     var showEditMyInfoDialog by remember { mutableStateOf(false) }
     var showEditRoomInfoDialog by remember { mutableStateOf(false) }
+    var showCompleteConfirmDialog by remember { mutableStateOf(false) }
 
 
     // roomId가 변경되거나, 달력의 월(selectedDate)이 변경될 때 데이터를 새로고침합니다.
@@ -539,7 +540,7 @@ fun StudyRoomDetailScreen(
 
         // 화면 하단 고정 버튼 로직 수정
         Button(
-            onClick = { if (roomId != null) roomVm.completeTodayChallenge(roomId) },
+            onClick = { showCompleteConfirmDialog = true },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
@@ -629,6 +630,25 @@ fun StudyRoomDetailScreen(
                 }
             )
         }
+
+        // '오늘 챌린지 완료하기' 확인 다이얼로그
+        if (showCompleteConfirmDialog) {
+            PixelArtConfirmDialog(
+                onDismissRequest = { showCompleteConfirmDialog = false },
+                title = "챌린지 완료",
+                confirmText = "완료",
+                onConfirm = {
+                    roomId?.let { roomVm.completeTodayChallenge(it) }
+                    showCompleteConfirmDialog = false
+                }
+            ) {
+                Text(
+                    text = "오늘의 챌린지를 완료하시겠습니까?\n완료하면 취소할 수 없습니다.",
+                    color = Color.White,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
     }
 }
 
@@ -717,4 +737,3 @@ fun RankingItem(
         }
     }
 }
-

@@ -23,6 +23,8 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 @Composable
 fun AccountSettingsScreen(authViewModel: AuthViewModel = viewModel()) {
     val authState by authViewModel.uiState.collectAsState()
+    // 1. 로그아웃 및 회원탈퇴 다이얼로그 상태를 관리할 변수 선언
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     val context = LocalActivity.current
 
@@ -30,6 +32,22 @@ fun AccountSettingsScreen(authViewModel: AuthViewModel = viewModel()) {
     val userEmail = when (val state = authState) {
         is AuthViewModel.AuthState.Authenticated -> state.user!!.email
         else -> "이메일 정보 없음"
+    }
+
+    // 2. 로그아웃 확인 다이얼로그
+    if (showLogoutConfirmDialog) {
+        PixelArtConfirmDialog(
+            title = "로그아웃",
+            content = { Text("정말로 로그아웃 하시겠습니까?") },
+            onConfirm = {
+                authViewModel.signOut(context!!)
+                showLogoutConfirmDialog = false
+            },
+            onDismissRequest = {
+                showLogoutConfirmDialog = false
+            },
+            confirmText = "로그아웃"
+        )
     }
 
     // 회원 탈퇴 확인 다이얼로그
@@ -66,7 +84,8 @@ fun AccountSettingsScreen(authViewModel: AuthViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        Button(onClick = { authViewModel.signOut(context!!) }) {
+        // 3. 로그아웃 버튼 클릭 시 ViewModel을 직접 호출하는 대신 다이얼로그를 띄우도록 수정
+        Button(onClick = { showLogoutConfirmDialog = true }) {
             Text("로그아웃")
         }
 
