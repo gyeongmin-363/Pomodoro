@@ -322,7 +322,10 @@ fun MessageBubble(
                 color = containerColor,
                 shape = RectangleShape // 완벽한 사각형 모양
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                        .fillMaxWidth()
+                ) {
                     Text(
                         text = message.nickname,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
