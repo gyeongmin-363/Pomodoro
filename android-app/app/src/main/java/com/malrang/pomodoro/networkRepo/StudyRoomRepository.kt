@@ -6,10 +6,14 @@ import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.selectAsFlow
+import io.github.jan.supabase.storage.ImageTransformation
+import io.github.jan.supabase.storage.Storage
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
 
 class StudyRoomRepository(
     private val postgrest: Postgrest,
+    private val storage: Storage
 ) {
 
     // MARK: - StudyRoom Functions
@@ -321,14 +325,34 @@ class StudyRoomRepository(
      * @param userId 메시지를 보내는 사용자 ID
      * @param message 보낼 메시지 내용
      */
-    suspend fun sendChatMessage(studyRoomId: String, userId: String, message: String, nickname : String) {
-        val chatMessage = mapOf(
+    suspend fun sendChatMessage(studyRoomId: String, userId: String, message: String, nickname : String, imageUrl: String? = null) {
+        val chatMessage = mutableMapOf(
             "study_room_id" to studyRoomId,
             "user_id" to userId,
             "message" to message,
             "nickname" to nickname
-        )
-        // created_at은 데이터베이스에서 default 값으로 자동 생성되도록 값을 보내지 않습니다.
+        ).apply {
+            imageUrl?.let { put("image_url", it) } // ✅ 이미지 URL이 있으면 맵에 추가
+        }
         postgrest["chat_messages"].insert(chatMessage)
+    }
+
+
+    /**
+     * 원본 이미지 데이터를 Supabase Storage에 업로드하고, 공개 URL을 반환합니다.
+     * @param bucketName Supabase 스토리지 버킷 이름 (예: "chat_images")
+     * @param imageBytes 업로드할 이미지의 ByteArray
+     * @return 업로드된 이미지의 전체 공개 URL
+     */
+    suspend fun uploadImage(bucketName: String, imageBytes: ByteArray): String {
+        val fileName = "images/${UUID.randomUUID()}.jpg"
+        storage[bucketName].upload(
+            path = fileName,
+            data = imageBytes
+        ) {
+            upsert = false
+        }
+        // 업로드 후, 파일 경로를 사용하여 Public URL을 생성하고 반환합니다.
+        return storage[bucketName].publicUrl(fileName)
     }
 }
