@@ -6,10 +6,12 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
@@ -119,6 +121,7 @@ fun ChatScreen(
 
                 Column(modifier = Modifier.fillMaxWidth()) {
                     if (selectedImageUri != null) {
+                        // --- 수정된 부분: 이미지 미리보기 ---
                         Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
                             AsyncImage(
                                 model = selectedImageUri,
@@ -127,6 +130,20 @@ fun ChatScreen(
                                     .height(150.dp)
                                     .clip(RoundedCornerShape(12.dp))
                             )
+                            // --- X 버튼 추가 ---
+                            IconButton(
+                                onClick = { selectedImageUri = null },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(4.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove selected image",
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
 
