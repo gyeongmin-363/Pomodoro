@@ -2,6 +2,7 @@ package com.malrang.pomodoro
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -16,8 +17,14 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.service.AppUsageMonitoringService
@@ -77,6 +84,7 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+            EnterFullScreen()
             PomodoroTheme {
                 Scaffold {
                     Box(modifier = Modifier.padding(it)) {
@@ -85,6 +93,25 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    @Composable
+    fun EnterFullScreen() {
+        val view = LocalView.current
+        val window = (view.context as? Activity)?.window ?: return
+
+        // LaunchedEffect를 사용하여 Composable이 화면에 처음 나타날 때 한 번만 실행되도록 합니다.
+        LaunchedEffect(Unit) {
+            val insetsController = WindowCompat.getInsetsController(window, view)
+
+            // 1. 상태 표시줄과 네비게이션 바를 모두 숨깁니다.
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+
+            // 2. 사용자가 화면을 스와이프했을 때만 시스템 바가 일시적으로 나타나도록 동작을 설정합니다.
+            //    잠시 후 자동으로 다시 사라집니다.
+            insetsController.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
 
