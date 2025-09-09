@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -12,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.networkRepo.StudyRoom
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
@@ -53,7 +55,17 @@ fun EditStudyRoomInfoDialog(
                 },
                 label = { Text("챌린지룸 이름 (${roomName.length}/20)") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true // 한 줄로 제한
+                singleLine = true, // 한 줄로 제한
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = Color.White,
+                    focusedLabelColor = Color.White,
+                    unfocusedLabelColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
@@ -67,7 +79,16 @@ fun EditStudyRoomInfoDialog(
                 label = { Text("설명 (${roomInform.length}/100)") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 1,
-                maxLines = 10 // 최대 10줄
+                maxLines = 10, // 최대 10줄
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = Color.White,
+                    focusedLabelColor = Color.White,
+                    unfocusedLabelColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
             )
         }
     }

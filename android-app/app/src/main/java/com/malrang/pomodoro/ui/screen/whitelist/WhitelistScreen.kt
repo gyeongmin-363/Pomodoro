@@ -34,8 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
-import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.theme.backgroundColor
+import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -83,9 +82,11 @@ fun WhitelistScreen(
 //    }
 
     Scaffold(
-        containerColor = backgroundColor,
+//        containerColor = backgroundImage,
         contentColor = Color.White
     ) { paddingValues ->
+        SetBackgroundImage()
+
         Column(
             modifier = Modifier
                 .padding(paddingValues)

@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.networkRepo.StudyRoom
-import com.malrang.pomodoro.ui.theme.backgroundColor
+import com.malrang.pomodoro.ui.theme.dialogColor
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +45,7 @@ fun DeleteStudyRoomScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = backgroundColor
+                    containerColor = dialogColor
                 )
             )
         },
@@ -64,7 +64,7 @@ fun DeleteStudyRoomScreen(
                 Text("선택한 챌린지룸 삭제 (${selectedRoomIds.size})")
             }
         },
-        containerColor = backgroundColor
+        containerColor = dialogColor
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             if (isLoading) {

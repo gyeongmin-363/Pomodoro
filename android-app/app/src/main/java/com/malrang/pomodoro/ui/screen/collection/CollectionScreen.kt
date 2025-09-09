@@ -1,6 +1,5 @@
 package com.malrang.pomodoro.ui.screen.collection
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,7 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.theme.backgroundColor
+import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 
 /**
@@ -56,11 +55,11 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
             .thenBy { it.displayName }
     )
 
+    SetBackgroundImage()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
             .padding(16.dp)
     ) {
         Row(
@@ -103,7 +102,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
                             .height(160.dp)
                             .fillMaxWidth()
                             .clickable { selectedAnimal = animal },
-                        colors = CardDefaults.cardColors(containerColor = Color(0x33FFFFFF))
+                        colors = CardDefaults.cardColors(containerColor = Color.Gray.copy(alpha = 0.7f))
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,

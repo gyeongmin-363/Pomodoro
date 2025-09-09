@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen.stats
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -13,9 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -57,10 +60,11 @@ fun DayCell(
         }
 
         if (hasRecord) {
-            Text(
-                text = "🐾",
-                fontSize = 28.sp,
-                color = Color(0xFFFBBF24).copy(alpha = 0.6f),
+            Image(
+                painterResource(com.malrang.pomodoro.R.drawable.cat_stamp_image),
+                contentDescription = "고양이 스탬프",
+                contentScale = ContentScale.FillBounds,
+                colorFilter = ColorFilter.tint(Color(0xFF3DB046))
             )
         }
         Text(

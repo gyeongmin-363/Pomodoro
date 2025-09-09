@@ -60,7 +60,7 @@ import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
-import com.malrang.pomodoro.ui.theme.backgroundColor
+import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import kotlinx.coroutines.launch
 
@@ -123,52 +123,54 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             ModalDrawerSheet(
                 drawerShape = RoundedCornerShape(0.dp),
                 modifier = Modifier.fillMaxWidth(0.7f),
-                drawerContainerColor = backgroundColor // 배경색 적용
             ) {
-                Column(
-                    modifier = Modifier
-                        .verticalScroll(rememberScrollState())
-                        .padding(top = 16.dp) // 상단 여백 추가
-                ) {
-                    drawerItems.forEach { item ->
-                        NavigationDrawerItem(
-                            icon = {
-                                if (item.iconRes != null) {
-                                    Icon(
-                                        painterResource(id = item.iconRes),
-                                        contentDescription = item.label,
-                                        modifier = Modifier.size(24.dp)
+                Box{
+                    SetBackgroundImage()
+                    Column(
+                        modifier = Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(top = 16.dp) // 상단 여백 추가
+                    ) {
+                        drawerItems.forEach { item ->
+                            NavigationDrawerItem(
+                                icon = {
+                                    if (item.iconRes != null) {
+                                        Icon(
+                                            painterResource(id = item.iconRes),
+                                            contentDescription = item.label,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    } else if (item.imageVector != null) {
+                                        Icon(
+                                            item.imageVector,
+                                            contentDescription = item.label,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                },
+                                label = {
+                                    Text(
+                                        text = item.label,
+                                        fontWeight = FontWeight.Normal
                                     )
-                                } else if (item.imageVector != null) {
-                                    Icon(
-                                        item.imageVector,
-                                        contentDescription = item.label,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            },
-                            label = {
-                                Text(
-                                    text = item.label,
-                                    fontWeight = FontWeight.Normal
+                                },
+                                selected = false, // 선택 상태는 이 예제에서 사용하지 않음
+                                onClick = {
+                                    item.screen?.let { viewModel.navigateTo(it) }
+                                    item.onCustomClick?.invoke()
+                                    scope.launch { drawerState.close() }
+                                },
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    .border(2.dp, Color.White.copy(alpha = 0.7f)), // 픽셀 느낌을 위한 테두리
+                                shape = RectangleShape, // 각진 모양
+                                colors = NavigationDrawerItemDefaults.colors(
+                                    unselectedContainerColor = Color.Gray.copy(alpha = 0.7f), // 기본 배경 투명
+                                    unselectedIconColor = drawerContentColor,
+                                    unselectedTextColor = drawerContentColor,
                                 )
-                            },
-                            selected = false, // 선택 상태는 이 예제에서 사용하지 않음
-                            onClick = {
-                                item.screen?.let { viewModel.navigateTo(it) }
-                                item.onCustomClick?.invoke()
-                                scope.launch { drawerState.close() }
-                            },
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp, vertical = 4.dp)
-                                .border(2.dp, Color.White.copy(alpha = 0.7f)), // 픽셀 느낌을 위한 테두리
-                            shape = RectangleShape, // 각진 모양
-                            colors = NavigationDrawerItemDefaults.colors(
-                                unselectedContainerColor = Color.Transparent, // 기본 배경 투명
-                                unselectedIconColor = drawerContentColor,
-                                unselectedTextColor = drawerContentColor,
                             )
-                        )
+                        }
                     }
                 }
             }

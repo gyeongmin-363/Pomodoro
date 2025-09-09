@@ -87,7 +87,7 @@ fun WeeklyTimeChart(dailyStats: Map<String, DailyStat>, displayDate: LocalDate) 
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2A64))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF525252))
     ) {
         Column(Modifier.padding(16.dp)) {
             val startDay = firstDayOfWeek.dayOfMonth

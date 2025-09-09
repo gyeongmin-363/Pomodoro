@@ -59,7 +59,7 @@ fun ExpandableCalendarView(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2A64))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF525252))
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             Row(

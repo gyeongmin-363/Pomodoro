@@ -32,6 +32,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.malrang.pomodoro.ui.theme.dialogColor
 
 
 /**
@@ -84,7 +85,7 @@ fun PixelArtConfirmDialog(
         ) {
             Surface(
                 shape = RectangleShape,
-                color = Color(0xFF2D2A5A),
+                color = dialogColor,
                 modifier = Modifier
                     .fillMaxWidth(0.8f) // 다이얼로그 너비를 화면의 80%로 설정 (조정 가능)
                     .border(2.dp, Color.White, RectangleShape)

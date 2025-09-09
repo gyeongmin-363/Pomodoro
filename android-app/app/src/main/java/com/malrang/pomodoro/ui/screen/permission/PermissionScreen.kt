@@ -3,26 +3,30 @@ package com.malrang.pomodoro.ui.screen.permission
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
@@ -30,9 +34,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.malrang.pomodoro.dataclass.ui.PermissionType
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.ui.theme.Typography
-import com.malrang.pomodoro.ui.theme.backgroundColor
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import androidx.core.net.toUri
 
 @Composable
 fun PermissionScreen(vm: PomodoroViewModel) {
@@ -49,7 +54,7 @@ fun PermissionScreen(vm: PomodoroViewModel) {
     val allPermissionsGranted = if (totalCount == 0) false else permissions.all { it.isGranted }
     val nextPermission = permissions.firstOrNull { it.type !in sessionAttemptedPermissions }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -68,7 +73,10 @@ fun PermissionScreen(vm: PomodoroViewModel) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        SetBackgroundImage()
+
+
         Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = "앱 사용을 위한 권한 설정", modifier = Modifier.padding(bottom = 24.dp))
 
@@ -99,7 +107,8 @@ fun PermissionScreen(vm: PomodoroViewModel) {
                             vm.setPermissionAttemptedInSession(nextPermission.type)
                             when (nextPermission.type) {
                                 PermissionType.OVERLAY -> {
-                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        "package:${context.packageName}".toUri())
                                     context.startActivity(intent)
                                 }
                                 PermissionType.USAGE_STATS -> {

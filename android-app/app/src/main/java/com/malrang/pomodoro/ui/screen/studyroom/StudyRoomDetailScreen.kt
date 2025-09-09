@@ -4,7 +4,6 @@ import android.content.Intent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,8 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -33,7 +30,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,15 +37,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +52,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
@@ -75,14 +66,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
-import com.malrang.pomodoro.networkRepo.StudyRoom
-import com.malrang.pomodoro.networkRepo.StudyRoomMember
 import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.ui.screen.stats.MonthlyCalendarGrid
@@ -91,7 +78,7 @@ import com.malrang.pomodoro.ui.screen.studyroom.dialog.ConfirmationDialog
 import com.malrang.pomodoro.ui.screen.studyroom.dialog.DelegateAdminDialog
 import com.malrang.pomodoro.ui.screen.studyroom.dialog.EditMyInfoDialog
 import com.malrang.pomodoro.ui.screen.studyroom.dialog.EditStudyRoomInfoDialog
-import com.malrang.pomodoro.ui.theme.backgroundColor
+import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -177,8 +164,9 @@ fun StudyRoomDetailScreen(
 
     // Box를 사용하여 컨텐츠와 버튼을 겹치게 배치합니다.
     Box(modifier = Modifier
-        .fillMaxSize()
-        .background(backgroundColor)) {
+        .fillMaxSize()) {
+        SetBackgroundImage()
+
         val scrollState = rememberScrollState()
         Column(
             modifier = Modifier
@@ -355,13 +343,16 @@ fun StudyRoomDetailScreen(
 
                         Column(
                             modifier = Modifier.animateContentSize()
+                                    .background(Color.Gray.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+                                    .padding(10.dp)
+
                         ) {
                             if (isDescriptionExpanded) {
                                 // 확장된 상태: 전체 텍스트와 위쪽 화살표 버튼
                                 Text(
                                     text = room.inform,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.Gray,
+                                    color = Color.White,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 if (isExpandable) {
@@ -387,7 +378,7 @@ fun StudyRoomDetailScreen(
                                     Text(
                                         text = room.inform,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = Color.Gray,
+                                        color = Color.White,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier
@@ -419,7 +410,10 @@ fun StudyRoomDetailScreen(
 
 
                 //달력
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Column(Modifier
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .background(Color(0xFF525252), RoundedCornerShape(10.dp))
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -498,40 +492,49 @@ fun StudyRoomDetailScreen(
 
                 var isParticipantListExpanded by remember { mutableStateOf(true) }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { isParticipantListExpanded = !isParticipantListExpanded }
                         .padding(horizontal = 16.dp)
-                ) {
-                    Text(
-                        text = "참여자 (${members.size}명)",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = { isParticipantListExpanded = !isParticipantListExpanded }) {
-                        Icon(
-                            imageVector = if (isParticipantListExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isParticipantListExpanded) "참여자 목록 축소" else "참여자 목록 확장",
-                            tint = Color.White
-                        )
-                    }
-                }
-
-                // 랭킹 UI에 동적 데이터 적용
-                Column(modifier = Modifier.animateContentSize()) {
-                    if (isParticipantListExpanded) {
-                        val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
-                        rankingList.forEach { item ->
-                            RankingItem(
-                                name = item.member.nickname,
-                                completedDays = item.completedDays,
-                                totalDaysInMonth = totalDaysInMonth,
-                                progress = item.progress,
-                                animalId = item.member.animal
+                        .background(Color(0xFF525252), RoundedCornerShape(10.dp))
+                ){
+                    Column(
+                        modifier = Modifier.padding(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isParticipantListExpanded = !isParticipantListExpanded }
+                        ) {
+                            Text(
+                                text = "참여자 (${members.size}명)",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f)
                             )
+                            IconButton(onClick = { isParticipantListExpanded = !isParticipantListExpanded }) {
+                                Icon(
+                                    imageVector = if (isParticipantListExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isParticipantListExpanded) "참여자 목록 축소" else "참여자 목록 확장",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+
+                        // 랭킹 UI에 동적 데이터 적용
+                        Column(modifier = Modifier.animateContentSize()) {
+                            if (isParticipantListExpanded) {
+                                val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
+                                rankingList.forEach { item ->
+                                    RankingItem(
+                                        name = item.member.nickname,
+                                        completedDays = item.completedDays,
+                                        totalDaysInMonth = totalDaysInMonth,
+                                        progress = item.progress,
+                                        animalId = item.member.animal
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -567,7 +570,7 @@ fun StudyRoomDetailScreen(
                     val progress = habitProgressMap[member.user_id]
                     val isCorrectMonth = progress?.year_month == YearMonth.from(tappedDate).format(DateTimeFormatter.ofPattern("yyyy-MM"))
                     if (isCorrectMonth) {
-                        progress?.daily_progress?.getOrNull(tappedDate!!.dayOfMonth - 1) == '1'
+                        progress.daily_progress.getOrNull(tappedDate!!.dayOfMonth - 1) == '1'
                     } else {
                         false
                     }
@@ -665,8 +668,7 @@ fun RankingItem(
 ) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+            .fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
         val animal = animalId?.let { AnimalsTable.byId(it) }

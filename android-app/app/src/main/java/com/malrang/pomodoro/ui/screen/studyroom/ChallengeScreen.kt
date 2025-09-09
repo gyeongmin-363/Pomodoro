@@ -1,6 +1,5 @@
 package com.malrang.pomodoro.ui.screen.studyroom
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -48,7 +48,7 @@ import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.networkRepo.User
 import com.malrang.pomodoro.ui.screen.studyroom.dialog.CreateStudyRoomDialog
 import com.malrang.pomodoro.ui.screen.studyroom.dialog.JoinStudyRoomDialog
-import com.malrang.pomodoro.ui.theme.backgroundColor
+import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import kotlinx.serialization.json.jsonPrimitive
@@ -106,10 +106,11 @@ fun ChallengeScreen(
     // FloatingActionButton은 Scaffold와 함께 사용하는 것이 일반적이지만,
     // 현재 구조를 유지하기 위해 Box로 감싸 화면 위에 표시되도록 합니다.
     Box(modifier = Modifier.fillMaxSize()) {
+        SetBackgroundImage()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
                 .padding(top = 16.dp)
             // ❌ [제거] 중첩 스크롤을 유발하는 원인이므로 제거합니다.
             // .verticalScroll(rememberScrollState())
@@ -130,12 +131,17 @@ fun ChallengeScreen(
                         modifier = Modifier.weight(1f),
                         placeholder = { Text("챌린지룸 이름으로 검색...") },
                         textStyle = TextStyle(color = Color.White),
-//                        colors = TextFieldDefaults.outlinedTextFieldColors(
-//                            focusedBorderColor = Color.White,
-//                            unfocusedBorderColor = Color.Gray,
-//                            cursorColor = Color.White,
-//                            placeholderColor = Color.LightGray
-//                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.White,
+                            unfocusedBorderColor = Color.Gray,
+                            cursorColor = Color.White,
+                            focusedLabelColor = Color.White,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color.DarkGray,
+                            unfocusedContainerColor = Color.DarkGray,
+                        ),
                         singleLine = true
                     )
                 } else {
@@ -184,7 +190,7 @@ fun ChallengeScreen(
             }
             TabRow(
                 selectedTabIndex = selectedTabIndex,
-                containerColor = backgroundColor,
+                containerColor = Color.Transparent,
                 contentColor = Color.White
             ) {
                 tabs.forEachIndexed { index, title ->

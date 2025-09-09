@@ -26,18 +26,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
@@ -67,7 +63,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.malrang.pomodoro.networkRepo.ChatMessage
-import com.malrang.pomodoro.ui.theme.backgroundColor
+import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import kotlinx.coroutines.launch
 
@@ -122,8 +118,8 @@ fun ChatScreen(
 
     Box(
         modifier = Modifier.fillMaxSize()
-            .background(backgroundColor)
     ) {
+        SetBackgroundImage()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -281,12 +277,12 @@ fun ChatScreen(
                         enabled = (messageText.isNotBlank() || selectedImageUri != null) && !uiState.isChatLoading,
                         shape = RectangleShape,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF6B6B6B),
+                            containerColor = Color(0xFF6BA5E3),
                             contentColor = Color.White
                         ),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Send,
+                            imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = "Send"
                         )
                     }
