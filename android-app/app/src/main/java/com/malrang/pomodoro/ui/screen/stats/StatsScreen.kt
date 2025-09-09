@@ -1,7 +1,6 @@
 package com.malrang.pomodoro.ui.screen.stats
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.theme.backgroundColor
+import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.PomodoroViewModel
 import java.time.LocalDate
 
@@ -41,10 +40,11 @@ fun StatsScreen(vm: PomodoroViewModel) {
     var isCalendarExpanded by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
+    SetBackgroundImage()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
