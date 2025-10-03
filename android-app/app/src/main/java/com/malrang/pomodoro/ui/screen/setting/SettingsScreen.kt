@@ -226,7 +226,6 @@ fun SettingsScreen(
             confirmText = "확인",
             onConfirm = {
                 onSave()
-                onNavigateTo(Screen.Main)
                 showDialog = false
             }
         ) {

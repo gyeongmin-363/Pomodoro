@@ -7,6 +7,7 @@ import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,7 @@ class TimerViewModel(
 
     private val _uiState = MutableStateFlow(TimerUiState())
     val uiState: StateFlow<TimerUiState> = _uiState.asStateFlow()
+    private var isResetting = false
 
     init {
         viewModelScope.launch {
@@ -65,8 +67,21 @@ class TimerViewModel(
     fun startTimer(settings: Settings) {
         if (_uiState.value.isRunning) return
         val s = _uiState.value
-        _uiState.update { it.copy(isRunning = true, isTimerStartedOnce = true) }
-        timerService.start(s.timeLeft, settings, s.currentMode, s.totalSessions)
+
+        val timeForCurrentMode = when (s.currentMode) {
+            Mode.STUDY -> settings.studyTime * 60
+            Mode.SHORT_BREAK -> settings.shortBreakTime * 60
+            Mode.LONG_BREAK -> settings.longBreakTime * 60
+        }
+
+        val newTimeLeft = if (!s.isTimerStartedOnce) {
+            timeForCurrentMode
+        } else {
+            s.timeLeft
+        }
+
+        _uiState.update { it.copy(isRunning = true, isTimerStartedOnce = true, timeLeft = newTimeLeft) }
+        timerService.start(newTimeLeft, settings, s.currentMode, s.totalSessions)
     }
 
     fun pauseTimer() {
@@ -76,6 +91,7 @@ class TimerViewModel(
 
     fun reset(settings: Settings) {
         viewModelScope.launch {
+            isResetting = true
             localRepo.clearTimerState()
             _uiState.update {
                 it.copy(
@@ -87,6 +103,8 @@ class TimerViewModel(
                 )
             }
             timerService.resetCompletely(settings)
+            delay(200) // 서비스가 리셋되고 브로드캐스트할 시간을 줍니다.
+            isResetting = false
         }
     }
 
@@ -114,6 +132,7 @@ class TimerViewModel(
     }
 
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
+        if (isResetting) return // 리셋 중에는 서비스로부터 오는 업데이트를 무시합니다.
         _uiState.update {
             it.copy(
                 timeLeft = timeLeft, isRunning = isRunning,

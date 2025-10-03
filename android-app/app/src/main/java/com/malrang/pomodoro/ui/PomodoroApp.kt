@@ -88,6 +88,10 @@ fun PomodoroApp(
                         onSave = {
                             settingsViewModel.saveSettingsAndReset { newSettings ->
                                 timerViewModel.reset(newSettings)
+                                // 저장 및 리셋이 완료된 후 메인 화면으로 이동합니다.
+                                navController.navigate(Screen.Main.name) {
+                                    popUpTo(Screen.Settings.name) { inclusive = true }
+                                }
                             }
                         }
                     )
