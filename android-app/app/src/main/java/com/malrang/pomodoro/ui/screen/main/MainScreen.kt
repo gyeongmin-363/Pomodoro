@@ -319,7 +319,7 @@ fun MainScreen(
             )
 
             AnimatedVisibility(
-                visible = (timerState.currentMode != Mode.STUDY || timerState.isPaused) && settingsState.useGrassBackground,
+                visible = (timerState.currentMode != Mode.STUDY || !timerState.isRunning) && settingsState.useGrassBackground,
                 enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
                 exit = fadeOut(animationSpec = tween(durationMillis = 1000))
             ) {

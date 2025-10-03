@@ -22,10 +22,10 @@ class TimerServiceProvider(private val context: Context) {
     fun start(timeLeft: Int, settings: Settings, currentMode: Mode, totalSessions: Int) {
         val intent = Intent(context, TimerService::class.java).apply {
             action = "START"
-            putExtra("TIME_LEFT", timeLeft)
-            putExtra("SETTINGS", settings as Serializable)
-            putExtra("CURRENT_MODE", currentMode as Serializable)
-            putExtra("TOTAL_SESSIONS", totalSessions)
+            putExtra(TimerService.EXTRA_TIME_LEFT, timeLeft)
+            putExtra(TimerService.EXTRA_SETTINGS, settings as Serializable)
+            putExtra(TimerService.EXTRA_CURRENT_MODE, currentMode as Serializable)
+            putExtra(TimerService.EXTRA_TOTAL_SESSIONS, totalSessions)
         }
         context.startService(intent)
     }
@@ -52,8 +52,8 @@ class TimerServiceProvider(private val context: Context) {
     fun skip(currentMode: Mode, totalSessions: Int) {
         val intent = Intent(context, TimerService::class.java).apply {
             action = "SKIP"
-            putExtra("CURRENT_MODE", currentMode as Serializable)
-            putExtra("TOTAL_SESSIONS", totalSessions)
+            putExtra(TimerService.EXTRA_CURRENT_MODE, currentMode as Serializable)
+            putExtra(TimerService.EXTRA_TOTAL_SESSIONS, totalSessions)
         }
         context.startService(intent)
     }
@@ -61,7 +61,7 @@ class TimerServiceProvider(private val context: Context) {
     fun resetCompletely(settings: Settings) { // Settings 객체를 인자로 받도록 변경
         val intent = Intent(context, TimerService::class.java).apply {
             action = "RESET"
-            putExtra("SETTINGS", settings as Serializable) // Intent에 설정값 추가
+            putExtra(TimerService.EXTRA_SETTINGS, settings as Serializable) // Intent에 설정값 추가
         }
         context.startService(intent)
     }

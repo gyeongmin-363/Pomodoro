@@ -121,7 +121,7 @@ fun DeletableStudyRoomItem(
         // 기존 StudyRoomItem UI를 재사용합니다.
         // 클릭 이벤트는 Row에서 처리하므로 Box로 감싸 클릭을 막습니다.
         Box(modifier = Modifier.weight(1f)) {
-            StudyRoomItem(room = room, onClick = {})
+            StudyRoomItem(room = room, onClick = {onToggleSelection()})
         }
     }
 }

@@ -50,6 +50,13 @@ fun PomodoroApp(
     val navController = rememberNavController()
     val authState by authViewModel.authState.collectAsState()
 
+    // ✅ [추가] StudyRoomViewModel의 내비게이션 이벤트를 처리하는 부분
+    LaunchedEffect(navController, studyRoomViewModel) {
+        studyRoomViewModel.navigationEvents.collect { route ->
+            navController.navigate(route)
+        }
+    }
+
     when (authState) {
         is AuthViewModel.AuthState.Authenticated -> {
             // ✅ 권한이 부여되었는지 확인합니다.
@@ -108,7 +115,7 @@ fun PomodoroApp(
                 composable(Screen.AccountSettings.name) {
                     AccountSettingsScreen(
                         authViewModel = authViewModel,
-                        onNavigateTo = { navController.navigate(Screen.Main) }
+                        onNavigateTo = { navController.navigate(Screen.Main.name) }
                     )
                 }
                 // 딥링크 처리
@@ -136,7 +143,7 @@ fun PomodoroApp(
                         authVM = authViewModel,
                         roomVM = studyRoomViewModel,
                         inviteStudyRoomId = inviteId, // ✅ 여기서 uuid 주입됨
-                        onNavigateBack = { navController.navigate(Screen.Main) },
+                        onNavigateBack = { navController.navigate(Screen.Main.name) },
                         onNavigateToDelete = { navController.navigate(Screen.DeleteStudyRoom.name) }
                     )
                 }

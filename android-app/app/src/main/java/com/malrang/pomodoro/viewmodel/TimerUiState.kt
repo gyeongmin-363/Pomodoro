@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 data class TimerUiState(
     val timeLeft: Int = 0,
     val isRunning: Boolean = false,
-    val isPaused: Boolean = true,
     val isTimerStartedOnce: Boolean = false,
     val currentMode: Mode = Mode.STUDY,
     val totalSessions: Int = 0
@@ -49,7 +48,6 @@ class TimerViewModel(
                             currentMode = savedState.currentMode,
                             totalSessions = savedState.totalSessions,
                             isRunning = false,
-                            isPaused = true,
                             // 수정된 부분: 로드한 currentSettings를 사용하여 올바르게 계산합니다.
                             isTimerStartedOnce = savedState.timeLeft < (currentSettings.studyTime * 60)
                         )
@@ -67,12 +65,12 @@ class TimerViewModel(
     fun startTimer(settings: Settings) {
         if (_uiState.value.isRunning) return
         val s = _uiState.value
-        _uiState.update { it.copy(isRunning = true, isPaused = false, isTimerStartedOnce = true) }
+        _uiState.update { it.copy(isRunning = true, isTimerStartedOnce = true) }
         timerService.start(s.timeLeft, settings, s.currentMode, s.totalSessions)
     }
 
     fun pauseTimer() {
-        _uiState.update { it.copy(isRunning = false, isPaused = true) }
+        _uiState.update { it.copy(isRunning = false) }
         timerService.pause()
     }
 
@@ -84,7 +82,6 @@ class TimerViewModel(
                     timeLeft = settings.studyTime * 60,
                     totalSessions = 0,
                     isRunning = false,
-                    isPaused = true,
                     isTimerStartedOnce = false,
                     currentMode = Mode.STUDY,
                 )
@@ -110,7 +107,7 @@ class TimerViewModel(
         _uiState.update {
             it.copy(
                 currentMode = nextMode, totalSessions = newTotalSessions, timeLeft = nextTime * 60,
-                isRunning = false, isPaused = false
+                isRunning = false
             )
         }
         timerService.skip(s.currentMode, newTotalSessions)
@@ -119,7 +116,7 @@ class TimerViewModel(
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
         _uiState.update {
             it.copy(
-                timeLeft = timeLeft, isRunning = isRunning, isPaused = !isRunning && timeLeft > 0,
+                timeLeft = timeLeft, isRunning = isRunning,
                 currentMode = currentMode, totalSessions = totalSessions
             )
         }

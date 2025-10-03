@@ -65,11 +65,22 @@ class TimerService : Service() {
                         intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                     }
 
-                    timeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
-                    currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
-                    totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
+                    // settings가 null이 아닌지 확인하여 안정성을 높입니다.
+                    settings?.let { s ->
+                        timeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
+                        currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
+                        totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
 
-                    startTimer()
+                        // 만약 남은 시간이 0초 이하이면, 현재 모드에 맞는 시간으로 재설정합니다.
+                        if (timeLeft <= 0) {
+                            timeLeft = when (currentMode) {
+                                Mode.STUDY -> s.studyTime * 60
+                                Mode.SHORT_BREAK -> s.shortBreakTime * 60
+                                Mode.LONG_BREAK -> s.longBreakTime * 60
+                            }
+                        }
+                        startTimer()
+                    }
                 }
             }
             "PAUSE" -> {
