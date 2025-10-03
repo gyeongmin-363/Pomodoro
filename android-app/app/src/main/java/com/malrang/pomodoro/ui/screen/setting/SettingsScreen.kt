@@ -44,13 +44,12 @@ import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.ui.theme.dialogColor
-import com.malrang.pomodoro.viewmodel.MainViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
-    mainViewModel: MainViewModel,
+    onNavigateTo: (Screen) -> Unit,
     onSave: () -> Unit // ✅ 타이머 리셋 로직은 외부에 있어 람다로 받습니다.
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
@@ -160,7 +159,7 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
-            TextButton(onClick = { mainViewModel.navigateTo(Screen.Whitelist) }) {
+            TextButton(onClick = { onNavigateTo(Screen.Whitelist) }) {
                 Text("예외 목록 설정")
             }
         }
@@ -206,7 +205,7 @@ fun SettingsScreen(
             IconButton(
                 onClick = {
                     settingsViewModel.clearDraftSettings()
-                    mainViewModel.navigateTo(Screen.Main)
+                    onNavigateTo(Screen.Main)
                 },
             ) {
                 Icon(Icons.Default.Close, "취소", tint = Color.White)
@@ -227,7 +226,7 @@ fun SettingsScreen(
             confirmText = "확인",
             onConfirm = {
                 onSave()
-                mainViewModel.navigateTo(Screen.Main)
+                onNavigateTo(Screen.Main)
                 showDialog = false
             }
         ) {

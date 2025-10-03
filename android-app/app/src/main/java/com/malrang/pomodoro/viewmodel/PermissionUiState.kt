@@ -38,13 +38,13 @@ class PermissionViewModel(
 
     fun onPermissionRequestResult(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            checkAndupdatePermissions(context)
+            checkAndUpdatePermissions(context)
             return
         }
 
         val notificationPermissionInfo = _uiState.value.permissions.find { it.type == PermissionType.NOTIFICATION }
         if (notificationPermissionInfo == null) {
-            checkAndupdatePermissions(context)
+            checkAndUpdatePermissions(context)
             return
         }
 
@@ -61,14 +61,14 @@ class PermissionViewModel(
                 _uiState.update { it.copy(notificationDenialCount = newCount) }
             }
         }
-        checkAndupdatePermissions(context)
+        checkAndUpdatePermissions(context)
     }
 
     fun setPermissionAttemptedInSession(permissionType: PermissionType) {
         _uiState.update { it.copy(sessionAttemptedPermissions = it.sessionAttemptedPermissions + permissionType) }
     }
 
-    fun checkAndupdatePermissions(context: Context): Boolean {
+    fun checkAndUpdatePermissions(context: Context): Boolean {
         val permissionList = mutableListOf<PermissionInfo>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissionList.add(

@@ -37,7 +37,6 @@ import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
-import com.malrang.pomodoro.viewmodel.MainViewModel
 import com.malrang.pomodoro.viewmodel.SettingsUiState
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerUiState
@@ -45,10 +44,10 @@ import com.malrang.pomodoro.viewmodel.TimerViewModel
 
 @Composable
 fun LandscapeMainScreen(
-    mainViewModel: MainViewModel,
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
     events: MainScreenEvents, // 여러 파라미터를 하나로 받음
+    onNavigateTo: (Screen) -> Unit,
     contentColor: Color,
     secondaryTextColor: Color,
     highlightColor: Color,
@@ -119,7 +118,7 @@ fun LandscapeMainScreen(
                         onRenamePreset = { preset -> events.onPresetToRenameChange(preset) },
                         onEditSettings = { presetId ->
                             settingsViewModel.startEditingWorkPreset(presetId)
-                            mainViewModel.navigateTo(Screen.Settings)
+                            onNavigateTo(Screen.Settings)
                         },
                         useGrassBackground = settingsState.useGrassBackground
                     )

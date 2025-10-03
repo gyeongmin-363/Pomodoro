@@ -17,7 +17,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
 import com.malrang.pomodoro.ui.screen.collection.CollectionScreen
@@ -32,7 +31,6 @@ import com.malrang.pomodoro.ui.screen.studyroom.DeleteStudyRoomScreen
 import com.malrang.pomodoro.ui.screen.studyroom.StudyRoomDetailScreen
 import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
-import com.malrang.pomodoro.viewmodel.MainViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
@@ -41,61 +39,45 @@ import com.malrang.pomodoro.viewmodel.TimerViewModel
 
 @Composable
 fun PomodoroApp(
-    mainViewModel: MainViewModel,
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
     permissionViewModel: PermissionViewModel,
     statsViewModel : StatsViewModel,
     authViewModel: AuthViewModel,
-    studyRoomViewModel: StudyRoomViewModel,
-    startAppMonitoring: (Set<String>, BlockMode) -> Unit,
-    stopAppMonitoring: () -> Unit,
-    stopWarningOverlay: () -> Unit
+    studyRoomViewModel: StudyRoomViewModel
 ) {
     val context = LocalContext.current
     val navController = rememberNavController()
-
-    // 각 ViewModel의 상태를 수집합니다.
     val authState by authViewModel.authState.collectAsState()
-
-    // MainViewModel의 내비게이션 이벤트를 구독하여 화면을 전환합니다.
-    LaunchedEffect(navController, mainViewModel) {
-        mainViewModel.navigationEvents.collect { screen ->
-            navController.navigate(screen.name)
-        }
-    }
-
-    // ✅ [수정된 부분] 앱 시작 시 권한을 확인하고 필요하면 권한 화면으로 이동합니다.
-    // 이 로직은 이제 UI 레이어의 책임입니다.
-    LaunchedEffect(Unit) {
-        val allGranted = permissionViewModel.checkAndupdatePermissions(context)
-        if (!allGranted) {
-            mainViewModel.navigateTo(Screen.Permission)
-        }
-    }
 
     when (authState) {
         is AuthViewModel.AuthState.Authenticated -> {
+            // ✅ 권한이 부여되었는지 확인합니다.
+            val allPermissionsGranted = permissionViewModel.checkAndUpdatePermissions(context)
+            // ✅ 권한 상태에 따라 시작 화면을 결정합니다.
+            val startDestination = if (allPermissionsGranted) Screen.Main.name else Screen.Permission.name
+
+
             // ✅ 로그인이 된 상태이면 메인 앱 콘텐츠를 보여줍니다.
-            NavHost(navController = navController, startDestination = Screen.Main.name) {
+            NavHost(navController = navController, startDestination = startDestination) {
                 composable(Screen.Main.name) {
                     MainScreen(
-                        mainViewModel = mainViewModel,
                         timerViewModel = timerViewModel,
-                        settingsViewModel = settingsViewModel
+                        settingsViewModel = settingsViewModel,
+                        onNavigateTo = { screen -> navController.navigate(screen.name) }
                     )
                 }
                 composable(Screen.Stats.name) {
                     StatsScreen(
                         statsViewModel = statsViewModel,
-                        mainViewModel = mainViewModel
+                        onNavigateTo = { screen -> navController.navigate(screen.name) }
                     )
                 }
                 composable(Screen.Collection.name) { CollectionScreen() }
                 composable(Screen.Settings.name) {
                     SettingsScreen(
                         settingsViewModel = settingsViewModel,
-                        mainViewModel = mainViewModel,
+                        onNavigateTo = { screen -> navController.navigate(screen.name) },
                         onSave = {
                             settingsViewModel.saveSettingsAndReset { newSettings ->
                                 timerViewModel.reset(newSettings)
@@ -109,7 +91,12 @@ fun PomodoroApp(
                         permissionUiState = permissionUiState,
                         onPermissionResult = { permissionViewModel.onPermissionRequestResult(context) },
                         onSetPermissionAttempted = permissionViewModel::setPermissionAttemptedInSession,
-                        onNavigateToMain = { mainViewModel.navigateTo(Screen.Main) }
+                        // 권한 설정 후 메인 화면으로 이동하고 이전 스택을 지웁니다.
+                        onNavigateToMain = {
+                            navController.navigate(Screen.Main.name) {
+                                popUpTo(Screen.Permission.name) { inclusive = true }
+                            }
+                        }
                     )
                 }
                 composable(Screen.Whitelist.name) {
@@ -121,7 +108,7 @@ fun PomodoroApp(
                 composable(Screen.AccountSettings.name) {
                     AccountSettingsScreen(
                         authViewModel = authViewModel,
-                        onNavigateTo = mainViewModel::navigateTo
+                        onNavigateTo = { navController.navigate(Screen.Main) }
                     )
                 }
                 // 딥링크 처리
@@ -149,7 +136,7 @@ fun PomodoroApp(
                         authVM = authViewModel,
                         roomVM = studyRoomViewModel,
                         inviteStudyRoomId = inviteId, // ✅ 여기서 uuid 주입됨
-                        onNavigateBack = { mainViewModel.navigateTo(Screen.Main) },
+                        onNavigateBack = { navController.navigate(Screen.Main) },
                         onNavigateToDelete = { navController.navigate(Screen.DeleteStudyRoom.name) }
                     )
                 }

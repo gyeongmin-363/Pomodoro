@@ -326,7 +326,6 @@ class TimerService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 2022
-        const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
         // 서비스 상태 브로드캐스트용 상수
         const val ACTION_STATUS_UPDATE = "com.malrang.pomodoro.ACTION_STATUS_UPDATE"
         const val EXTRA_IS_RUNNING = "com.malrang.pomodoro.EXTRA_IS_RUNNING"

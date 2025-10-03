@@ -57,7 +57,6 @@ import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.ui.theme.SetBackgroundImage
-import com.malrang.pomodoro.viewmodel.MainViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 import kotlinx.coroutines.launch
@@ -82,9 +81,9 @@ data class MainScreenEvents(
 
 @Composable
 fun MainScreen(
-    mainViewModel: MainViewModel,
     timerViewModel: TimerViewModel,
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    onNavigateTo : (Screen) -> Unit
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
@@ -182,7 +181,7 @@ fun MainScreen(
                                 },
                                 selected = false,
                                 onClick = {
-                                    item.screen?.let { mainViewModel.navigateTo(it) }
+                                    item.screen?.let { onNavigateTo(it) }
                                     item.onCustomClick?.invoke()
                                     scope.launch { drawerState.close() }
                                 },
@@ -346,10 +345,10 @@ fun MainScreen(
             when (configuration.orientation) {
                 Configuration.ORIENTATION_LANDSCAPE -> {
                     LandscapeMainScreen(
-                        mainViewModel= mainViewModel,
                         timerViewModel = timerViewModel,
                         settingsViewModel = settingsViewModel,
                         events = events,
+                        onNavigateTo = onNavigateTo,
                         contentColor = contentColor,
                         secondaryTextColor = secondaryTextColor,
                         highlightColor = highlightColor,
@@ -358,10 +357,10 @@ fun MainScreen(
 
                 else -> {
                     PortraitMainScreen(
-                        mainViewModel= mainViewModel,
                         timerViewModel = timerViewModel,
                         settingsViewModel = settingsViewModel,
                         events = events,
+                        onNavigateTo = onNavigateTo,
                         contentColor = contentColor,
                         secondaryTextColor = secondaryTextColor,
                         highlightColor = highlightColor,

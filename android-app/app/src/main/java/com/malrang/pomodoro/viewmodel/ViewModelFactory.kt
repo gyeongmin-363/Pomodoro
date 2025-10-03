@@ -37,9 +37,6 @@ class AppViewModelFactory(private val app: Application) : ViewModelProvider.Fact
             modelClass.isAssignableFrom(StatsViewModel::class.java) -> {
                 StatsViewModel(pomodoroRepository)
             }
-            modelClass.isAssignableFrom(MainViewModel::class.java) -> {
-                MainViewModel(pomodoroRepository)
-            }
             else -> {
                 throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
             }

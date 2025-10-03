@@ -34,17 +34,16 @@ import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.AppViewModelFactory
 import com.malrang.pomodoro.viewmodel.AuthVMFactory
 import com.malrang.pomodoro.viewmodel.AuthViewModel
-import com.malrang.pomodoro.viewmodel.MainViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import com.malrang.pomodoro.viewmodel.StudyRoomVMFactory
 import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
+import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
     // 분리된 ViewModel들을 AppViewModelFactory를 사용해 초기화합니다.
-    private val mainViewModel: MainViewModel by viewModels { AppViewModelFactory(application) }
     private val timerViewModel: TimerViewModel by viewModels { AppViewModelFactory(application) }
     private val settingsViewModel: SettingsViewModel by viewModels { AppViewModelFactory(application) }
     private val permissionViewModel: PermissionViewModel by viewModels { AppViewModelFactory(application) }
@@ -75,6 +74,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        SupabaseProvider.client.handleDeeplinks(intent)
+
         enableEdgeToEdge()
         setContent {
             WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -83,17 +85,13 @@ class MainActivity : ComponentActivity() {
                 Scaffold { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
                         // PomodoroApp에 모든 ViewModel을 전달합니다.
-                        PomodoroApp(
-                            mainViewModel = mainViewModel,
+                         PomodoroApp(
                             timerViewModel = timerViewModel,
                             settingsViewModel = settingsViewModel,
                             permissionViewModel = permissionViewModel,
                             statsViewModel = statsViewModel,
                             authViewModel = authViewModel,
-                            studyRoomViewModel = studyRoomViewModel,
-                            startAppMonitoring = ::startAppMonitoringService,
-                            stopAppMonitoring = ::stopAppMonitoringService,
-                            stopWarningOverlay = ::stopWarningOverlay
+                            studyRoomViewModel = studyRoomViewModel
                         )
                     }
                 }
@@ -110,6 +108,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        // [추가] 앱이 백그라운드로 전환될 때, 학습 중이면 앱 모니터링 서비스를 시작하는 로직
+        val timerState = timerViewModel.uiState.value
+        val settingsState = settingsViewModel.uiState.value
+        if (timerState.isRunning && timerState.currentMode == com.malrang.pomodoro.dataclass.ui.Mode.STUDY) {
+            startAppMonitoringService(settingsState.whitelistedApps, settingsState.settings.blockMode)
+        }
         unregisterReceiver(updateReceiver)
     }
 
@@ -154,6 +158,38 @@ class MainActivity : ComponentActivity() {
     private fun stopWarningOverlay() {
         stopService(Intent(this, WarningOverlayService::class.java))
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // 앱이 이미 실행 중일 때에도 딥링크를 처리하고,
+        SupabaseProvider.client.handleDeeplinks(intent)
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    override fun onResume() {
+        super.onResume()
+        val timerFilter = IntentFilter().apply {
+            addAction(TimerService.ACTION_STATUS_UPDATE)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                updateReceiver,
+                timerFilter,
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(updateReceiver, timerFilter)
+        }
+
+        // [수정] 앱이 포그라운드로 돌아올 때 서비스의 최신 상태를 요청하고, 동물 목록을 새로고침합니다.
+        timerViewModel.requestTimerStatus()
+
+        stopAppMonitoringService()
+        stopWarningOverlay()
+    }
+
 }
 
 @SuppressLint("ComposableNaming")
@@ -163,7 +199,10 @@ private fun Activity.HideSystemBars() {
     val window = window
     LaunchedEffect(Unit) {
         WindowCompat.getInsetsController(window, view).apply {
+            //상태 표시줄과 네비게이션 바를 모두 숨깁니다.
             hide(WindowInsetsCompat.Type.systemBars())
+
+            //사용자가 화면을 스와이프했을 때만 시스템 바가 일시적으로 나타나도록 동작을 설정합니다.
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }

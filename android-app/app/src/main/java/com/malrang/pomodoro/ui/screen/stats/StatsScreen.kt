@@ -30,14 +30,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.theme.SetBackgroundImage
-import com.malrang.pomodoro.viewmodel.MainViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import java.time.LocalDate
 
 @Composable
 fun StatsScreen(
     statsViewModel: StatsViewModel, // ✅ PomodoroViewModel 대신 StatsViewModel 사용
-    mainViewModel: MainViewModel // ✅ 화면 전환을 위해 MainViewModel 추가
+    onNavigateTo: (Screen) -> Unit,
 ) {
     // ✅ statsViewModel에서 상태를 수집
     val state by statsViewModel.uiState.collectAsState()
@@ -60,7 +59,7 @@ fun StatsScreen(
         ) {
             Text("📊 통계", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
             // ✅ mainViewModel을 사용하여 메인 화면으로 이동
-            IconButton(onClick = { mainViewModel.navigateTo(Screen.Main) }) {
+            IconButton(onClick = { onNavigateTo(Screen.Main) }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "돌아가기",
