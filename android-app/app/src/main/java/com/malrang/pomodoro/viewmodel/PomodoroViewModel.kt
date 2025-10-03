@@ -9,7 +9,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
-import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.PermissionInfo
 import com.malrang.pomodoro.dataclass.ui.PermissionType
@@ -392,34 +391,4 @@ class PomodoroViewModel(
         }
     }
 
-    fun updateSprites(deltaSec: Float, widthPx: Int, heightPx: Int) {
-        _uiState.update { s ->
-            val updated = s.activeSprites.map { sp ->
-                var nx = sp.x + sp.vx * deltaSec
-                var ny = sp.y + sp.vy * deltaSec
-                var vx = sp.vx
-                var vy = sp.vy
-                val margin = 16f
-                if (nx < margin) { nx = margin; vx = -vx }
-                if (ny < margin) { ny = margin; vy = -vy }
-                if (nx > widthPx - margin) { nx = widthPx - margin; vx = -vx }
-                if (ny > heightPx - margin) { ny = heightPx - margin; vy = -vy }
-                val nextState = if (sp.spriteState == SpriteState.IDLE && Random.nextFloat() < 0.003f) {
-                    SpriteState.JUMP
-                } else {
-                    sp.spriteState
-                }
-                sp.copy(x = nx, y = ny, vx = vx, vy = vy, spriteState = nextState)
-            }
-            s.copy(activeSprites = updated)
-        }
-    }
-    fun onJumpFinished(spriteId: String) {
-        _uiState.update { s ->
-            val updated = s.activeSprites.map { sp ->
-                if (sp.id == spriteId) sp.copy(spriteState = SpriteState.IDLE) else sp
-            }
-            s.copy(activeSprites = updated)
-        }
-    }
 }

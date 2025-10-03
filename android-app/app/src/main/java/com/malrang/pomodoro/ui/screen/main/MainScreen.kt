@@ -310,7 +310,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 state.activeSprites.forEach { sp ->
                     SpriteSheetImage(
                         sprite = sp,
-                        onJumpFinished = { id -> viewModel.onJumpFinished(id) },
                         modifier = Modifier
                             .absoluteOffset { IntOffset(sp.x.toInt(), sp.y.toInt()) }
                             .size(sp.sizeDp.dp)
@@ -318,17 +317,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 }
             }
 
-            LaunchedEffect(widthPx, heightPx, state.activeSprites.size) {
-                if (widthPx == 0 || heightPx == 0) return@LaunchedEffect
-                var last = System.nanoTime()
-                while (true) {
-                    withFrameNanos { now ->
-                        val dt = (now - last) / 1_000_000_000f
-                        last = now
-                        viewModel.updateSprites(dt.coerceIn(0f, 0.05f), widthPx, heightPx)
-                    }
-                }
-            }
 
             val onMenuClick: () -> Unit = {
                 scope.launch { drawerState.open() }

@@ -29,7 +29,6 @@ data class AnimalSprite(
     val jumpSheetRes: Int,
     val jumpCols: Int,
     val jumpRows: Int,
-    val spriteState: SpriteState = SpriteState.IDLE,
     val frameDurationMs: Long = 120L,
     val x: Float,
     val y: Float,

@@ -103,7 +103,6 @@ private fun LoginScreenPortrait(viewModel: AuthViewModel) {
             animals.forEach { sprite ->
                 SpriteSheetImage(
                     sprite = sprite,
-                    onJumpFinished = { },
                     modifier = Modifier.size(100.dp)
                 )
             }
@@ -221,7 +220,6 @@ private fun LoginScreenLandscape(viewModel: AuthViewModel) {
                 animals.forEach { sprite ->
                     SpriteSheetImage(
                         sprite = sprite,
-                        onJumpFinished = { },
                         modifier = Modifier.size(50.dp)
                     )
                 }

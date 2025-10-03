@@ -8,7 +8,6 @@ import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
-import com.malrang.pomodoro.dataclass.sprite.SpriteState
 import com.malrang.pomodoro.ui.screen.main.SpriteSheetImage
 
 @Composable
@@ -25,7 +24,6 @@ fun SpriteItem(animal: Animal, size: Float) {
             jumpSheetRes = spriteData.jumpRes,
             jumpCols = spriteData.jumpCols,
             jumpRows = spriteData.jumpRows,
-            spriteState = SpriteState.IDLE,
             x = 0f,
             y = 0f,
             vx = 0f,
@@ -36,7 +34,6 @@ fun SpriteItem(animal: Animal, size: Float) {
 
     SpriteSheetImage(
         sprite = tempSprite,
-        onJumpFinished = {},
         modifier = Modifier.size(size.dp)
     )
 }
