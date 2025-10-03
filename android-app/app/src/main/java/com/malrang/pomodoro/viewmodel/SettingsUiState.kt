@@ -72,6 +72,7 @@ class SettingsViewModel(
         _uiState.update { it.copy(draftSettings = settingsToEdit) }
     }
 
+    // 수정 후
     fun saveSettingsAndReset(onReset: (Settings) -> Unit) {
         viewModelScope.launch {
             val settingsToSave = _uiState.value.draftSettings ?: return@launch
@@ -86,8 +87,14 @@ class SettingsViewModel(
                 }
             }
             localRepo.saveWorkPresets(updatedPresets)
-            _uiState.update { it.copy(workPresets = updatedPresets) }
+
             val newActiveSettings = updatedPresets.find { it.id == currentId }?.settings ?: Settings()
+            _uiState.update {
+                it.copy(
+                    workPresets = updatedPresets,
+                    settings = newActiveSettings
+                )
+            }
             onReset(newActiveSettings)
             clearDraftSettings()
         }

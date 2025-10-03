@@ -129,10 +129,10 @@ class TimerService : Service() {
                     repo.clearTimerState()
                 }
                 val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getSerializableExtra("SETTINGS", Settings::class.java)
+                    intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                 } else {
                     @Suppress("DEPRECATION")
-                    intent.getSerializableExtra("SETTINGS") as? Settings
+                    intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                 }
 
                 if (newSettings != null) {

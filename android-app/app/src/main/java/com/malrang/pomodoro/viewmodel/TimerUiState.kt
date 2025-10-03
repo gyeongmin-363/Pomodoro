@@ -29,7 +29,6 @@ class TimerViewModel(
 
     private val _uiState = MutableStateFlow(TimerUiState())
     val uiState: StateFlow<TimerUiState> = _uiState.asStateFlow()
-    private var isResetting = false
 
     init {
         viewModelScope.launch {
@@ -91,7 +90,6 @@ class TimerViewModel(
 
     fun reset(settings: Settings) {
         viewModelScope.launch {
-            isResetting = true
             localRepo.clearTimerState()
             _uiState.update {
                 it.copy(
@@ -103,8 +101,6 @@ class TimerViewModel(
                 )
             }
             timerService.resetCompletely(settings)
-            delay(200) // 서비스가 리셋되고 브로드캐스트할 시간을 줍니다.
-            isResetting = false
         }
     }
 
@@ -132,7 +128,6 @@ class TimerViewModel(
     }
 
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
-        if (isResetting) return // 리셋 중에는 서비스로부터 오는 업데이트를 무시합니다.
         _uiState.update {
             it.copy(
                 timeLeft = timeLeft, isRunning = isRunning,
