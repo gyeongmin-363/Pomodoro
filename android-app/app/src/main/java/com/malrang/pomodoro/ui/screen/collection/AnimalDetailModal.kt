@@ -43,13 +43,6 @@ fun AnimalDetailModal(animal: Animal, onDismissRequest: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = getRarityString(animal.rarity),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = getRarityColor(animal.rarity)
-                )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = animal.description,

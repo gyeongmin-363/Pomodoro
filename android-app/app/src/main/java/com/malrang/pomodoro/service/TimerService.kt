@@ -15,7 +15,6 @@ import com.malrang.pomodoro.MainActivity
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.animalInfo.Animal
 import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
-import com.malrang.pomodoro.dataclass.animalInfo.Rarity
 import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.sprite.SpriteData
 import com.malrang.pomodoro.dataclass.sprite.SpriteMap
@@ -260,12 +259,12 @@ class TimerService : Service() {
             updateTodayStats(finishedMode)
 
             if (finishedMode == Mode.STUDY) {
-                val animal = getRandomAnimal()
-                val sprite = makeSprite(animal)
-                val updatedSeenIds = repo.loadSeenIds() + animal.id
-                val updatedSprites = repo.loadActiveSprites() + sprite
-                repo.saveSeenIds(updatedSeenIds)
-                repo.saveActiveSprites(updatedSprites)
+//                val animal = getRandomAnimal()
+//                val sprite = makeSprite(animal)
+//                val updatedSeenIds = repo.loadSeenIds() + animal.id
+//                val updatedSprites = repo.loadActiveSprites() + sprite
+//                repo.saveSeenIds(updatedSeenIds)
+//                repo.saveActiveSprites(updatedSprites)
 
                 sendBroadcast(Intent(NEW_ANIMAL_ADDED).apply { setPackage("com.malrang.pomodoro") })
             }
@@ -302,16 +301,6 @@ class TimerService : Service() {
         repo.saveDailyStats(currentStatsMap)
     }
 
-    private fun getRandomAnimal(): Animal {
-        val roll = Random.nextInt(100)
-        val rarity = when {
-            roll < 40 -> Rarity.COMMON
-            roll < 70 -> Rarity.RARE
-            roll < 90 -> Rarity.EPIC
-            else -> Rarity.LEGENDARY
-        }
-        return AnimalsTable.randomByRarity(rarity)
-    }
 
     private fun makeSprite(animal: Animal): AnimalSprite {
         val spriteData = SpriteMap.map[animal]

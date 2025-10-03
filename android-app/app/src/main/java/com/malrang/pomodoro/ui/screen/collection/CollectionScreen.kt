@@ -50,10 +50,7 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
     val totalAnimals = Animal.entries.size
     var selectedAnimal by remember { mutableStateOf<Animal?>(null) }
     // 희귀도 내림차순, 이름 오름차순으로 정렬
-    val sortedAnimals = state.collectedAnimals.sortedWith(
-        compareByDescending<Animal> { it.rarity.ordinal }
-            .thenBy { it.displayName }
-    )
+    val sortedAnimals = state.collectedAnimals.toList()
 
     SetBackgroundImage()
 
@@ -121,11 +118,6 @@ fun CollectionScreen(viewModel: PomodoroViewModel) {
                                     fontWeight = FontWeight.Medium,
                                     color = Color.White,
                                     textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = getRarityString(animal.rarity),
-                                    fontSize = 10.sp,
-                                    color = getRarityColor(animal.rarity)
                                 )
                             }
                         }
