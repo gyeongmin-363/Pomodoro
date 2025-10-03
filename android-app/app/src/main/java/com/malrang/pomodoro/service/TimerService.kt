@@ -25,8 +25,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.UUID
-import kotlin.random.Random
 
 class TimerService : Service() {
 
@@ -60,37 +58,25 @@ class TimerService : Service() {
         when (intent?.action) {
             "START" -> {
                 if (!isRunning) {
-                    timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                     settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getSerializableExtra("SETTINGS", Settings::class.java)
+                        intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                     } else {
                         @Suppress("DEPRECATION")
-                        intent.getSerializableExtra("SETTINGS") as? Settings
+                        intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                     }
-                    currentMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getSerializableExtra("CURRENT_MODE", Mode::class.java) ?: Mode.STUDY
-                    } else {
-                        @Suppress("DEPRECATION")
-                        (intent.getSerializableExtra("CURRENT_MODE") as? Mode) ?: Mode.STUDY
-                    }
-                    totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
 
-                    isRunning = true
+                    timeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
+                    currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
+                    totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
+
                     startTimer()
                 }
             }
             "PAUSE" -> {
-                isRunning = false
                 pauseTimer()
             }
             "REQUEST_STATUS" -> {
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", isRunning)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                    setPackage("com.malrang.pomodoro")
-                })
+                broadcastStatus()
             }
             "SKIP" -> {
                 job?.cancel()
@@ -120,14 +106,7 @@ class TimerService : Service() {
                 isRunning = false
 
                 updateNotification()
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", isRunning)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                    setPackage("com.malrang.pomodoro")
-
-                })
+                broadcastStatus()
             }
             "RESET" -> {
                 job?.cancel()
@@ -153,15 +132,7 @@ class TimerService : Service() {
                 totalSessions = 0
                 timeLeft = settings?.studyTime?.times(60) ?: (25 * 60)
 
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", false)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                    setPackage("com.malrang.pomodoro")
-
-                })
-
+                broadcastStatus()
                 updateNotification()
             }
             // [추가] 알림이 지워졌을 때 호출될 액션
@@ -172,7 +143,20 @@ class TimerService : Service() {
         return START_STICKY
     }
 
+    private fun broadcastStatus() {
+        val intent = Intent(ACTION_STATUS_UPDATE).apply {
+            putExtra(EXTRA_TIME_LEFT, timeLeft)
+            putExtra(EXTRA_IS_RUNNING, isRunning)
+            putExtra(EXTRA_CURRENT_MODE, currentMode.name)
+            putExtra(EXTRA_TOTAL_SESSIONS, totalSessions)
+            setPackage("com.malrang.pomodoro")
+        }
+        sendBroadcast(intent)
+    }
+
     private fun startTimer() {
+        isRunning = true
+        
         job?.cancel()
         wakeLock.acquire(90*60*1000L /*90 minutes*/)
         job = CoroutineScope(Dispatchers.Main).launch {
@@ -180,14 +164,7 @@ class TimerService : Service() {
                 delay(1000)
                 timeLeft--
                 updateNotification()
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", true)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                    setPackage("com.malrang.pomodoro")
-
-                })
+                broadcastStatus()
             }
             if (wakeLock.isHeld) {
                 wakeLock.release()
@@ -220,10 +197,8 @@ class TimerService : Service() {
             totalSessions = newTotalSessions
 
             if (currentSettings.autoStart) {
-                isRunning = true
                 startTimer()
             } else {
-                isRunning = false
                 pauseTimer()
             }
         }
@@ -231,6 +206,7 @@ class TimerService : Service() {
     }
 
     private fun pauseTimer() {
+        isRunning = false
         job?.cancel()
         if (wakeLock.isHeld) {
             wakeLock.release()
@@ -239,14 +215,7 @@ class TimerService : Service() {
             repo.saveTimerState(timeLeft, currentMode, totalSessions)
         }
         updateNotification()
-        sendBroadcast(Intent(TIMER_TICK).apply {
-            putExtra("TIME_LEFT", timeLeft)
-            putExtra("IS_RUNNING", false)
-            putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-            putExtra("TOTAL_SESSIONS", totalSessions)
-            setPackage("com.malrang.pomodoro")
-
-        })
+        broadcastStatus()
     }
 
     private fun handleSessionCompletion(finishedMode: Mode) {
@@ -358,7 +327,18 @@ class TimerService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 2022
         const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
+        // 서비스 상태 브로드캐스트용 상수
+        const val ACTION_STATUS_UPDATE = "com.malrang.pomodoro.ACTION_STATUS_UPDATE"
+        const val EXTRA_IS_RUNNING = "com.malrang.pomodoro.EXTRA_IS_RUNNING"
+
+        // 데이터 전달용 상수
+        const val EXTRA_TIME_LEFT = "com.malrang.pomodoro.EXTRA_TIME_LEFT"
+        const val EXTRA_CURRENT_MODE = "com.malrang.pomodoro.EXTRA_CURRENT_MODE"
+        const val EXTRA_TOTAL_SESSIONS = "com.malrang.pomodoro.EXTRA_TOTAL_SESSIONS"
+        const val EXTRA_SETTINGS = "com.malrang.pomodoro.EXTRA_SETTINGS"
+
         private var isServiceActive = false
         fun isServiceActive(): Boolean = isServiceActive
     }
+
 }

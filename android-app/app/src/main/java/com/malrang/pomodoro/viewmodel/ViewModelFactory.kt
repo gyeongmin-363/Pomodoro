@@ -10,21 +10,41 @@ import com.malrang.pomodoro.service.TimerServiceProvider
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
+import kotlin.jvm.java
 
+/**
+ * 앱의 주요 뷰모델들을 생성하는 팩토리입니다.
+ * 공통 의존성을 공유하여 메모리 효율성을 높입니다.
+ */
+class AppViewModelFactory(private val app: Application) : ViewModelProvider.Factory {
 
-class PomodoroVMFactory(private val app: Application) : ViewModelProvider.Factory {
+    // 여러 뷰모델에서 공유되는 의존성은 lazy를 통해 한 번만 생성되도록 합니다.
+    private val pomodoroRepository by lazy { PomodoroRepository(app) }
+    private val timerServiceProvider by lazy { TimerServiceProvider(app) }
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(PomodoroViewModel::class.java)) {
-            val localDatastoreRepo = PomodoroRepository(app)
-            val timerServiceProvider = TimerServiceProvider(app)
-
-            @Suppress("UNCHECKED_CAST")
-            return PomodoroViewModel(
-                localRepo = localDatastoreRepo,
-                timerService = timerServiceProvider,
-            ) as T
+        @Suppress("UNCHECKED_CAST")
+        val viewModel = when {
+            modelClass.isAssignableFrom(TimerViewModel::class.java) -> {
+                TimerViewModel(pomodoroRepository, timerServiceProvider)
+            }
+            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
+                SettingsViewModel(pomodoroRepository)
+            }
+            modelClass.isAssignableFrom(PermissionViewModel::class.java) -> {
+                PermissionViewModel(pomodoroRepository)
+            }
+            modelClass.isAssignableFrom(StatsViewModel::class.java) -> {
+                StatsViewModel(pomodoroRepository)
+            }
+            modelClass.isAssignableFrom(MainViewModel::class.java) -> {
+                MainViewModel(pomodoroRepository)
+            }
+            else -> {
+                throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+            }
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+        return viewModel as T
     }
 }
 

@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -35,19 +34,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.ui.theme.SetBackgroundImage
-import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
 /**
  * 설치된 앱 목록을 보여주고 화이트리스트를 관리하는 화면입니다.
  * 모든 시스템 앱을 포함하며, 검색 기능이 있습니다.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WhitelistScreen(
-    viewModel: PomodoroViewModel,
-    onNavigateBack: () -> Unit // ✅ 뒤로가기 콜백 함수 추가
+    settingsViewModel: SettingsViewModel, // ✅ PomodoroViewModel 대신 SettingsViewModel 사용
+    onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    // ✅ settingsViewModel에서 상태를 가져옵니다.
+    val uiState by settingsViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val packageManager = context.packageManager
 
@@ -76,13 +75,8 @@ fun WhitelistScreen(
         }
     }
 
-//    // ✅ 시스템 뒤로가기 버튼을 눌렀을 때 SettingsScreen으로 이동하도록 설정
-//    BackPressMove {
-//        viewModel.navigateTo(Screen.Settings)
-//    }
-
     Scaffold(
-//        containerColor = backgroundImage,
+        containerColor = Color.Transparent,
         contentColor = Color.White
     ) { paddingValues ->
         SetBackgroundImage()
@@ -98,11 +92,10 @@ fun WhitelistScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("앱 허용 목록 (전체)", fontSize = 16.sp)
+                Text("앱 허용 목록 (전체)", fontSize = 16.sp, color = Color.White)
 
-                // ✅ onClick 이벤트를 콜백 함수로 변경
                 IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기", tint = Color.White)
                 }
             }
 
@@ -134,7 +127,8 @@ fun WhitelistScreen(
             Text(
                 "공부 중에 사용을 허용할 앱을 선택해주세요.",
                 fontSize = 14.sp,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp),
+                color = Color.White
             )
 
             LazyColumn(
@@ -144,6 +138,7 @@ fun WhitelistScreen(
                     val appName = packageManager.getApplicationLabel(appInfo).toString()
                     val packageName = appInfo.packageName
                     val appIcon = appInfo.loadIcon(packageManager)
+                    // ✅ uiState.whitelistedApps는 SettingsUiState에 통합되어 있습니다.
                     val isChecked = uiState.whitelistedApps.contains(packageName)
 
                     AppListItem(
@@ -157,10 +152,11 @@ fun WhitelistScreen(
                         },
                         isChecked = isChecked,
                         onCheckedChange = {
+                            // ✅ settingsViewModel의 함수를 호출합니다.
                             if (it) {
-                                viewModel.addToWhitelist(packageName)
+                                settingsViewModel.addToWhitelist(packageName)
                             } else {
-                                viewModel.removeFromWhitelist(packageName)
+                                settingsViewModel.removeFromWhitelist(packageName)
                             }
                         }
                     )

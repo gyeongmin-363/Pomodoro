@@ -23,8 +23,8 @@ class AuthViewModel(
     private val supabase: SupabaseClient
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<AuthState>(AuthState.Idle)
-    val uiState: StateFlow<AuthState> = _uiState
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
+    val authState: StateFlow<AuthState> = _authState
 
     init {
         // ✅ [핵심 수정] ViewModel 생성 시 Supabase의 인증 상태 흐름을 구독합니다.
@@ -32,7 +32,7 @@ class AuthViewModel(
         // uiState를 올바르게 업데이트합니다.
         supabase.auth.sessionStatus
             .onEach { status ->
-                _uiState.value = when (status) {
+                _authState.value = when (status) {
                     is SessionStatus.Authenticated -> AuthState.Authenticated(status.session.user)
                     is SessionStatus.NotAuthenticated -> AuthState.NotAuthenticated
                     is SessionStatus.Initializing -> AuthState.Loading
@@ -47,7 +47,7 @@ class AuthViewModel(
         viewModelScope.launch {
             try {
                 // 로그인 시도 시 상태를 '로딩 중'으로 변경합니다.
-                _uiState.value = AuthState.Loading
+                _authState.value = AuthState.Loading
                 supabase.auth.signInWith(Google) {
                     scopes.add("email")
                     scopes.add("profile")
@@ -55,11 +55,11 @@ class AuthViewModel(
                 // ✅ [핵심 수정] 로그인 시도 후, 인증 상태가 여전히 NotAuthenticated라면
                 // 사용자가 로그인을 취소한 것으로 간주하고 상태를 되돌립니다.
                 if (supabase.auth.sessionStatus.value is SessionStatus.NotAuthenticated) {
-                    _uiState.value = AuthState.NotAuthenticated
+                    _authState.value = AuthState.NotAuthenticated
                 }
             } catch (e: Exception) {
                 // 실제 에러가 발생하면 Error 상태로 변경합니다.
-                _uiState.value = AuthState.Error(e.message ?: "알 수 없는 오류가 발생했습니다.")
+                _authState.value = AuthState.Error(e.message ?: "알 수 없는 오류가 발생했습니다.")
             }
         }
     }
@@ -72,7 +72,7 @@ class AuthViewModel(
      */
     fun signOut(activityContext: Context) {
         viewModelScope.launch {
-            _uiState.value = AuthState.Loading
+            _authState.value = AuthState.Loading
             try {
                 // 1) Supabase 로그아웃
                 supabase.auth.signOut()
@@ -87,9 +87,9 @@ class AuthViewModel(
                     Log.w("AuthViewModel", "clearCredentialState failed: ${e.message}")
                 }
 
-                _uiState.value = AuthState.NotAuthenticated
+                _authState.value = AuthState.NotAuthenticated
             } catch (e: Exception) {
-                _uiState.value = AuthState.Error(e.message ?: "로그아웃 중 오류가 발생했습니다.")
+                _authState.value = AuthState.Error(e.message ?: "로그아웃 중 오류가 발생했습니다.")
             }
         }
     }
@@ -101,13 +101,13 @@ class AuthViewModel(
      */
     fun deleteUser(edgeFunctionUrl: String, activityContext: Context? = null) {
         viewModelScope.launch {
-            _uiState.value = AuthState.Loading
+            _authState.value = AuthState.Loading
 
             try {
                 val session = supabase.auth.currentSessionOrNull()
                 val user = session?.user
                 if (user == null) {
-                    _uiState.value = AuthState.Error("로그인된 사용자가 없습니다.")
+                    _authState.value = AuthState.Error("로그인된 사용자가 없습니다.")
                     return@launch
                 }
                 val userId = user.id
@@ -133,7 +133,7 @@ class AuthViewModel(
                 }
 
                 if (jwt.isNullOrBlank()) {
-                    _uiState.value = AuthState.Error("현재 세션 토큰을 가져오지 못했습니다.")
+                    _authState.value = AuthState.Error("현재 세션 토큰을 가져오지 못했습니다.")
                     return@launch
                 }
 
@@ -163,10 +163,10 @@ class AuthViewModel(
 
                 // 성공 시 로컬 세션 삭제
                 supabase.auth.signOut()
-                _uiState.value = AuthState.NotAuthenticated
+                _authState.value = AuthState.NotAuthenticated
 
             } catch (e: Exception) {
-                _uiState.value = AuthState.Error("회원 탈퇴 중 오류: ${e.message ?: e.toString()}")
+                _authState.value = AuthState.Error("회원 탈퇴 중 오류: ${e.message ?: e.toString()}")
             }
         }
     }

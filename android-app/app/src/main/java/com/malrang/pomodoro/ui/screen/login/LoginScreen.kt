@@ -53,7 +53,7 @@ fun LoginScreen(viewModel: AuthViewModel) {
 // 기존의 세로 모드 UI를 분리한 함수입니다.
 @Composable
 private fun LoginScreenPortrait(viewModel: AuthViewModel) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.authState.collectAsState()
 
     // 기존의 세로 모드 UI
     Box(
@@ -130,7 +130,7 @@ private fun LoginScreenPortrait(viewModel: AuthViewModel) {
 // 가로 모드 UI를 위한 새로운 함수입니다.
 @Composable
 private fun LoginScreenLandscape(viewModel: AuthViewModel) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.authState.collectAsState()
 
     Box(
         modifier = Modifier.fillMaxSize()

@@ -61,7 +61,7 @@ fun ChallengeScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDelete: () -> Unit
 ) {
-    val authState by authVM.uiState.collectAsState()
+    val authState by authVM.authState.collectAsState()
 
     LaunchedEffect(authState) {
         when (val state = authState) {

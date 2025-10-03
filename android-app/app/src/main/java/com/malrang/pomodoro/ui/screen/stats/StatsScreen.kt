@@ -30,12 +30,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.theme.SetBackgroundImage
-import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.pomodoro.viewmodel.MainViewModel
+import com.malrang.pomodoro.viewmodel.StatsViewModel
 import java.time.LocalDate
 
 @Composable
-fun StatsScreen(vm: PomodoroViewModel) {
-    val state by vm.uiState.collectAsState()
+fun StatsScreen(
+    statsViewModel: StatsViewModel, // ✅ PomodoroViewModel 대신 StatsViewModel 사용
+    mainViewModel: MainViewModel // ✅ 화면 전환을 위해 MainViewModel 추가
+) {
+    // ✅ statsViewModel에서 상태를 수집
+    val state by statsViewModel.uiState.collectAsState()
 
     var isCalendarExpanded by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
@@ -54,7 +59,8 @@ fun StatsScreen(vm: PomodoroViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("📊 통계", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            IconButton(onClick = { vm.navigateTo(Screen.Main) }) {
+            // ✅ mainViewModel을 사용하여 메인 화면으로 이동
+            IconButton(onClick = { mainViewModel.navigateTo(Screen.Main) }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "돌아가기",
@@ -64,6 +70,7 @@ fun StatsScreen(vm: PomodoroViewModel) {
         }
         Spacer(Modifier.height(16.dp))
 
+        // dailyStats는 이제 state에서 직접 가져옵니다.
         ExpandableCalendarView(
             dailyStats = state.dailyStats,
             isExpanded = isCalendarExpanded,
@@ -83,5 +90,3 @@ fun StatsScreen(vm: PomodoroViewModel) {
         }
     }
 }
-
-

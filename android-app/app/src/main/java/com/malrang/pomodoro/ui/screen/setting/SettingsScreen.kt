@@ -44,19 +44,24 @@ import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.ui.theme.dialogColor
-import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.pomodoro.viewmodel.MainViewModel
+import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
 @Composable
-fun SettingsScreen(viewModel: PomodoroViewModel) {
-    val editingPreset by viewModel.editingWorkPreset.collectAsState()
-    val settings by viewModel.draftSettings.collectAsState()
-    val title = editingPreset?.name ?: "기본 설정"
+fun SettingsScreen(
+    settingsViewModel: SettingsViewModel,
+    mainViewModel: MainViewModel,
+    onSave: () -> Unit // ✅ 타이머 리셋 로직은 외부에 있어 람다로 받습니다.
+) {
+    val uiState by settingsViewModel.uiState.collectAsState()
+    val settings = uiState.draftSettings
+    val title = uiState.editingWorkPreset?.name ?: "기본 설정"
 
     var showDialog by remember { mutableStateOf(false) }
 
     // 설정 화면이 시작될 때 ViewModel에 임시 설정을 초기화하도록 요청합니다.
     LaunchedEffect(Unit) {
-        viewModel.initializeDraftSettings()
+        settingsViewModel.initializeDraftSettings()
     }
 
     // settings가 null이면 UI를 그리지 않아 NullPointerException을 방지합니다.
@@ -90,34 +95,34 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             inactiveTrackColor = Color.Gray
         )
 
-        Text("공부 시간: ${settings!!.studyTime}분", color = Color.White)
+        Text("공부 시간: ${settings.studyTime}분", color = Color.White)
         Slider(
-            value = settings!!.studyTime.toFloat(),
-            onValueChange = { viewModel.updateStudyTime(it.toInt()) },
+            value = settings.studyTime.toFloat(),
+            onValueChange = { settingsViewModel.updateStudyTime(it.toInt()) },
             valueRange = 1f..60f,
             colors = sliderColors
         )
 
-        Text("짧은 휴식 시간: ${settings!!.shortBreakTime}분", color = Color.White)
+        Text("짧은 휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
         Slider(
-            value = settings!!.shortBreakTime.toFloat(),
-            onValueChange = { viewModel.updateShortBreakTime(it.toInt()) },
+            value = settings.shortBreakTime.toFloat(),
+            onValueChange = { settingsViewModel.updateShortBreakTime(it.toInt()) },
             valueRange = 1f..30f,
             colors = sliderColors
         )
 
-        Text("긴 휴식 시간: ${settings!!.longBreakTime}분", color = Color.White)
+        Text("긴 휴식 시간: ${settings.longBreakTime}분", color = Color.White)
         Slider(
-            value = settings!!.longBreakTime.toFloat(),
-            onValueChange = { viewModel.updateLongBreakTime(it.toInt()) },
+            value = settings.longBreakTime.toFloat(),
+            onValueChange = { settingsViewModel.updateLongBreakTime(it.toInt()) },
             valueRange = 1f..60f,
             colors = sliderColors
         )
 
-        Text("긴 휴식 간격: ${settings!!.longBreakInterval}회 마다", color = Color.White)
+        Text("긴 휴식 간격: ${settings.longBreakInterval}회 마다", color = Color.White)
         Slider(
-            value = settings!!.longBreakInterval.toFloat(),
-            onValueChange = { viewModel.updateLongBreakInterval(it.toInt()) },
+            value = settings.longBreakInterval.toFloat(),
+            onValueChange = { settingsViewModel.updateLongBreakInterval(it.toInt()) },
             valueRange = 2f..12f,
             steps = 9,
             colors = sliderColors
@@ -134,17 +139,17 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings!!.soundEnabled, onCheckedChange = { viewModel.toggleSound(it) }, colors = checkboxColors)
+            Checkbox(checked = settings.soundEnabled, onCheckedChange = { settingsViewModel.toggleSound(it) }, colors = checkboxColors)
             Text("알림음 사용", color = Color.White)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings!!.vibrationEnabled, onCheckedChange = { viewModel.toggleVibration(it) }, colors = checkboxColors)
+            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { settingsViewModel.toggleVibration(it) }, colors = checkboxColors)
             Text("진동 사용", color = Color.White)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings!!.autoStart, onCheckedChange = { viewModel.toggleAutoStart(it) }, colors = checkboxColors)
+            Checkbox(checked = settings.autoStart, onCheckedChange = { settingsViewModel.toggleAutoStart(it) }, colors = checkboxColors)
             Text("자동 시작", color = Color.White)
         }
         Spacer(Modifier.height(24.dp))
@@ -155,7 +160,7 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
-            TextButton(onClick = { viewModel.navigateTo(Screen.Whitelist) }) {
+            TextButton(onClick = { mainViewModel.navigateTo(Screen.Whitelist) }) {
                 Text("예외 목록 설정")
             }
         }
@@ -173,15 +178,15 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
                     Modifier
                         .fillMaxWidth()
                         .selectable(
-                            selected = (settings!!.blockMode == mode),
-                            onClick = { viewModel.updateBlockMode(mode) }
+                            selected = (settings.blockMode == mode),
+                            onClick = { settingsViewModel.updateBlockMode(mode) }
                         )
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
-                        selected = (settings!!.blockMode == mode),
-                        onClick = { viewModel.updateBlockMode(mode) },
+                        selected = (settings.blockMode == mode),
+                        onClick = { settingsViewModel.updateBlockMode(mode) },
                         colors = RadioButtonDefaults.colors(
                             selectedColor = Color.White,
                             unselectedColor = Color.Gray
@@ -200,8 +205,8 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
         ) {
             IconButton(
                 onClick = {
-                    viewModel.clearDraftSettings()
-                    viewModel.navigateTo(Screen.Main)
+                    settingsViewModel.clearDraftSettings()
+                    mainViewModel.navigateTo(Screen.Main)
                 },
             ) {
                 Icon(Icons.Default.Close, "취소", tint = Color.White)
@@ -221,9 +226,8 @@ fun SettingsScreen(viewModel: PomodoroViewModel) {
             title = "저장하시겠습니까?",
             confirmText = "확인",
             onConfirm = {
-                // 변경사항을 저장하고 타이머를 초기화한 후 메인 화면으로 돌아갑니다.
-                viewModel.saveSettingsAndReset()
-                viewModel.navigateTo(Screen.Main)
+                onSave()
+                mainViewModel.navigateTo(Screen.Main)
                 showDialog = false
             }
         ) {

@@ -19,6 +19,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,65 +36,65 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
-import com.malrang.pomodoro.dataclass.ui.PomodoroUiState
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.theme.Typography
-import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.pomodoro.viewmodel.MainViewModel
+import com.malrang.pomodoro.viewmodel.SettingsUiState
+import com.malrang.pomodoro.viewmodel.SettingsViewModel
+import com.malrang.pomodoro.viewmodel.TimerUiState
+import com.malrang.pomodoro.viewmodel.TimerViewModel
 
 @Composable
 fun PortraitMainScreen(
-    state: PomodoroUiState,
-    viewModel: PomodoroViewModel,
-    showWorkManager: Boolean,
-    onShowWorkManagerChange: (Boolean) -> Unit,
-    onPresetToDeleteChange: (WorkPreset) -> Unit,
-    onPresetToRenameChange: (WorkPreset) -> Unit,
-    onShowResetConfirmChange: (Boolean) -> Unit,
-    onShowSkipConfirmChange: (Boolean) -> Unit,
-    onSelectPreset: (String) -> Unit,
+    mainViewModel: MainViewModel,
+    timerViewModel: TimerViewModel,
+    settingsViewModel: SettingsViewModel,
+    events: MainScreenEvents, // 여러 파라미터를 하나로 받음
     contentColor: Color,
     secondaryTextColor: Color,
     highlightColor: Color,
-    onMenuClick: () -> Unit
 ) {
-    val titleText = when (state.currentMode) {
+    val timerState by timerViewModel.uiState.collectAsState()
+    val settingsState by settingsViewModel.uiState.collectAsState()
+    // showWorkManager 상태를 내부에서 직접 관리
+    var showWorkManager by remember { mutableStateOf(false) }
+
+    val titleText = when (timerState.currentMode) {
         Mode.STUDY -> "📖 공부 시간"
         Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
     }
-    val currentWorkName = state.workPresets.find { it.id == state.currentWorkId }?.name ?: "기본"
+    val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 1. 가장 바깥 Column: 전체 화면을 차지하며, 자식들을 수직으로 배치
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // 2. 내부 Column: 중앙에 위치할 컨텐츠들을 그룹화하고 중앙 정렬
             Column(
-                modifier = Modifier.weight(1f), // 하단 Row를 제외한 모든 공간 차지
-                verticalArrangement = Arrangement.Center, // 차지한 공간 내에서 수직 중앙 정렬
-                horizontalAlignment = Alignment.CenterHorizontally // 자식들을 수평 중앙 정렬
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TextButton(onClick = { onShowWorkManagerChange(!showWorkManager) }) {
+                TextButton(onClick = { showWorkManager = !showWorkManager }) {
                     Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor, style = Typography.bodyLarge)
                     Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
                 }
 
                 AnimatedVisibility(visible = showWorkManager) {
                     WorkPresetsManager(
-                        presets = state.workPresets,
-                        currentPresetId = state.currentWorkId,
-                        onPresetSelected = onSelectPreset,
-                        onAddPreset = { viewModel.addWorkPreset() },
-                        onDeletePreset = { preset -> onPresetToDeleteChange(preset) },
-                        onRenamePreset = { preset -> onPresetToRenameChange(preset) },
+                        presets = settingsState.workPresets,
+                        currentPresetId = settingsState.currentWorkId,
+                        onPresetSelected = events.onSelectPreset,
+                        onAddPreset = { settingsViewModel.addWorkPreset() },
+                        onDeletePreset = { preset -> events.onPresetToDeleteChange(preset) },
+                        onRenamePreset = { preset -> events.onPresetToRenameChange(preset) },
                         onEditSettings = { presetId ->
-                            viewModel.startEditingWorkPreset(presetId)
-                            viewModel.navigateTo(Screen.Settings)
+                            settingsViewModel.startEditingWorkPreset(presetId)
+                            mainViewModel.navigateTo(Screen.Settings)
                         },
-                        useGrassBackground = state.useGrassBackground
+                        useGrassBackground = settingsState.useGrassBackground
                     )
                 }
                 Spacer(Modifier.height(16.dp))
@@ -98,7 +103,7 @@ fun PortraitMainScreen(
 
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "%02d:%02d".format(state.timeLeft / 60, state.timeLeft % 60),
+                    text = "%02d:%02d".format(timerState.timeLeft / 60, timerState.timeLeft % 60),
                     fontSize = 60.sp,
                     fontWeight = FontWeight.Bold,
                     color = contentColor
@@ -112,35 +117,35 @@ fun PortraitMainScreen(
                             fontWeight = FontWeight.Bold,
                             color = highlightColor
                         )
-                        ) { append("${state.totalSessions} ") }
+                        ) { append("${timerState.totalSessions} ") }
                     }
                 )
                 Spacer(Modifier.height(16.dp))
                 CycleIndicator(
                     modifier = Modifier.fillMaxWidth(),
-                    currentMode = state.currentMode,
-                    totalSessions = state.totalSessions,
-                    longBreakInterval = state.settings.longBreakInterval,
+                    currentMode = timerState.currentMode,
+                    totalSessions = timerState.totalSessions,
+                    longBreakInterval = settingsState.settings.longBreakInterval,
                     borderColor = contentColor.copy(alpha = 0.5f),
                     itemsPerRow = 8
                 )
                 Spacer(Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (!state.isRunning) {
-                        IconButton(onClick = { viewModel.startTimer() }) {
+                    if (!timerState.isRunning) {
+                        IconButton(onClick = { timerViewModel.startTimer(settingsState.settings) }) {
                             Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = contentColor)
                         }
                     } else {
-                        IconButton(onClick = { viewModel.pauseTimer() }) {
+                        IconButton(onClick = { timerViewModel.pauseTimer() }) {
                             Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = contentColor)
                         }
                     }
                     Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = { onShowResetConfirmChange(true) }) {
+                    IconButton(onClick = { events.onShowResetConfirmChange(true) }) {
                         Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = contentColor)
                     }
                     Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = { onShowSkipConfirmChange(true) }) {
+                    IconButton(onClick = { events.onShowSkipConfirmChange(true) }) {
                         Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = contentColor)
                     }
                 }
@@ -148,7 +153,7 @@ fun PortraitMainScreen(
         }
 
         IconButton(
-            onClick = onMenuClick,
+            onClick = events.onMenuClick,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(8.dp)

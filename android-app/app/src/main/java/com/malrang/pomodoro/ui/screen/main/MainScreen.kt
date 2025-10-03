@@ -11,7 +11,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,14 +31,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -53,7 +50,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
@@ -61,7 +57,9 @@ import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.ui.theme.SetBackgroundImage
-import com.malrang.pomodoro.viewmodel.PomodoroViewModel
+import com.malrang.pomodoro.viewmodel.MainViewModel
+import com.malrang.pomodoro.viewmodel.SettingsViewModel
+import com.malrang.pomodoro.viewmodel.TimerViewModel
 import kotlinx.coroutines.launch
 
 // 드로어 아이템을 위한 데이터 클래스
@@ -73,11 +71,23 @@ private data class DrawerItem(
     val onCustomClick: (() -> Unit)? = null
 )
 
+data class MainScreenEvents(
+    val onPresetToDeleteChange: (WorkPreset) -> Unit,
+    val onPresetToRenameChange: (WorkPreset) -> Unit,
+    val onShowResetConfirmChange: (Boolean) -> Unit,
+    val onShowSkipConfirmChange: (Boolean) -> Unit,
+    val onSelectPreset: (String) -> Unit,
+    val onMenuClick: () -> Unit
+)
+
 @Composable
-fun MainScreen(viewModel: PomodoroViewModel) {
-    val state by viewModel.uiState.collectAsState()
-    var widthPx by remember { mutableStateOf(0) }
-    var heightPx by remember { mutableStateOf(0) }
+fun MainScreen(
+    mainViewModel: MainViewModel,
+    timerViewModel: TimerViewModel,
+    settingsViewModel: SettingsViewModel
+) {
+    val timerState by timerViewModel.uiState.collectAsState()
+    val settingsState by settingsViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
     var showWorkManager by remember { mutableStateOf(false) }
@@ -88,18 +98,15 @@ fun MainScreen(viewModel: PomodoroViewModel) {
     var showSkipConfirm by remember { mutableStateOf(false) }
     var presetIdToSelect by remember { mutableStateOf<String?>(null) }
 
-    val contentColor = if (state.useGrassBackground) Color.Black else Color.White
+    val contentColor = if (settingsState.useGrassBackground) Color.Black else Color.White
     val secondaryTextColor = Color.LightGray
-    val highlightColor = if (state.useGrassBackground) Color(0xFF01579B) else Color.Cyan
+    val highlightColor = if (settingsState.useGrassBackground) Color(0xFF01579B) else Color.Cyan
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    val drawerContentColor = Color(0xFFF0F0F0)
 
-    // 1. 픽셀 아트 스타일 색상
-    val drawerContentColor = Color(0xFFF0F0F0)   // 밝은 텍스트/아이콘 색상
-
-    // 3. 드로어 메뉴 아이템 리스트
     val drawerItems = listOf(
         DrawerItem(iconRes = R.drawable.ic_collection, label = "동물 도감", screen = Screen.Collection),
         DrawerItem(iconRes = R.drawable.ic_stats, label = "통계", screen = Screen.Stats),
@@ -107,14 +114,33 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             iconRes = R.drawable.light_night,
             label = "배경 변경",
             onCustomClick = {
-                if (state.useGrassBackground) {
+                if (settingsState.useGrassBackground) {
                     Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
                 }
-                viewModel.toggleBackground()
+                settingsViewModel.toggleBackground()
             }
         ),
         DrawerItem(iconRes = R.drawable.ic_military_tech_24px, label = "챌린지룸", screen = Screen.StudyRoom),
         DrawerItem(imageVector = Icons.Filled.AccountCircle, label = "계정 설정", screen = Screen.AccountSettings)
+    )
+
+    // 이벤트를 하나로 묶기
+    val events = MainScreenEvents(
+        onPresetToDeleteChange = { presetToDelete = it },
+        onPresetToRenameChange = { preset ->
+            newPresetName = preset.name
+            presetToRename = preset
+        },
+        onShowResetConfirmChange = { showResetConfirm = it },
+        onShowSkipConfirmChange = { showSkipConfirm = it },
+        onSelectPreset = { presetId ->
+            if (settingsState.currentWorkId != presetId) {
+                presetIdToSelect = presetId
+            }
+        },
+        onMenuClick = {
+            scope.launch { drawerState.open() }
+        }
     )
 
     ModalNavigationDrawer(
@@ -124,12 +150,12 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 drawerShape = RoundedCornerShape(0.dp),
                 modifier = Modifier.fillMaxWidth(0.7f),
             ) {
-                Box{
+                Box {
                     SetBackgroundImage()
                     Column(
                         modifier = Modifier
                             .verticalScroll(rememberScrollState())
-                            .padding(top = 16.dp) // 상단 여백 추가
+                            .padding(top = 16.dp)
                     ) {
                         drawerItems.forEach { item ->
                             NavigationDrawerItem(
@@ -154,18 +180,18 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                                         fontWeight = FontWeight.Normal
                                     )
                                 },
-                                selected = false, // 선택 상태는 이 예제에서 사용하지 않음
+                                selected = false,
                                 onClick = {
-                                    item.screen?.let { viewModel.navigateTo(it) }
+                                    item.screen?.let { mainViewModel.navigateTo(it) }
                                     item.onCustomClick?.invoke()
                                     scope.launch { drawerState.close() }
                                 },
                                 modifier = Modifier
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
-                                    .border(2.dp, Color.White.copy(alpha = 0.7f)), // 픽셀 느낌을 위한 테두리
-                                shape = RectangleShape, // 각진 모양
+                                    .border(2.dp, Color.White.copy(alpha = 0.7f)),
+                                shape = RectangleShape,
                                 colors = NavigationDrawerItemDefaults.colors(
-                                    unselectedContainerColor = Color.Gray.copy(alpha = 0.7f), // 기본 배경 투명
+                                    unselectedContainerColor = Color.Gray.copy(alpha = 0.7f),
                                     unselectedIconColor = drawerContentColor,
                                     unselectedTextColor = drawerContentColor,
                                 )
@@ -182,7 +208,9 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 title = "Work 변경",
                 confirmText = "확인",
                 onConfirm = {
-                    viewModel.selectWorkPreset(presetIdToSelect!!)
+                    settingsViewModel.selectWorkPreset(presetIdToSelect!!) { newSettings ->
+                        timerViewModel.reset(newSettings)
+                    }
                     presetIdToSelect = null
                 }
             ) {
@@ -200,16 +228,17 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 confirmText = "확인",
                 confirmButtonEnabled = newPresetName.isNotBlank(),
                 onConfirm = {
-                    viewModel.updateWorkPresetName(presetToRename!!.id, newPresetName)
+                    settingsViewModel.updateWorkPresetName(presetToRename!!.id, newPresetName)
                     presetToRename = null
                 }
             ) {
                 OutlinedTextField(
                     value = newPresetName,
                     onValueChange = {
-                        if (it.length <= 10) { // 10자 이하로 제한
+                        if (it.length <= 10) {
                             newPresetName = it
-                        }},
+                        }
+                    },
                     label = { Text("새 이름") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -231,7 +260,9 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 title = "Work 삭제",
                 confirmText = "삭제",
                 onConfirm = {
-                    viewModel.deleteWorkPreset(presetToDelete!!.id)
+                    settingsViewModel.deleteWorkPreset(presetToDelete!!.id) { newSettings ->
+                        timerViewModel.reset(newSettings)
+                    }
                     presetToDelete = null
                 }
             ) {
@@ -254,7 +285,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 title = "세션 건너뛰기",
                 confirmText = "확인",
                 onConfirm = {
-                    viewModel.skipSession()
+                    timerViewModel.skipSession(settingsState.settings)
                     showSkipConfirm = false
                 }
             ) {
@@ -265,10 +296,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .onSizeChanged { sz ->
-                    widthPx = sz.width
-                    heightPx = sz.height
-                }
+                .onSizeChanged { /* widthPx, heightPx are not used */ }
         ) {
             if (showResetConfirm) {
                 PixelArtConfirmDialog(
@@ -276,7 +304,7 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                     title = "리셋 확인",
                     confirmText = "확인",
                     onConfirm = {
-                        viewModel.reset()
+                        timerViewModel.reset(settingsState.settings)
                         showResetConfirm = false
                     }
                 ) {
@@ -284,17 +312,15 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 }
             }
 
-            // 기본 배경색 설정
-            val backgroundColor = if (state.useGrassBackground) Color(0xFF99C658) else Color.Black
+            val backgroundColor = if (settingsState.useGrassBackground) Color(0xFF99C658) else Color.Black
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(backgroundColor)
             )
 
-            // 공부 모드가 아닐 때와 grass 배경을 사용할 때만 Image를 애니메이션과 함께 보이도록 설정
             AnimatedVisibility(
-                visible = (state.currentMode != Mode.STUDY || state.isPaused) && state.useGrassBackground,
+                visible = (timerState.currentMode != Mode.STUDY || timerState.isPaused) && settingsState.useGrassBackground,
                 enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
                 exit = fadeOut(animationSpec = tween(durationMillis = 1000))
             ) {
@@ -311,53 +337,34 @@ fun MainScreen(viewModel: PomodoroViewModel) {
             }
 
             val onSelectPreset: (String) -> Unit = { presetId ->
-                if (state.currentWorkId != presetId) {
+                if (settingsState.currentWorkId != presetId) {
                     presetIdToSelect = presetId
                 }
             }
-
 
             val configuration = LocalConfiguration.current
             when (configuration.orientation) {
                 Configuration.ORIENTATION_LANDSCAPE -> {
                     LandscapeMainScreen(
-                        state = state,
-                        viewModel = viewModel,
-                        showWorkManager = showWorkManager,
-                        onShowWorkManagerChange = { showWorkManager = it },
-                        onPresetToDeleteChange = { presetToDelete = it },
-                        onPresetToRenameChange = { preset ->
-                            newPresetName = preset.name
-                            presetToRename = preset
-                        },
-                        onShowResetConfirmChange = { showResetConfirm = it },
-                        onShowSkipConfirmChange = { showSkipConfirm = it },
-                        onSelectPreset = onSelectPreset,
+                        mainViewModel= mainViewModel,
+                        timerViewModel = timerViewModel,
+                        settingsViewModel = settingsViewModel,
+                        events = events,
                         contentColor = contentColor,
                         secondaryTextColor = secondaryTextColor,
                         highlightColor = highlightColor,
-                        onMenuClick = onMenuClick
                     )
                 }
 
                 else -> {
                     PortraitMainScreen(
-                        state = state,
-                        viewModel = viewModel,
-                        showWorkManager = showWorkManager,
-                        onShowWorkManagerChange = { showWorkManager = it },
-                        onPresetToDeleteChange = { presetToDelete = it },
-                        onPresetToRenameChange = { preset ->
-                            newPresetName = preset.name
-                            presetToRename = preset
-                        },
-                        onShowResetConfirmChange = { showResetConfirm = it },
-                        onShowSkipConfirmChange = { showSkipConfirm = it },
-                        onSelectPreset = onSelectPreset,
+                        mainViewModel= mainViewModel,
+                        timerViewModel = timerViewModel,
+                        settingsViewModel = settingsViewModel,
+                        events = events,
                         contentColor = contentColor,
                         secondaryTextColor = secondaryTextColor,
                         highlightColor = highlightColor,
-                        onMenuClick = onMenuClick
                     )
                 }
             }
