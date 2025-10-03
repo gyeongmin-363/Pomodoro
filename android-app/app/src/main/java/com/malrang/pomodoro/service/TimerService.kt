@@ -13,11 +13,6 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.malrang.pomodoro.MainActivity
 import com.malrang.pomodoro.R
-import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
-import com.malrang.pomodoro.dataclass.sprite.SpriteData
-import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
@@ -257,17 +252,6 @@ class TimerService : Service() {
     private fun handleSessionCompletion(finishedMode: Mode) {
         CoroutineScope(Dispatchers.IO).launch {
             updateTodayStats(finishedMode)
-
-            if (finishedMode == Mode.STUDY) {
-//                val animal = getRandomAnimal()
-//                val sprite = makeSprite(animal)
-//                val updatedSeenIds = repo.loadSeenIds() + animal.id
-//                val updatedSprites = repo.loadActiveSprites() + sprite
-//                repo.saveSeenIds(updatedSeenIds)
-//                repo.saveActiveSprites(updatedSprites)
-
-                sendBroadcast(Intent(NEW_ANIMAL_ADDED).apply { setPackage("com.malrang.pomodoro") })
-            }
         }
     }
 
@@ -301,26 +285,6 @@ class TimerService : Service() {
         repo.saveDailyStats(currentStatsMap)
     }
 
-
-    private fun makeSprite(animal: Animal): AnimalSprite {
-        val spriteData = SpriteMap.map[animal]
-            ?: SpriteData(idleRes = R.drawable.classical_idle, jumpRes = R.drawable.classical_jump)
-        return AnimalSprite(
-            id = UUID.randomUUID().toString(),
-            animalId = animal.id,
-            idleSheetRes = spriteData.idleRes,
-            idleCols = spriteData.idleCols,
-            idleRows = spriteData.idleRows,
-            jumpSheetRes = spriteData.jumpRes,
-            jumpCols = spriteData.jumpCols,
-            jumpRows = spriteData.jumpRows,
-            x = Random.nextInt(0, 600).toFloat(),
-            y = Random.nextInt(0, 1000).toFloat(),
-            vx = listOf(-70f, 70f).random(),
-            vy = listOf(-50f, 50f).random(),
-            sizeDp = 48f
-        )
-    }
 
     private fun updateNotification() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -394,7 +358,6 @@ class TimerService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 2022
         const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
-        const val NEW_ANIMAL_ADDED = "com.malrang.pomodoro.NEW_ANIMAL_ADDED"
         private var isServiceActive = false
         fun isServiceActive(): Boolean = isServiceActive
     }

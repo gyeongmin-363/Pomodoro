@@ -294,9 +294,9 @@ class StudyRoomViewModel(
      * @param newNickname 새로운 닉네임
      * @param newAnimalId 새로운 동물 ID
      */
-    fun updateMyInfoInRoom(memberId: String, studyRoomId: String, newNickname: String, newAnimalId: String?) {
+    fun updateMyInfoInRoom(memberId: String, studyRoomId: String, newNickname: String) {
         viewModelScope.launch {
-            networkRepo.updateMemberInfo(memberId, newNickname, newAnimalId)
+            networkRepo.updateMemberInfo(memberId, newNickname, null)
             // UI 갱신을 위해 멤버 목록을 다시 불러옵니다.
             loadStudyRoomMembers(studyRoomId)
         }

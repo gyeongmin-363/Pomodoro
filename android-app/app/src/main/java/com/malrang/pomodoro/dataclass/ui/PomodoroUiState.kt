@@ -1,7 +1,5 @@
 package com.malrang.pomodoro.dataclass.ui
 
-import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 
 /**
  * 포모도로 앱의 전체 UI 상태를 나타내는 데이터 클래스입니다.
@@ -24,10 +22,6 @@ data class PomodoroUiState(
     val isPaused: Boolean = false,
     val timeLeft: Int = 30 * 60,
     val cycleCount: Int = 1,
-
-    // 도감(영구) + 이번 세션 스프라이트(비영구)
-    val collectedAnimals: Set<Animal> = emptySet(),
-    val activeSprites: List<AnimalSprite> = emptyList(),
 
     // 통계
     val totalSessions: Int = 0,

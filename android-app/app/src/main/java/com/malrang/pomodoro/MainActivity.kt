@@ -67,10 +67,7 @@ class MainActivity : ComponentActivity() {
                     val totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
                     vm.updateTimerStateFromService(timeLeft, isRunning, currentMode, totalSessions)
                 }
-                // [추가] 새로운 동물이 추가되었다는 신호를 받으면 ViewModel의 새로고침 함수 호출
-                TimerService.NEW_ANIMAL_ADDED -> {
-                    vm.refreshActiveSprites()
-                }
+
             }
         }
     }
@@ -127,7 +124,6 @@ class MainActivity : ComponentActivity() {
         // [수정] BroadcastReceiver가 두 가지 Action을 모두 수신하도록 필터에 추가
         val timerFilter = IntentFilter().apply {
             addAction(TimerService.TIMER_TICK)
-            addAction(TimerService.NEW_ANIMAL_ADDED)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -143,7 +139,6 @@ class MainActivity : ComponentActivity() {
 
         // [수정] 앱이 포그라운드로 돌아올 때 서비스의 최신 상태를 요청하고, 동물 목록을 새로고침합니다.
         vm.requestTimerStatus()
-        vm.refreshActiveSprites()
 
         stopAppMonitoringService()
         stopWarningOverlay()

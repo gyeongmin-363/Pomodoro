@@ -6,8 +6,6 @@ package com.malrang.pomodoro.dataclass.ui
 enum class Screen {
     /** 메인 화면 */
     Main,
-    /** 동물 획득 화면 */
-    Animal,
     /** 동물 도감 화면 */
     Collection,
     /** 설정 화면 */

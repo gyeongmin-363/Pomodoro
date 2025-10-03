@@ -8,7 +8,6 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.PermissionInfo
 import com.malrang.pomodoro.dataclass.ui.PermissionType
@@ -58,21 +57,17 @@ class PomodoroViewModel(
             val presets = localRepo.loadWorkPresets()
             val whitelistedApps = localRepo.loadWhitelistedApps()
             val currentWorkId = localRepo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
-            val sprites = localRepo.loadActiveSprites()
             val useGrassBackground = localRepo.loadUseGrassBackground()
 
-            val seenAnimals = seenIds.mapNotNull { id -> AnimalsTable.byId(id) }
             val currentWork = presets.find { it.id == currentWorkId }
             val currentSettings = currentWork?.settings ?: Settings()
 
             _uiState.update {
                 it.copy(
-                    collectedAnimals = seenAnimals.toSet(),
                     dailyStats = daily,
                     settings = currentSettings,
                     workPresets = presets,
                     currentWorkId = currentWorkId,
-                    activeSprites = sprites,
                     useGrassBackground = useGrassBackground,
                     whitelistedApps = whitelistedApps
                 )
@@ -192,12 +187,7 @@ class PomodoroViewModel(
         val settingsToEdit = _editingWorkPreset.value?.settings ?: _uiState.value.settings
         _draftSettings.value = settingsToEdit
     }
-    fun refreshActiveSprites() {
-        viewModelScope.launch {
-            val updatedSprites = localRepo.loadActiveSprites()
-            _uiState.update { it.copy(activeSprites = updatedSprites) }
-        }
-    }
+
     fun requestTimerStatus() {
         if (TimerService.isServiceActive()) {
             timerService.requestStatus()
@@ -208,7 +198,6 @@ class PomodoroViewModel(
     private suspend fun performResetLogic(settings: Settings) {
         // [수정] 저장된 타이머 상태와 활성 스프라이트를 모두 삭제합니다.
         localRepo.clearTimerState()
-        localRepo.saveActiveSprites(emptyList())
 
         _uiState.update {
             it.copy(
@@ -219,7 +208,6 @@ class PomodoroViewModel(
                 isTimerStartedOnce = false,
                 currentMode = Mode.STUDY,
                 settings = settings,
-                activeSprites = emptyList()
             )
         }
         timerService.resetCompletely(settings)
@@ -241,10 +229,6 @@ class PomodoroViewModel(
     }
 
     fun pauseTimer() {
-        // 일시정지 시 동물들의 현재 상태(위치 등)를 저장합니다.
-        viewModelScope.launch {
-            localRepo.saveActiveSprites(uiState.value.activeSprites)
-        }
         _uiState.update { it.copy(isRunning = false, isPaused = true) }
         timerService.pause()
     }

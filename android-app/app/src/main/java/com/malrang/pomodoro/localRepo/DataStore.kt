@@ -9,7 +9,6 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
@@ -37,8 +36,6 @@ object DSKeys {
     val WORK_PRESETS_JSON = stringPreferencesKey("work_presets_json")
     /** 현재 선택된 작업 프리셋의 ID를 저장하기 위한 키 */
     val CURRENT_WORK_ID = stringPreferencesKey("current_work_id")
-    /** 현재 화면에 표시되는 활성 스프라이트(동물) 목록을 JSON 형태로 저장하기 위한 키 */
-    val ACTIVE_SPRITES_JSON = stringPreferencesKey("active_sprites_json")
     /** 잔디 배경화면 사용 여부를 저장하기 위한 키 */
     val USE_GRASS_BACKGROUND = booleanPreferencesKey("use_grass_background")
     /** ✅ 화이트리스트 앱 목록을 저장하기 위한 키 */
@@ -95,15 +92,6 @@ class PomodoroRepository(private val context: Context) {
     }
     suspend fun saveCurrentWorkId(id: String) {
         context.dataStore.edit { it[DSKeys.CURRENT_WORK_ID] = id }
-    }
-    suspend fun saveActiveSprites(sprites: List<AnimalSprite>) {
-        val json = gson.toJson(sprites)
-        context.dataStore.edit { it[DSKeys.ACTIVE_SPRITES_JSON] = json }
-    }
-    suspend fun loadActiveSprites(): List<AnimalSprite> {
-        val json = context.dataStore.data.first()[DSKeys.ACTIVE_SPRITES_JSON] ?: return emptyList()
-        val type = object : TypeToken<List<AnimalSprite>>() {}.type
-        return runCatching { gson.fromJson<List<AnimalSprite>>(json, type) }.getOrElse { emptyList() }
     }
     suspend fun loadUseGrassBackground(): Boolean {
         return context.dataStore.data.first()[DSKeys.USE_GRASS_BACKGROUND] ?: true

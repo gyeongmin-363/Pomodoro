@@ -67,9 +67,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
-import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
-import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.networkRepo.StudyRoomMemberWithProgress
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
 import com.malrang.pomodoro.ui.screen.stats.MonthlyCalendarGrid
@@ -96,7 +93,6 @@ import kotlin.math.roundToInt
 fun StudyRoomDetailScreen(
     roomId: String?,
     roomVm: StudyRoomViewModel,
-    collectAnimal : Set<Animal>,
     onNavigateBack: () -> Unit,
     onNavigateToChat: (String) -> Unit
 ) {
@@ -520,22 +516,6 @@ fun StudyRoomDetailScreen(
                                 )
                             }
                         }
-
-                        // 랭킹 UI에 동적 데이터 적용
-                        Column(modifier = Modifier.animateContentSize()) {
-                            if (isParticipantListExpanded) {
-                                val totalDaysInMonth = YearMonth.from(selectedDate).lengthOfMonth()
-                                rankingList.forEach { item ->
-                                    RankingItem(
-                                        name = item.member.nickname,
-                                        completedDays = item.completedDays,
-                                        totalDaysInMonth = totalDaysInMonth,
-                                        progress = item.progress,
-                                        animalId = item.member.animal
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -589,12 +569,8 @@ fun StudyRoomDetailScreen(
         }
 
         if (showEditMyInfoDialog && myMemberInfo != null) {
-            // JoinStudyRoomDialog 형식을 따르기 위해 collectedAnimals 파라미터가 필요합니다.
-            // 현재 화면에서는 사용자가 수집한 동물 목록 데이터가 없으므로 빈 목록을 전달합니다.
-            // 실제 구현 시에는 이 부분에 사용자 동물 데이터를 전달해야 합니다.
             EditMyInfoDialog(
                 member = myMemberInfo,
-                collectedAnimals = collectAnimal, // 빈 Set 전달
                 viewModel = roomVm,
                 onDismiss = { showEditMyInfoDialog = false }
             )
@@ -651,91 +627,6 @@ fun StudyRoomDetailScreen(
                     textAlign = TextAlign.Center
                 )
             }
-        }
-    }
-}
-
-
-
-
-@Composable
-fun RankingItem(
-    name: String,
-    completedDays: Int,
-    totalDaysInMonth: Int,
-    progress: Float,
-    animalId: String?
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
-        val animal = animalId?.let { AnimalsTable.byId(it) }
-        val spriteData = animal?.let { SpriteMap.map[it] }
-
-        Box(
-            modifier = Modifier.size(56.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (spriteData != null) {
-                val imageBitmap = ImageBitmap.imageResource(id = spriteData.idleRes)
-                val frameWidth = imageBitmap.width / spriteData.idleCols
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawImage(
-                        image = imageBitmap,
-                        srcOffset = IntOffset.Zero,
-                        srcSize = IntSize(frameWidth, imageBitmap.height),
-                        dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
-                        filterQuality = FilterQuality.None
-                    )
-                }
-            } else {
-                // Fallback to the original rank display
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFF676767)),
-                    contentAlignment = Alignment.Center
-                ) {
-//                    Text(
-//                        text = "$rank",
-//                        color = Color.Black,
-//                        fontSize = 24.sp,
-//                        fontWeight = FontWeight.Bold
-//                    )
-                }
-            }
-        }
-
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = name,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-            Text(
-                text = "($completedDays / $totalDaysInMonth 일 완료)",
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp),
-                color = Color(0xFF4CAF50),
-                trackColor = Color.DarkGray,
-                strokeCap = StrokeCap.Butt,
-                gapSize = 0.dp
-            )
         }
     }
 }

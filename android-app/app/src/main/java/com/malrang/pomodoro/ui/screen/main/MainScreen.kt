@@ -306,18 +306,6 @@ fun MainScreen(viewModel: PomodoroViewModel) {
                 )
             }
 
-            if ((state.currentMode != Mode.STUDY || state.isPaused) && state.useGrassBackground) {
-                state.activeSprites.forEach { sp ->
-                    SpriteSheetImage(
-                        sprite = sp,
-                        modifier = Modifier
-                            .absoluteOffset { IntOffset(sp.x.toInt(), sp.y.toInt()) }
-                            .size(sp.sizeDp.dp)
-                    )
-                }
-            }
-
-
             val onMenuClick: () -> Unit = {
                 scope.launch { drawerState.open() }
             }

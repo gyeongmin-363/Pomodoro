@@ -35,10 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
-import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
-import com.malrang.pomodoro.dataclass.sprite.SpriteMap
-import com.malrang.pomodoro.ui.screen.main.SpriteSheetImage
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import java.util.UUID
 
@@ -58,27 +54,6 @@ fun LoginScreen(viewModel: AuthViewModel) {
 @Composable
 private fun LoginScreenPortrait(viewModel: AuthViewModel) {
     val state by viewModel.uiState.collectAsState()
-    var animals by remember { mutableStateOf(emptyList<AnimalSprite>()) }
-
-    // 기존 LaunchedEffect 로직
-    LaunchedEffect(Unit) {
-        val allAnimals = Animal.entries
-        animals = allAnimals.map { animal ->
-            val spriteData = SpriteMap.map[animal]
-            if (spriteData == null) return@LaunchedEffect
-            AnimalSprite(
-                id = UUID.randomUUID().toString(),
-                animalId = animal.id,
-                idleSheetRes = spriteData.idleRes,
-                idleCols = spriteData.idleCols,
-                idleRows = spriteData.idleRows,
-                jumpSheetRes = spriteData.jumpRes,
-                jumpCols = spriteData.jumpCols,
-                jumpRows = spriteData.jumpRows,
-                x = 0f, y = 0f, vx = 0f, vy = 0f, sizeDp = 100f
-            )
-        }.filterNotNull()
-    }
 
     // 기존의 세로 모드 UI
     Box(
@@ -90,23 +65,6 @@ private fun LoginScreenPortrait(viewModel: AuthViewModel) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
-
-        // 동물 스프라이트
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            animals.forEach { sprite ->
-                SpriteSheetImage(
-                    sprite = sprite,
-                    modifier = Modifier.size(100.dp)
-                )
-            }
-        }
 
         // 중앙 UI
         Column(
@@ -173,27 +131,6 @@ private fun LoginScreenPortrait(viewModel: AuthViewModel) {
 @Composable
 private fun LoginScreenLandscape(viewModel: AuthViewModel) {
     val state by viewModel.uiState.collectAsState()
-    var animals by remember { mutableStateOf(emptyList<AnimalSprite>()) }
-
-    // 기존 LaunchedEffect 로직
-    LaunchedEffect(Unit) {
-        val allAnimals = Animal.entries
-        animals = allAnimals.map { animal ->
-            val spriteData = SpriteMap.map[animal]
-            if (spriteData == null) return@LaunchedEffect
-            AnimalSprite(
-                id = UUID.randomUUID().toString(),
-                animalId = animal.id,
-                idleSheetRes = spriteData.idleRes,
-                idleCols = spriteData.idleCols,
-                idleRows = spriteData.idleRows,
-                jumpSheetRes = spriteData.jumpRes,
-                jumpCols = spriteData.jumpCols,
-                jumpRows = spriteData.jumpRows,
-                x = 0f, y = 0f, vx = 0f, vy = 0f, sizeDp = 100f
-            )
-        }.filterNotNull()
-    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -204,27 +141,6 @@ private fun LoginScreenLandscape(viewModel: AuthViewModel) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
-
-        // 동물 스프라이트
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ){
-                animals.forEach { sprite ->
-                    SpriteSheetImage(
-                        sprite = sprite,
-                        modifier = Modifier.size(50.dp)
-                    )
-                }
-            }
-        }
 
         // 가로 모드 레이아웃: Row를 사용하여 좌우로 분할합니다.
         Row(
