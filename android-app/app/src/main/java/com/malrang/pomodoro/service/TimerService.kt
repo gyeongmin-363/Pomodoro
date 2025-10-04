@@ -22,6 +22,8 @@ import com.malrang.pomodoro.localRepo.VibratorHelper
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,6 +54,7 @@ class TimerService : Service() {
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
         repo = PomodoroRepository(this)
+        supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")

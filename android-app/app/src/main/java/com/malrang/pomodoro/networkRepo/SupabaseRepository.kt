@@ -2,6 +2,7 @@ package com.malrang.pomodoro.networkRepo
 
 import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.base.Functions
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.rpc
 import io.github.jan.supabase.storage.Storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,8 +29,14 @@ class SupabaseRepository(
     /**
      * 특정 유저의 코인을 증가시킵니다. (Edge Function 호출)
      */
-    suspend fun incrementUserCoins(userId: String, amount: Int) {
-
+    suspend fun incrementUserCoins(userId: String, coinIncrement: Int) {
+        postgrest.rpc(
+            "increment_user_coin",
+            mapOf(
+                "user_id_input" to userId,
+                "coin_increment" to coinIncrement
+            )
+        )
     }
 
 }
