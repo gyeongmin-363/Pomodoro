@@ -87,6 +87,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
     implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.crashlytics.buildtools)
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation(libs.androidx.animation.core)
 
@@ -96,6 +97,8 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan.supabase:functions-kt:2.5.2")
 
     implementation("io.ktor:ktor-client-okhttp:3.2.2")
     implementation("io.ktor:ktor-client-core:3.2.2")

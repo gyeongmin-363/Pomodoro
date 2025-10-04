@@ -1,6 +1,7 @@
 package com.malrang.pomodoro.networkRepo
 
 
+import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.base.Functions
 import com.malrang.pomodoro.BuildConfig
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.ExternalAuthAction

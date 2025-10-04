@@ -19,6 +19,9 @@ import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
+import com.malrang.pomodoro.networkRepo.SupabaseProvider
+import com.malrang.pomodoro.networkRepo.SupabaseRepository
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,7 +41,7 @@ class TimerService : Service() {
     private lateinit var soundPlayer: SoundPlayer
     private lateinit var vibratorHelper: VibratorHelper
     private lateinit var repo: PomodoroRepository
-
+    private lateinit var supabaseRepo: SupabaseRepository
     private lateinit var wakeLock: PowerManager.WakeLock
 
 
@@ -232,6 +235,19 @@ class TimerService : Service() {
     private fun handleSessionCompletion(finishedMode: Mode) {
         CoroutineScope(Dispatchers.IO).launch {
             updateTodayStats(finishedMode)
+
+            // 공부 세션이 끝났을 때만 코인을 지급합니다.
+            if (finishedMode == Mode.STUDY) {
+                // 현재 로그인된 사용자 ID 가져오기
+                val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
+                // 설정된 공부 시간을 보상으로 지급할 코인 양으로 사용
+                val coinAmount = settings?.studyTime
+
+                // 사용자 ID와 코인 양이 유효할 때만 지급
+                if (userId != null && coinAmount != null && coinAmount > 0) {
+                    supabaseRepo.incrementUserCoins(userId, coinAmount)
+                }
+            }
         }
     }
 
