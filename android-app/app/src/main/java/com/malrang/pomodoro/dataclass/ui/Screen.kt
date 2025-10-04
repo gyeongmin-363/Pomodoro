@@ -6,8 +6,6 @@ package com.malrang.pomodoro.dataclass.ui
 enum class Screen {
     /** 메인 화면 */
     Main,
-    /** 동물 도감 화면 */
-    Collection,
     /** 설정 화면 */
     Settings,
     /** 통계 */
@@ -16,7 +14,5 @@ enum class Screen {
     Whitelist,
     /** 권한 설정 화면 */
     Permission,
-    StudyRoom,
     AccountSettings, // 계정 설정 화면 추가
-    DeleteStudyRoom
 }

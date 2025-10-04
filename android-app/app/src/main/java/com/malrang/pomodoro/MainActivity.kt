@@ -37,8 +37,6 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
-import com.malrang.pomodoro.viewmodel.StudyRoomVMFactory
-import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 import io.github.jan.supabase.auth.handleDeeplinks
 
@@ -49,7 +47,6 @@ class MainActivity : ComponentActivity() {
     private val permissionViewModel: PermissionViewModel by viewModels { AppViewModelFactory(application) }
     private val statsViewModel: StatsViewModel by viewModels { AppViewModelFactory(application) }
     private val authViewModel: AuthViewModel by viewModels { AuthVMFactory(SupabaseProvider.client) }
-    private val studyRoomViewModel: StudyRoomViewModel by viewModels { StudyRoomVMFactory() }
 
 
     private val updateReceiver = object : BroadcastReceiver() {
@@ -91,7 +88,6 @@ class MainActivity : ComponentActivity() {
                             permissionViewModel = permissionViewModel,
                             statsViewModel = statsViewModel,
                             authViewModel = authViewModel,
-                            studyRoomViewModel = studyRoomViewModel
                         )
                     }
                 }

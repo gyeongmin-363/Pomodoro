@@ -60,11 +60,6 @@ data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSe
 class PomodoroRepository(private val context: Context) {
     private val gson = Gson()
 
-    suspend fun loadSeenIds(): Set<String> =
-        context.dataStore.data.first()[DSKeys.SEEN_IDS] ?: emptySet()
-    suspend fun saveSeenIds(ids: Set<String>) {
-        context.dataStore.edit { it[DSKeys.SEEN_IDS] = ids }
-    }
     suspend fun loadDailyStats(): Map<String, DailyStat> {
         val json = context.dataStore.data.first()[DSKeys.DAILY_JSON] ?: return emptyMap()
         val type = object : TypeToken<Map<String, DailyStat>>() {}.type

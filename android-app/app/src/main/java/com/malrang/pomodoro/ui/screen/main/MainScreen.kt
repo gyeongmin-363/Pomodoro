@@ -107,7 +107,6 @@ fun MainScreen(
     val drawerContentColor = Color(0xFFF0F0F0)
 
     val drawerItems = listOf(
-        DrawerItem(iconRes = R.drawable.ic_collection, label = "동물 도감", screen = Screen.Collection),
         DrawerItem(iconRes = R.drawable.ic_stats, label = "통계", screen = Screen.Stats),
         DrawerItem(
             iconRes = R.drawable.light_night,
@@ -119,7 +118,6 @@ fun MainScreen(
                 settingsViewModel.toggleBackground()
             }
         ),
-        DrawerItem(iconRes = R.drawable.ic_military_tech_24px, label = "챌린지룸", screen = Screen.StudyRoom),
         DrawerItem(imageVector = Icons.Filled.AccountCircle, label = "계정 설정", screen = Screen.AccountSettings)
     )
 
