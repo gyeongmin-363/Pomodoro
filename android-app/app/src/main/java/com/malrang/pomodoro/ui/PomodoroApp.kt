@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -17,6 +16,7 @@ import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
 import com.malrang.pomodoro.ui.screen.login.LoginScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
+import com.malrang.pomodoro.ui.screen.nickname.NicknameSetupScreen
 import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
 import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
 import com.malrang.pomodoro.ui.screen.stats.StatsScreen
@@ -26,6 +26,7 @@ import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
+import com.malrang.pomodoro.viewmodel.UserViewModel
 
 @Composable
 fun PomodoroApp(
@@ -34,6 +35,7 @@ fun PomodoroApp(
     permissionViewModel: PermissionViewModel,
     statsViewModel : StatsViewModel,
     authViewModel: AuthViewModel,
+    userViewModel: UserViewModel,
 ) {
     val context = LocalContext.current
     val navController = rememberNavController()
@@ -83,9 +85,9 @@ fun PomodoroApp(
                         permissionUiState = permissionUiState,
                         onPermissionResult = { permissionViewModel.onPermissionRequestResult(context) },
                         onSetPermissionAttempted = permissionViewModel::setPermissionAttemptedInSession,
-                        // 권한 설정 후 메인 화면으로 이동하고 이전 스택을 지웁니다.
-                        onNavigateToMain = {
-                            navController.navigate(Screen.Main.name) {
+                        // 권한 설정 후 닉네임 화면으로 이동하고 이전 스택을 지웁니다.
+                        onNavigateTo = {
+                            navController.navigate(Screen.NicknameSetup.name) {
                                 popUpTo(Screen.Permission.name) { inclusive = true }
                             }
                         }
@@ -101,6 +103,17 @@ fun PomodoroApp(
                     AccountSettingsScreen(
                         authViewModel = authViewModel,
                         onNavigateTo = { navController.navigate(Screen.Main.name) }
+                    )
+                }
+
+                composable(Screen.NicknameSetup.name) {
+                    NicknameSetupScreen(
+                        userViewModel = userViewModel,
+                        onNavigateToMain = {
+                            navController.navigate(Screen.Main.name) {
+                                popUpTo(Screen.NicknameSetup.name) { inclusive = true }
+                            }
+                        }
                     )
                 }
 
