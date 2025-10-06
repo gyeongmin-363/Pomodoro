@@ -51,6 +51,19 @@ class MainActivity : ComponentActivity() {
     private val userViewModel: UserViewModel by viewModels { AuthVMFactory(SupabaseProvider.client) }
 
 
+    // 👇 [추가] 데이터 업데이트를 수신할 BroadcastReceiver
+    private val dataUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == TimerService.ACTION_DATA_UPDATED) {
+                // 코인 정보 새로고침
+                userViewModel.fetchUserProfile()
+
+                // 통계 정보도 새로고침
+                statsViewModel.loadDailyStats()
+            }
+        }
+    }
+
     private val updateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == TimerService.ACTION_STATUS_UPDATE) {
@@ -75,6 +88,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         SupabaseProvider.client.handleDeeplinks(intent)
+
+        val intentFilter = IntentFilter(TimerService.ACTION_DATA_UPDATED)
+        registerReceiver(dataUpdateReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
 
         enableEdgeToEdge()
         setContent {
@@ -118,6 +134,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterReceiver(dataUpdateReceiver)
+
         if (TimerService.isServiceActive()) {
             var hasNotificationPermission = true
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

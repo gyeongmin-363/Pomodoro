@@ -213,7 +213,6 @@ class TimerService : Service() {
         broadcastStatus()
     }
 
-    // ... 이하 나머지 코드는 기존과 동일 ...
     private fun handleSessionCompletion(finishedMode: Mode) {
         CoroutineScope(Dispatchers.IO).launch {
             updateTodayStats(finishedMode)
@@ -226,6 +225,12 @@ class TimerService : Service() {
                     supabaseRepo.incrementUserCoins(userId, coinAmount)
                 }
             }
+
+            // 👇 [추가] 데이터 업데이트 신호 보내기
+            val intent = Intent(ACTION_DATA_UPDATED).apply {
+                setPackage("com.malrang.pomodoro")
+            }
+            sendBroadcast(intent)
         }
     }
 
@@ -335,6 +340,9 @@ class TimerService : Service() {
         const val EXTRA_CURRENT_MODE = "com.malrang.pomodoro.EXTRA_CURRENT_MODE"
         const val EXTRA_TOTAL_SESSIONS = "com.malrang.pomodoro.EXTRA_TOTAL_SESSIONS"
         const val EXTRA_SETTINGS = "com.malrang.pomodoro.EXTRA_SETTINGS"
+
+        //데이터 업데이트 후 신호
+        const val ACTION_DATA_UPDATED = "com.malrang.pomodoro.ACTION_DATA_UPDATED"
 
         private var isServiceActive = false
         fun isServiceActive(): Boolean = isServiceActive
