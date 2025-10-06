@@ -60,11 +60,26 @@ class TimerService : Service() {
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
     }
 
+    // ✅ [추가] 세션 전환 로직을 별도 함수로 분리하여 재사용성 및 일관성 확보
+    private fun advanceToNextSession() {
+        val currentSettings = settings ?: return
+
+        if (currentMode == Mode.STUDY) {
+            totalSessions++
+            val isLongBreakTime = totalSessions > 0 && totalSessions % currentSettings.longBreakInterval == 0
+            currentMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
+            timeLeft = (if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime) * 60
+        } else { // 현재 모드가 휴식 시간이면 다음은 공부 시간
+            currentMode = Mode.STUDY
+            timeLeft = currentSettings.studyTime * 60
+        }
+    }
+
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             "START" -> {
                 if (!isRunning) {
-                    // 설정 값을 인텐트에서 가져옵니다.
                     settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                     } else {
@@ -73,36 +88,20 @@ class TimerService : Service() {
                     }
 
                     settings?.let { s ->
-                        // 타이머 상태를 설정하고 시작하는 로직을 코루틴으로 감쌉니다.
-                        CoroutineScope(Dispatchers.IO).launch {
-                            val intentTimeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
-                            val savedState = repo.loadTimerState() // 저장된 상태를 불러옵니다.
+                        // ViewModel이 전달한 상태를 우선적으로 사용
+                        currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
+                        totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
+                        timeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
 
-                            if (intentTimeLeft > 0) {
-                                // 인텐트로 전달된 시간이 있으면 그 값을 사용합니다.
-                                timeLeft = intentTimeLeft
-                                currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
-                                totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
-                            } else if (savedState != null) {
-                                // 전달된 시간이 없고 저장된 상태가 있으면 복원합니다.
-                                timeLeft = savedState.timeLeft
-                                currentMode = savedState.currentMode
-                                totalSessions = savedState.totalSessions
-                            } else {
-                                // 전달된 시간도, 저장된 상태도 없으면 초기화합니다.
-                                timeLeft = when (currentMode) {
-                                    Mode.STUDY -> s.studyTime * 60
-                                    Mode.SHORT_BREAK -> s.shortBreakTime * 60
-                                    Mode.LONG_BREAK -> s.longBreakTime * 60
-                                }
-                                totalSessions = 0 // 세션도 초기화
-                            }
-
-                            // 타이머 시작은 메인 스레드에서 수행합니다.
-                            launch(Dispatchers.Main) {
-                                startTimer()
+                        // ✅ [수정] 타이머 시작 시 남은 시간이 0이면, 현재 모드에 맞는 시간으로 재설정
+                        if (timeLeft <= 0) {
+                            timeLeft = when (currentMode) {
+                                Mode.STUDY -> s.studyTime * 60
+                                Mode.SHORT_BREAK -> s.shortBreakTime * 60
+                                Mode.LONG_BREAK -> s.longBreakTime * 60
                             }
                         }
+                        startTimer()
                     }
                 }
             }
@@ -114,53 +113,31 @@ class TimerService : Service() {
             }
             "SKIP" -> {
                 job?.cancel()
-                if (wakeLock.isHeld) {
-                    wakeLock.release()
-                }
-                val currentSettings = settings ?: return START_STICKY
-
-                var nextMode = Mode.STUDY
-                var nextTime = 0
-                var newTotalSessions = totalSessions
-
-                if (currentMode == Mode.STUDY) {
-                    newTotalSessions++
-                    val isLongBreakTime = newTotalSessions > 0 &&
-                            newTotalSessions % currentSettings.longBreakInterval == 0
-                    nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
-                    nextTime = if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime
-                } else {
-                    nextMode = Mode.STUDY
-                    nextTime = currentSettings.studyTime
-                }
-
-                currentMode = nextMode
-                totalSessions = newTotalSessions
-                timeLeft = nextTime * 60
                 isRunning = false
+                if (wakeLock.isHeld) { wakeLock.release() }
 
+                advanceToNextSession() // ✅ [수정] 통합된 세션 전환 로직 호출
+
+                // 스킵 후에는 항상 '일시정지' 상태이므로, 변경된 상태를 즉시 저장하고 UI에 알립니다.
+                CoroutineScope(Dispatchers.IO).launch {
+                    repo.saveTimerState(timeLeft, currentMode, totalSessions)
+                }
                 updateNotification()
                 broadcastStatus()
             }
             "RESET" -> {
                 job?.cancel()
                 isRunning = false
-                if (wakeLock.isHeld) {
-                    wakeLock.release()
-                }
-                CoroutineScope(Dispatchers.IO).launch {
-                    repo.clearTimerState()
-                }
+                if (wakeLock.isHeld) { wakeLock.release() }
+                CoroutineScope(Dispatchers.IO).launch { repo.clearTimerState() }
+
                 val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                 } else {
                     @Suppress("DEPRECATION")
                     intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                 }
-
-                if (newSettings != null) {
-                    settings = newSettings
-                }
+                if (newSettings != null) { settings = newSettings }
 
                 currentMode = Mode.STUDY
                 totalSessions = 0
@@ -169,9 +146,8 @@ class TimerService : Service() {
                 broadcastStatus()
                 updateNotification()
             }
-            // [추가] 알림이 지워졌을 때 호출될 액션
             "STOP_SERVICE_ACTION" -> {
-                stopSelf() // 서비스 종료
+                stopSelf()
             }
         }
         return START_STICKY
@@ -200,9 +176,7 @@ class TimerService : Service() {
                 updateNotification()
                 broadcastStatus()
             }
-            if (wakeLock.isHeld) {
-                wakeLock.release()
-            }
+            if (wakeLock.isHeld) { wakeLock.release() }
 
             val finishedMode = currentMode
             val currentSettings = settings ?: return@launch
@@ -212,23 +186,11 @@ class TimerService : Service() {
 
             handleSessionCompletion(finishedMode)
 
-            var nextMode = Mode.STUDY
-            var nextTime = 0
-            var newTotalSessions = totalSessions
+            advanceToNextSession() // ✅ [수정] 통합된 세션 전환 로직 호출
 
-            if (finishedMode == Mode.STUDY) {
-                newTotalSessions++
-                val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % currentSettings.longBreakInterval == 0
-                nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
-                nextTime = if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime
-            } else {
-                nextMode = Mode.STUDY
-                nextTime = currentSettings.studyTime
-            }
-
-            timeLeft = nextTime * 60
-            currentMode = nextMode
-            totalSessions = newTotalSessions
+            // ✅ [중요] 다음 동작(자동시작/일시정지) 전에 UI에 변경된 상태를 먼저 알립니다.
+            broadcastStatus()
+            updateNotification()
 
             if (currentSettings.autoStart) {
                 startTimer()
@@ -242,9 +204,8 @@ class TimerService : Service() {
     private fun pauseTimer() {
         isRunning = false
         job?.cancel()
-        if (wakeLock.isHeld) {
-            wakeLock.release()
-        }
+        if (wakeLock.isHeld) { wakeLock.release() }
+        // 일시정지 할 때마다 현재 상태를 저장합니다.
         CoroutineScope(Dispatchers.IO).launch {
             repo.saveTimerState(timeLeft, currentMode, totalSessions)
         }
@@ -252,18 +213,15 @@ class TimerService : Service() {
         broadcastStatus()
     }
 
+    // ... 이하 나머지 코드는 기존과 동일 ...
     private fun handleSessionCompletion(finishedMode: Mode) {
         CoroutineScope(Dispatchers.IO).launch {
             updateTodayStats(finishedMode)
 
-            // 공부 세션이 끝났을 때만 코인을 지급합니다.
             if (finishedMode == Mode.STUDY) {
-                // 현재 로그인된 사용자 ID 가져오기
                 val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
-                // 설정된 공부 시간을 보상으로 지급할 코인 양으로 사용
                 val coinAmount = settings?.studyTime
 
-                // 사용자 ID와 코인 양이 유효할 때만 지급
                 if (userId != null && coinAmount != null && coinAmount > 0) {
                     supabaseRepo.incrementUserCoins(userId, coinAmount)
                 }
@@ -301,7 +259,6 @@ class TimerService : Service() {
         repo.saveDailyStats(currentStatsMap)
     }
 
-
     private fun updateNotification() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, createNotification())
@@ -317,7 +274,6 @@ class TimerService : Service() {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        // [추가] 알림이 지워졌을 때 서비스를 종료시키기 위한 PendingIntent 생성
         val stopServiceIntent = Intent(this, TimerService::class.java).apply {
             action = "STOP_SERVICE_ACTION"
         }
@@ -353,8 +309,8 @@ class TimerService : Service() {
             .setContentText(contentText)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
-            .setOngoing(isRunning) // isRunning이 true일 때 (타이머 작동 중) 알림을 못 지우게 설정
-            .setDeleteIntent(stopServicePendingIntent) // [추가] 알림을 지웠을 때 stopServicePendingIntent 실행
+            .setOngoing(isRunning)
+            .setDeleteIntent(stopServicePendingIntent)
             .build()
     }
 
@@ -373,11 +329,8 @@ class TimerService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 2022
-        // 서비스 상태 브로드캐스트용 상수
         const val ACTION_STATUS_UPDATE = "com.malrang.pomodoro.ACTION_STATUS_UPDATE"
         const val EXTRA_IS_RUNNING = "com.malrang.pomodoro.EXTRA_IS_RUNNING"
-
-        // 데이터 전달용 상수
         const val EXTRA_TIME_LEFT = "com.malrang.pomodoro.EXTRA_TIME_LEFT"
         const val EXTRA_CURRENT_MODE = "com.malrang.pomodoro.EXTRA_CURRENT_MODE"
         const val EXTRA_TOTAL_SESSIONS = "com.malrang.pomodoro.EXTRA_TOTAL_SESSIONS"
@@ -386,5 +339,4 @@ class TimerService : Service() {
         private var isServiceActive = false
         fun isServiceActive(): Boolean = isServiceActive
     }
-
 }
