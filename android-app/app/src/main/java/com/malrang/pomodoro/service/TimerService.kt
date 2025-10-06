@@ -64,6 +64,7 @@ class TimerService : Service() {
         when (intent?.action) {
             "START" -> {
                 if (!isRunning) {
+                    // 설정 값을 인텐트에서 가져옵니다.
                     settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                     } else {
@@ -71,21 +72,37 @@ class TimerService : Service() {
                         intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                     }
 
-                    // settings가 null이 아닌지 확인하여 안정성을 높입니다.
                     settings?.let { s ->
-                        timeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
-                        currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
-                        totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
+                        // 타이머 상태를 설정하고 시작하는 로직을 코루틴으로 감쌉니다.
+                        CoroutineScope(Dispatchers.IO).launch {
+                            val intentTimeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
+                            val savedState = repo.loadTimerState() // 저장된 상태를 불러옵니다.
 
-                        // 만약 남은 시간이 0초 이하이면, 현재 모드에 맞는 시간으로 재설정합니다.
-                        if (timeLeft <= 0) {
-                            timeLeft = when (currentMode) {
-                                Mode.STUDY -> s.studyTime * 60
-                                Mode.SHORT_BREAK -> s.shortBreakTime * 60
-                                Mode.LONG_BREAK -> s.longBreakTime * 60
+                            if (intentTimeLeft > 0) {
+                                // 인텐트로 전달된 시간이 있으면 그 값을 사용합니다.
+                                timeLeft = intentTimeLeft
+                                currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
+                                totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
+                            } else if (savedState != null) {
+                                // 전달된 시간이 없고 저장된 상태가 있으면 복원합니다.
+                                timeLeft = savedState.timeLeft
+                                currentMode = savedState.currentMode
+                                totalSessions = savedState.totalSessions
+                            } else {
+                                // 전달된 시간도, 저장된 상태도 없으면 초기화합니다.
+                                timeLeft = when (currentMode) {
+                                    Mode.STUDY -> s.studyTime * 60
+                                    Mode.SHORT_BREAK -> s.shortBreakTime * 60
+                                    Mode.LONG_BREAK -> s.longBreakTime * 60
+                                }
+                                totalSessions = 0 // 세션도 초기화
+                            }
+
+                            // 타이머 시작은 메인 스레드에서 수행합니다.
+                            launch(Dispatchers.Main) {
+                                startTimer()
                             }
                         }
-                        startTimer()
                     }
                 }
             }
@@ -173,7 +190,7 @@ class TimerService : Service() {
 
     private fun startTimer() {
         isRunning = true
-        
+
         job?.cancel()
         wakeLock.acquire(90*60*1000L /*90 minutes*/)
         job = CoroutineScope(Dispatchers.Main).launch {

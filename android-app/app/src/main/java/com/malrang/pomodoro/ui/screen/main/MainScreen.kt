@@ -282,7 +282,7 @@ fun MainScreen(
                 title = "세션 건너뛰기",
                 confirmText = "확인",
                 onConfirm = {
-                    timerViewModel.skipSession(settingsState.settings)
+                    timerViewModel.skipSession()
                     showSkipConfirm = false
                 }
             ) {

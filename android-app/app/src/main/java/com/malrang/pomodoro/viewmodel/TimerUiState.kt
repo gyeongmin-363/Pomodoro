@@ -5,9 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
-import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.TimerServiceProvider
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,31 +30,30 @@ class TimerViewModel(
 
     init {
         viewModelScope.launch {
-            // 참고: 타이머 상태를 올바르게 초기화하기 위해 여기에서 설정을 로드합니다.
-            // 이로 인해 SettingsViewModel과 일부 로직이 중복될 수 있지만, 분리된 뷰모델의 자가 초기화를 위해 필요합니다.
-            val presets = localRepo.loadWorkPresets()
-            val currentWorkId = localRepo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
-            val currentSettings = presets.find { it.id == currentWorkId }?.settings ?: Settings()
-
-            if (TimerService.isServiceActive()) {
-                timerService.requestStatus()
+            // ✅ [추가] ViewModel이 생성될 때 저장된 타이머 상태를 불러옵니다.
+            val savedState = localRepo.loadTimerState()
+            if (savedState != null) {
+                // 저장된 상태가 있으면 UI 상태를 즉시 업데이트합니다.
+                _uiState.update {
+                    it.copy(
+                        timeLeft = savedState.timeLeft,
+                        currentMode = savedState.currentMode,
+                        totalSessions = savedState.totalSessions,
+                        isRunning = false // 앱 시작 시에는 항상 '일시정지' 상태입니다.
+                    )
+                }
             } else {
-                val savedState = localRepo.loadTimerState()
-                if (savedState != null) {
+                // ✅ [수정] 저장된 상태가 없으면, 현재 설정에 맞는 기본값으로 초기화합니다.
+                val workPresets = localRepo.loadWorkPresets()
+                val currentWorkId = localRepo.loadCurrentWorkId()
+                val currentSettings = workPresets.find { it.id == currentWorkId }?.settings
+                if (currentSettings != null) {
                     _uiState.update {
                         it.copy(
-                            timeLeft = savedState.timeLeft,
-                            currentMode = savedState.currentMode,
-                            totalSessions = savedState.totalSessions,
-                            isRunning = false,
-                            // 수정된 부분: 로드한 currentSettings를 사용하여 올바르게 계산합니다.
-                            isTimerStartedOnce = savedState.timeLeft < (currentSettings.studyTime * 60)
+                            timeLeft = currentSettings.studyTime * 60,
+                            currentMode = Mode.STUDY,
+                            totalSessions = 0
                         )
-                    }
-                } else {
-                    // 저장된 상태가 없을 경우, 현재 설정으로 타이머를 초기화합니다.
-                    _uiState.update {
-                        it.copy(timeLeft = currentSettings.studyTime * 60)
                     }
                 }
             }
@@ -64,23 +61,14 @@ class TimerViewModel(
     }
 
     fun startTimer(settings: Settings) {
-        if (_uiState.value.isRunning) return
         val s = _uiState.value
-
-        val timeForCurrentMode = when (s.currentMode) {
-            Mode.STUDY -> settings.studyTime * 60
-            Mode.SHORT_BREAK -> settings.shortBreakTime * 60
-            Mode.LONG_BREAK -> settings.longBreakTime * 60
-        }
-
-        val newTimeLeft = if (!s.isTimerStartedOnce) {
-            timeForCurrentMode
-        } else {
-            s.timeLeft
-        }
-
-        _uiState.update { it.copy(isRunning = true, isTimerStartedOnce = true, timeLeft = newTimeLeft) }
-        timerService.start(newTimeLeft, settings, s.currentMode, s.totalSessions)
+        _uiState.update { it.copy(isRunning = true, isTimerStartedOnce = true) }
+        timerService.start(
+            s.timeLeft,
+            settings,
+            s.currentMode,
+            s.totalSessions
+        )
     }
 
     fun pauseTimer() {
@@ -90,41 +78,25 @@ class TimerViewModel(
 
     fun reset(settings: Settings) {
         viewModelScope.launch {
+            // ✅ [추가] 리셋 시 저장된 타이머 상태를 삭제합니다.
             localRepo.clearTimerState()
             _uiState.update {
                 it.copy(
                     timeLeft = settings.studyTime * 60,
-                    totalSessions = 0,
                     isRunning = false,
                     isTimerStartedOnce = false,
                     currentMode = Mode.STUDY,
+                    totalSessions = 0
                 )
             }
             timerService.resetCompletely(settings)
         }
     }
 
-    fun skipSession(settings: Settings) {
+    fun skipSession() {
         val s = _uiState.value
-        val nextMode: Mode
-        val nextTime: Int
-        var newTotalSessions = s.totalSessions
-        if (s.currentMode == Mode.STUDY) {
-            newTotalSessions++
-            val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % settings.longBreakInterval == 0
-            nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
-            nextTime = if (isLongBreakTime) settings.longBreakTime else settings.shortBreakTime
-        } else {
-            nextMode = Mode.STUDY
-            nextTime = settings.studyTime
-        }
-        _uiState.update {
-            it.copy(
-                currentMode = nextMode, totalSessions = newTotalSessions, timeLeft = nextTime * 60,
-                isRunning = false
-            )
-        }
-        timerService.skip(s.currentMode, newTotalSessions)
+        timerService.skip(s.currentMode , s.totalSessions)
+        // 서비스로부터 상태 업데이트를 받으므로 UI 직접 변경 로직 제거
     }
 
     fun updateTimerStateFromService(timeLeft: Int, isRunning: Boolean, currentMode: Mode, totalSessions: Int) {
@@ -137,8 +109,6 @@ class TimerViewModel(
     }
 
     fun requestTimerStatus() {
-        if (TimerService.isServiceActive()) {
-            timerService.requestStatus()
-        }
+        timerService.requestStatus()
     }
 }
