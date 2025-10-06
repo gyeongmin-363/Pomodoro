@@ -38,85 +38,98 @@ fun PomodoroApp(
     userViewModel: UserViewModel,
 ) {
     val context = LocalContext.current
-    val navController = rememberNavController()
     val authState by authViewModel.authState.collectAsState()
+    val userState by userViewModel.userState.collectAsState() // userState를 여기서 수집
 
     when (authState) {
         is AuthViewModel.AuthState.Authenticated -> {
-            // ✅ 권한이 부여되었는지 확인합니다.
-            val allPermissionsGranted = permissionViewModel.checkAndUpdatePermissions(context)
-            // ✅ 권한 상태에 따라 시작 화면을 결정합니다.
-            val startDestination = if (allPermissionsGranted) Screen.Main.name else Screen.Permission.name
-
-
-            // ✅ 로그인이 된 상태이면 메인 앱 콘텐츠를 보여줍니다.
-            NavHost(navController = navController, startDestination = startDestination) {
-                composable(Screen.Main.name) {
-                    MainScreen(
-                        timerViewModel = timerViewModel,
-                        settingsViewModel = settingsViewModel,
-                        onNavigateTo = { screen -> navController.navigate(screen.name) }
-                    )
+            // ✅ 사용자 프로필을 로딩하는 동안 로딩 인디케이터를 표시합니다.
+            if (userState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-                composable(Screen.Stats.name) {
-                    StatsScreen(
-                        statsViewModel = statsViewModel,
-                        onNavigateTo = { screen -> navController.navigate(screen.name) }
-                    )
+            } else {
+                val navController = rememberNavController()
+                // ✅ 권한 확인
+                val allPermissionsGranted = permissionViewModel.checkAndUpdatePermissions(context)
+
+                // ✅ 권한과 닉네임 설정 여부에 따라 시작 화면을 결정합니다.
+                val startDestination = when {
+                    !allPermissionsGranted -> Screen.Permission.name
+                    !userState.isNicknameSet -> Screen.NicknameSetup.name
+                    else -> Screen.Main.name
                 }
-                composable(Screen.Settings.name) {
-                    SettingsScreen(
-                        settingsViewModel = settingsViewModel,
-                        onNavigateTo = { screen -> navController.navigate(screen.name) },
-                        onSave = {
-                            settingsViewModel.saveSettingsAndReset { newSettings ->
-                                timerViewModel.reset(newSettings)
-                                // 저장 및 리셋이 완료된 후 메인 화면으로 이동합니다.
-                                navController.navigate(Screen.Main.name) {
-                                    popUpTo(Screen.Settings.name) { inclusive = true }
+
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable(Screen.Main.name) {
+                        MainScreen(
+                            timerViewModel = timerViewModel,
+                            settingsViewModel = settingsViewModel,
+                            onNavigateTo = { screen -> navController.navigate(screen.name) }
+                        )
+                    }
+                    composable(Screen.Stats.name) {
+                        StatsScreen(
+                            statsViewModel = statsViewModel,
+                            onNavigateTo = { screen -> navController.navigate(screen.name) }
+                        )
+                    }
+                    composable(Screen.Settings.name) {
+                        SettingsScreen(
+                            settingsViewModel = settingsViewModel,
+                            onNavigateTo = { screen -> navController.navigate(screen.name) },
+                            onSave = {
+                                settingsViewModel.saveSettingsAndReset { newSettings ->
+                                    timerViewModel.reset(newSettings)
+                                    navController.navigate(Screen.Main.name) {
+                                        popUpTo(Screen.Settings.name) { inclusive = true }
+                                    }
                                 }
                             }
-                        }
-                    )
-                }
-                composable(Screen.Permission.name) {
-                    val permissionUiState by permissionViewModel.uiState.collectAsState()
-                    PermissionScreen(
-                        permissionUiState = permissionUiState,
-                        onPermissionResult = { permissionViewModel.onPermissionRequestResult(context) },
-                        onSetPermissionAttempted = permissionViewModel::setPermissionAttemptedInSession,
-                        // 권한 설정 후 닉네임 화면으로 이동하고 이전 스택을 지웁니다.
-                        onNavigateTo = {
-                            navController.navigate(Screen.NicknameSetup.name) {
-                                popUpTo(Screen.Permission.name) { inclusive = true }
+                        )
+                    }
+                    composable(Screen.Permission.name) {
+                        val permissionUiState by permissionViewModel.uiState.collectAsState()
+                        PermissionScreen(
+                            permissionUiState = permissionUiState,
+                            onPermissionResult = { permissionViewModel.onPermissionRequestResult(context) },
+                            onSetPermissionAttempted = permissionViewModel::setPermissionAttemptedInSession,
+                            // ✅ 권한 설정 후 닉네임 설정 여부에 따라 분기합니다.
+                            onNavigateTo = {
+                                val destination = if (userState.isNicknameSet) {
+                                    Screen.Main.name
+                                } else {
+                                    Screen.NicknameSetup.name
+                                }
+                                navController.navigate(destination) {
+                                    popUpTo(Screen.Permission.name) { inclusive = true }
+                                }
                             }
-                        }
-                    )
-                }
-                composable(Screen.Whitelist.name) {
-                    WhitelistScreen(
-                        settingsViewModel = settingsViewModel,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
-                composable(Screen.AccountSettings.name) {
-                    AccountSettingsScreen(
-                        authViewModel = authViewModel,
-                        onNavigateTo = { navController.navigate(Screen.Main.name) }
-                    )
-                }
-
-                composable(Screen.NicknameSetup.name) {
-                    NicknameSetupScreen(
-                        userViewModel = userViewModel,
-                        onNavigateToMain = {
-                            navController.navigate(Screen.Main.name) {
-                                popUpTo(Screen.NicknameSetup.name) { inclusive = true }
+                        )
+                    }
+                    composable(Screen.Whitelist.name) {
+                        WhitelistScreen(
+                            settingsViewModel = settingsViewModel,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(Screen.AccountSettings.name) {
+                        AccountSettingsScreen(
+                            authViewModel = authViewModel,
+                            onNavigateTo = { navController.navigate(Screen.Main.name) }
+                        )
+                    }
+                    composable(Screen.NicknameSetup.name) {
+                        NicknameSetupScreen(
+                            userViewModel = userViewModel,
+                            onNavigateToMain = {
+                                navController.navigate(Screen.Main.name) {
+                                    popUpTo(Screen.NicknameSetup.name) { inclusive = true }
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-
             }
         }
         is AuthViewModel.AuthState.NotAuthenticated,

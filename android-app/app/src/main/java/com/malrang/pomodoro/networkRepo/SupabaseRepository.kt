@@ -1,8 +1,6 @@
 package com.malrang.pomodoro.networkRepo
 
-import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.base.Functions
 import io.github.jan.supabase.postgrest.Postgrest
-import io.github.jan.supabase.postgrest.query.Count
 import io.github.jan.supabase.postgrest.rpc
 import io.github.jan.supabase.storage.Storage
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +23,21 @@ class SupabaseRepository(
                 }
             }
             .decodeSingleOrNull<User>()
+    }
+
+    /**
+     * 새로운 사용자 프로필을 생성합니다.
+     * @param userId 생성할 유저의 ID (auth.users.id)
+     * @param nickname 설정할 닉네임
+     */
+    suspend fun createUserProfile(userId: String, nickname: String) {
+        withContext(Dispatchers.IO) {
+            val newUser = User(
+                id = userId,
+                nickname = nickname
+            )
+            postgrest["users"].insert(newUser)
+        }
     }
 
     /**

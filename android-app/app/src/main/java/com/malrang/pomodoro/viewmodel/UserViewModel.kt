@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 data class UserState(
     val user: User? = null,
     val isNicknameSet: Boolean = false,
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true, // ✅ 기본값을 true로 변경하여 초기 로딩 상태를 표시합니다.
     val error: String? = null,
     val isNicknameAvailable: Boolean? = null // 중복 확인 결과 (null: 확인 전, true: 사용 가능, false: 중복)
 )
@@ -38,7 +38,8 @@ class UserViewModel(
 
     fun fetchUserProfile() {
         viewModelScope.launch {
-            _userState.update { it.copy(isLoading = true) }
+            // init에서 이미 isLoading이 true이므로 여기서 업데이트할 필요가 없습니다.
+            // _userState.update { it.copy(isLoading = true) }
             val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
             if (userId != null) {
                 try {
@@ -59,45 +60,40 @@ class UserViewModel(
         }
     }
 
-    fun updateNickname(nickname: String) {
+    /**
+     * 닉네임을 제출받아 중복 검사 후 프로필을 생성합니다.
+     * @param nickname 제출할 닉네임
+     */
+    fun submitNickname(nickname: String) {
         viewModelScope.launch {
-            _userState.update { it.copy(isLoading = true) }
+            _userState.update { it.copy(isLoading = true, isNicknameAvailable = null) }
             val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
-            if (userId != null) {
-                try {
-                    supabaseRepository.updateNickname(userId, nickname)
+
+            if (userId == null) {
+                _userState.update { it.copy(error = "사용자 인증 정보 없음", isLoading = false) }
+                return@launch
+            }
+
+            try {
+                // 1. 닉네임 중복 검사
+                val isAvailable = supabaseRepository.isNicknameAvailable(nickname)
+
+                if (isAvailable) {
+                    // 2. 사용 가능하면 프로필 생성
+                    supabaseRepository.createUserProfile(userId, nickname)
                     _userState.update {
                         it.copy(
-                            user = it.user?.copy(nickname = nickname),
+                            user = User(id = userId, nickname = nickname, coins = 0),
                             isNicknameSet = true,
                             isLoading = false
                         )
                     }
-                } catch (e: Exception) {
-                    _userState.update { it.copy(error = e.message, isLoading = false) }
+                } else {
+                    // 3. 중복된 닉네임이면 에러 상태 업데이트
+                    _userState.update { it.copy(isNicknameAvailable = false, isLoading = false) }
                 }
-            } else {
-                _userState.update { it.copy(error = "사용자 인증 정보 없음", isLoading = false) }
-            }
-        }
-    }
-
-    fun checkNicknameAvailability(nickname: String) {
-        // 닉네임이 비어있으면 확인 상태를 초기화
-        if (nickname.isBlank()) {
-            _userState.update { it.copy(isNicknameAvailable = null) }
-            return
-        }
-        // 확인 시작
-        _userState.update { it.copy(isNicknameAvailable = null, isLoading = true) }
-
-        viewModelScope.launch {
-            try {
-                val isAvailable = supabaseRepository.isNicknameAvailable(nickname)
-                _userState.update { it.copy(isNicknameAvailable = isAvailable, isLoading = false) }
             } catch (e: Exception) {
-                // 에러 처리. 예를 들어, 네트워크 문제
-                _userState.update { it.copy(isNicknameAvailable = false, error = "닉네임 확인 중 오류 발생", isLoading = false) }
+                _userState.update { it.copy(error = "처리 중 오류 발생: ${e.message}", isLoading = false) }
             }
         }
     }

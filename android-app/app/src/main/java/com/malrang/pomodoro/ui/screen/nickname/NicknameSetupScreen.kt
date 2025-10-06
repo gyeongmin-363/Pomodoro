@@ -1,13 +1,31 @@
+// NicknameSetupScreen.kt 파일 전체를 아래 코드로 교체하세요.
+
 package com.malrang.pomodoro.ui.screen.nickname
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.viewmodel.UserViewModel
-import kotlinx.coroutines.delay
 
 @Composable
 fun NicknameSetupScreen(
@@ -18,15 +36,10 @@ fun NicknameSetupScreen(
     val userState by userViewModel.userState.collectAsState()
     val isNicknameAvailable = userState.isNicknameAvailable
 
-    // 사용자가 타이핑을 멈추면 닉네임 중복 검사를 실행 (Debouncing)
-    LaunchedEffect(nickname) {
-        if (nickname.isNotBlank()) {
-            // 500ms 동안 추가 입력이 없으면 검사 실행
-            delay(500)
-            userViewModel.checkNicknameAvailability(nickname)
-        } else {
-            // 입력값이 없으면 검사 상태 초기화
-            userViewModel.checkNicknameAvailability("")
+    // 닉네임 설정이 완료되면 메인 화면으로 이동하는 로직은 그대로 둡니다.
+    LaunchedEffect(userState.isNicknameSet) {
+        if (userState.isNicknameSet) {
+            onNavigateToMain()
         }
     }
 
@@ -39,43 +52,37 @@ fun NicknameSetupScreen(
     ) {
         OutlinedTextField(
             value = nickname,
-            onValueChange = { nickname = it },
+            onValueChange = {
+                if (it.length <= 10) {
+                    nickname = it
+                }
+            },
             label = { Text("닉네임") },
-            // isNicknameAvailable이 false일 때 (중복될 때) 에러 상태로 표시
+            // isNicknameAvailable 상태가 false일 때만 에러로 표시
             isError = isNicknameAvailable == false,
             singleLine = true
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 닉네임 유효성 검사 메시지 표시
         Box(modifier = Modifier.height(24.dp)) {
-            if (nickname.isNotBlank()) {
-                when (isNicknameAvailable) {
-                    true -> Text("사용 가능한 닉네임입니다.", color = MaterialTheme.colorScheme.primary)
-                    false -> Text("이미 사용 중인 닉네임입니다.", color = MaterialTheme.colorScheme.error)
-                    null -> if (userState.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp)) // 확인 중 로딩 표시
-                    }
-                }
+            if (isNicknameAvailable == false) {
+                Text("이미 사용 중인 닉네임입니다.", color = MaterialTheme.colorScheme.error)
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
-                userViewModel.updateNickname(nickname)
+                // ✅ 버튼 클릭 시 ViewModel의 통합된 함수를 호출
+                userViewModel.submitNickname(nickname)
             },
-            // 닉네임이 비어있지 않고, 사용 가능(true)할 때만 버튼 활성화
-            enabled = nickname.isNotBlank() && isNicknameAvailable == true
+            enabled = nickname.isNotBlank() && !userState.isLoading
         ) {
-            Text("완료")
-        }
-    }
-
-    // 닉네임 설정이 완료되면 메인 화면으로 이동
-    LaunchedEffect(userState.isNicknameSet) {
-        if (userState.isNicknameSet) {
-            onNavigateToMain()
+            if (userState.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+            } else {
+                Text("시작하기")
+            }
         }
     }
 }

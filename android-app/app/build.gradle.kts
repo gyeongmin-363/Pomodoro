@@ -87,7 +87,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
     implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.crashlytics.buildtools)
+//    implementation(libs.firebase.crashlytics.buildtools)
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation(libs.androidx.animation.core)
 
