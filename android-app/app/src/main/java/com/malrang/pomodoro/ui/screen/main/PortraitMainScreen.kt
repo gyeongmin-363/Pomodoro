@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -37,11 +37,8 @@ import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.theme.Typography
-import com.malrang.pomodoro.viewmodel.SettingsUiState
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
-import com.malrang.pomodoro.viewmodel.TimerUiState
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
 @Composable
@@ -50,14 +47,15 @@ fun PortraitMainScreen(
     settingsViewModel: SettingsViewModel,
     events: MainScreenEvents, // 여러 파라미터를 하나로 받음
     onNavigateTo: (Screen) -> Unit,
-    contentColor: Color,
-    secondaryTextColor: Color,
-    highlightColor: Color,
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
-    // showWorkManager 상태를 내부에서 직접 관리
     var showWorkManager by remember { mutableStateOf(false) }
+
+    val contentColor = MaterialTheme.colorScheme.onBackground
+    val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val highlightColor = MaterialTheme.colorScheme.primary
+
 
     val titleText = when (timerState.currentMode) {
         Mode.STUDY -> "📖 공부 시간"
@@ -93,7 +91,7 @@ fun PortraitMainScreen(
                             settingsViewModel.startEditingWorkPreset(presetId)
                             onNavigateTo(Screen.Settings)
                         },
-                        useGrassBackground = settingsState.useGrassBackground
+                        useGrassBackground = false // 이 부분은 이제 테마로 관리되므로 false로 고정하거나 WorkPresetsManager에서 파라미터를 제거해야 합니다.
                     )
                 }
                 Spacer(Modifier.height(16.dp))

@@ -42,7 +42,7 @@ fun PermissionScreen(
     permissionUiState: PermissionUiState,
     onPermissionResult: () -> Unit,
     onSetPermissionAttempted: (PermissionType) -> Unit,
-    onNavigateToMain: () -> Unit
+    onNavigateTo: () -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as Activity
@@ -72,7 +72,7 @@ fun PermissionScreen(
     // ✅ 모든 권한이 부여되면 자동으로 메인 화면으로 이동합니다.
     LaunchedEffect(allPermissionsGranted) {
         if (allPermissionsGranted) {
-            onNavigateToMain()
+            onNavigateTo()
         }
     }
 

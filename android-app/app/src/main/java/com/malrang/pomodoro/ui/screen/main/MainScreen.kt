@@ -1,12 +1,6 @@
 package com.malrang.pomodoro.ui.screen.main
 
 import android.content.res.Configuration
-import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -22,12 +16,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -41,10 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -52,11 +46,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.R
-import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
-import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 import kotlinx.coroutines.launch
@@ -83,13 +75,11 @@ data class MainScreenEvents(
 fun MainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
-    onNavigateTo : (Screen) -> Unit
+    onNavigateTo: (Screen) -> Unit
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
-    var showWorkManager by remember { mutableStateOf(false) }
     var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
     var newPresetName by remember { mutableStateOf("") }
     var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
@@ -97,29 +87,11 @@ fun MainScreen(
     var showSkipConfirm by remember { mutableStateOf(false) }
     var presetIdToSelect by remember { mutableStateOf<String?>(null) }
 
-    val contentColor = if (settingsState.useGrassBackground) Color.Black else Color.White
-    val secondaryTextColor = Color.LightGray
-    val highlightColor = if (settingsState.useGrassBackground) Color(0xFF01579B) else Color.Cyan
-
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    val drawerContentColor = Color(0xFFF0F0F0)
-
     val drawerItems = listOf(
-        DrawerItem(iconRes = R.drawable.ic_collection, label = "동물 도감", screen = Screen.Collection),
         DrawerItem(iconRes = R.drawable.ic_stats, label = "통계", screen = Screen.Stats),
-        DrawerItem(
-            iconRes = R.drawable.light_night,
-            label = "배경 변경",
-            onCustomClick = {
-                if (settingsState.useGrassBackground) {
-                    Toast.makeText(context, "어두운 배경에서는 동물이 나타나지 않아요.", Toast.LENGTH_SHORT).show()
-                }
-                settingsViewModel.toggleBackground()
-            }
-        ),
-        DrawerItem(iconRes = R.drawable.ic_military_tech_24px, label = "챌린지룸", screen = Screen.StudyRoom),
         DrawerItem(imageVector = Icons.Filled.AccountCircle, label = "계정 설정", screen = Screen.AccountSettings)
     )
 
@@ -149,8 +121,7 @@ fun MainScreen(
                 drawerShape = RoundedCornerShape(0.dp),
                 modifier = Modifier.fillMaxWidth(0.7f),
             ) {
-                Box {
-                    SetBackgroundImage()
+                Surface(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
                             .verticalScroll(rememberScrollState())
@@ -187,12 +158,17 @@ fun MainScreen(
                                 },
                                 modifier = Modifier
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
-                                    .border(2.dp, Color.White.copy(alpha = 0.7f)),
+                                    .border(
+                                        2.dp,
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    ),
                                 shape = RectangleShape,
                                 colors = NavigationDrawerItemDefaults.colors(
-                                    unselectedContainerColor = Color.Gray.copy(alpha = 0.7f),
-                                    unselectedIconColor = drawerContentColor,
-                                    unselectedTextColor = drawerContentColor,
+                                    unselectedContainerColor = MaterialTheme.colorScheme.surface.copy(
+                                        alpha = 0.7f
+                                    ),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurface,
                                 )
                             )
                         }
@@ -215,7 +191,7 @@ fun MainScreen(
             ) {
                 Text(
                     "Work를 변경하면 현재 진행상황이 초기화됩니다. 계속하시겠습니까?",
-                    color = secondaryTextColor
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -241,13 +217,13 @@ fun MainScreen(
                     label = { Text("새 이름") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.White,
-                        unfocusedBorderColor = Color.Gray,
-                        cursorColor = Color.White,
-                        focusedLabelColor = Color.White,
-                        unfocusedLabelColor = Color.Gray,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
             }
@@ -268,12 +244,17 @@ fun MainScreen(
                 Text(
                     buildAnnotatedString {
                         append("정말로 '")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = Color.White)) {
+                        withStyle(
+                            style = SpanStyle(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
                             append(presetToDelete!!.name)
                         }
                         append("' Work를 삭제하시겠습니까?")
                     },
-                    color = secondaryTextColor
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -284,11 +265,14 @@ fun MainScreen(
                 title = "세션 건너뛰기",
                 confirmText = "확인",
                 onConfirm = {
-                    timerViewModel.skipSession(settingsState.settings)
+                    timerViewModel.skipSession()
                     showSkipConfirm = false
                 }
             ) {
-                Text("현재 세션을 건너뛰시겠습니까?", color = secondaryTextColor)
+                Text(
+                    "현재 세션을 건너뛰시겠습니까?",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -307,39 +291,19 @@ fun MainScreen(
                         showResetConfirm = false
                     }
                 ) {
-                    Text("정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.", color = secondaryTextColor)
+                    Text(
+                        "정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            val backgroundColor = if (settingsState.useGrassBackground) Color(0xFF99C658) else Color.Black
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(backgroundColor)
+                    .background(MaterialTheme.colorScheme.background)
             )
 
-            AnimatedVisibility(
-                visible = (timerState.currentMode != Mode.STUDY || !timerState.isRunning) && settingsState.useGrassBackground,
-                enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
-                exit = fadeOut(animationSpec = tween(durationMillis = 1000))
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.grass_background),
-                    contentDescription = "잔디, 꽃 배경",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            val onMenuClick: () -> Unit = {
-                scope.launch { drawerState.open() }
-            }
-
-            val onSelectPreset: (String) -> Unit = { presetId ->
-                if (settingsState.currentWorkId != presetId) {
-                    presetIdToSelect = presetId
-                }
-            }
 
             val configuration = LocalConfiguration.current
             when (configuration.orientation) {
@@ -349,9 +313,6 @@ fun MainScreen(
                         settingsViewModel = settingsViewModel,
                         events = events,
                         onNavigateTo = onNavigateTo,
-                        contentColor = contentColor,
-                        secondaryTextColor = secondaryTextColor,
-                        highlightColor = highlightColor,
                     )
                 }
 
@@ -361,9 +322,6 @@ fun MainScreen(
                         settingsViewModel = settingsViewModel,
                         events = events,
                         onNavigateTo = onNavigateTo,
-                        contentColor = contentColor,
-                        secondaryTextColor = secondaryTextColor,
-                        highlightColor = highlightColor,
                     )
                 }
             }

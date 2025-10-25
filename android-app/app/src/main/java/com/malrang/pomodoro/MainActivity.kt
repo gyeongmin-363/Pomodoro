@@ -37,9 +37,8 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
-import com.malrang.pomodoro.viewmodel.StudyRoomVMFactory
-import com.malrang.pomodoro.viewmodel.StudyRoomViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
+import com.malrang.pomodoro.viewmodel.UserViewModel
 import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
@@ -49,8 +48,21 @@ class MainActivity : ComponentActivity() {
     private val permissionViewModel: PermissionViewModel by viewModels { AppViewModelFactory(application) }
     private val statsViewModel: StatsViewModel by viewModels { AppViewModelFactory(application) }
     private val authViewModel: AuthViewModel by viewModels { AuthVMFactory(SupabaseProvider.client) }
-    private val studyRoomViewModel: StudyRoomViewModel by viewModels { StudyRoomVMFactory() }
+    private val userViewModel: UserViewModel by viewModels { AuthVMFactory(SupabaseProvider.client) }
 
+
+    // 👇 [추가] 데이터 업데이트를 수신할 BroadcastReceiver
+    private val dataUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == TimerService.ACTION_DATA_UPDATED) {
+                // 코인 정보 새로고침
+                userViewModel.fetchUserProfile()
+
+                // 통계 정보도 새로고침
+                statsViewModel.loadDailyStats()
+            }
+        }
+    }
 
     private val updateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -77,6 +89,9 @@ class MainActivity : ComponentActivity() {
 
         SupabaseProvider.client.handleDeeplinks(intent)
 
+        val intentFilter = IntentFilter(TimerService.ACTION_DATA_UPDATED)
+        registerReceiver(dataUpdateReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
+
         enableEdgeToEdge()
         setContent {
             WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -91,7 +106,7 @@ class MainActivity : ComponentActivity() {
                             permissionViewModel = permissionViewModel,
                             statsViewModel = statsViewModel,
                             authViewModel = authViewModel,
-                            studyRoomViewModel = studyRoomViewModel
+                            userViewModel = userViewModel
                         )
                     }
                 }
@@ -119,6 +134,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterReceiver(dataUpdateReceiver)
+
         if (TimerService.isServiceActive()) {
             var hasNotificationPermission = true
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

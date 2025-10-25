@@ -4,12 +4,8 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.malrang.pomodoro.localRepo.PomodoroRepository
-import com.malrang.pomodoro.networkRepo.StudyRoomRepository
-import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.service.TimerServiceProvider
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.storage.storage
 import kotlin.jvm.java
 
 /**
@@ -53,21 +49,26 @@ class AuthVMFactory(
             @Suppress("UNCHECKED_CAST")
             return AuthViewModel(supabase) as T
         }
-        throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
-    }
-}
-
-class StudyRoomVMFactory() : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(StudyRoomViewModel::class.java)) {
-            val studyRoomRepo = StudyRoomRepository(
-                postgrest = SupabaseProvider.client.postgrest,
-                storage = SupabaseProvider.client.storage
-            )
-
+        // UserViewModel 생성 로직 추가
+        else if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return StudyRoomViewModel(studyRoomRepo) as T
+            return UserViewModel(supabase) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
     }
 }
+
+//class StudyRoomVMFactory() : ViewModelProvider.Factory {
+//    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+//        if (modelClass.isAssignableFrom(StudyRoomViewModel::class.java)) {
+//            val studyRoomRepo = SupabaseRepository(
+//                postgrest = SupabaseProvider.client.postgrest,
+//                storage = SupabaseProvider.client.storage
+//            )
+//
+//            @Suppress("UNCHECKED_CAST")
+//            return StudyRoomViewModel(studyRoomRepo) as T
+//        }
+//        throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
+//    }
+//}

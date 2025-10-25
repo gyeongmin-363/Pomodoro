@@ -25,10 +25,9 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
         loadDailyStats()
     }
 
-    private fun loadDailyStats() {
+    // 👇 [수정] private fun -> fun 으로 변경하여 외부에서 호출할 수 있도록 함
+    fun loadDailyStats() {
         viewModelScope.launch {
-            // Repository에서 일일 통계 데이터를 로드합니다.
-            // (PomodoroRepository에 loadDailyStats 함수가 구현되어 있다고 가정합니다)
             val stats = repository.loadDailyStats()
             _uiState.update { it.copy(dailyStats = stats) }
         }
