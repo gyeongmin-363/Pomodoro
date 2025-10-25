@@ -67,64 +67,137 @@
 ---
 ---
 
-## 🛠️ 개발 가이드 체크리스트
+## 🛠️ 개발 로드맵 및 체크리스트
 
-### 1. 🗺️ 지도 및 기본 리소스
-- [ ] 정적 세계지도 이미지 (Equirectangular projection) 리소스 추가 (PNG 또는 SVG)
-- [ ] 비행기 아이콘 이미지 리소스 추가 (내 위치 표시용)
-- [ ] 다른 사용자 표시용 점(Dot) 디자인 정의 (색상, 크기)
-- [ ] 비행 경로 표시용 점선(Dashed line) 스타일 정의
+### ✈️ Phase 1: 솔로 비행 (핵심 기능 - 혼자 뽀모도로)
+> **목표:** 사용자 혼자 뽀모도로를 실행할 때, 지도 위에서 자신의 비행기가 출발지부터 도착지까지 비행하는 전체 과정을 구현합니다.
 
-### 2. 📍 좌표계 및 위치 정의
-- [ ] 지도 이미지의 픽셀(Offset)을 월드 좌표(위도/경도)로 변환하거나, 혹은 그 반대로 변환하는 유틸리티 함수 구현
-- [ ] `Equirectangular projection` 특성에 맞는 좌표 계산식 확인
-    - `x = (longitude + 180) * (imageWidth / 360)`
-    - `y = (90 - latitude) * (imageHeight / 180)`
-- [ ] 바다 위에 점이 찍히지 않도록, 주요 도시/육지 좌표 리스트 (위도/경도) 미리 정의 (e.g., `cities.json` 또는 `object` 파일)
-- [ ] 집중 세션 시작 시(출발), 미리 정의된 도시 리스트에서 출발지/도착지 랜덤 선택 로직 구현
+#### 1. 🎨 리소스 및 좌표계 준비
+- [ ] **정적 세계지도 이미지:** `res/drawable`에 `world_map.png` (Equirectangular) 추가
+- [ ] **비행기 아이콘:** `res/drawable`에 `ic_airplane.xml` (또는 .png) 추가
+- [ ] **도시 좌표 리스트:** `com/malrang/pomodoro/dataclass/`에 `CityCoordinates.kt` 파일 생성
+    - `data class City(val name: String, val latitude: Double, val longitude: Double)` 정의
+    - `object CityList { val cities = listOf(...) }`에 주요 도시(육지) 좌표 하드코딩
+- [ ] **좌표 변환 유틸리티:** `com/malrang/pomodoro/ui/utils/CoordinateUtils.kt` 생성
+    - `fun latLngToOffset(latitude, longitude, mapWidth, mapHeight): Offset` 함수 구현 (위도/경도 → Canvas의 X, Y 픽셀 좌표)
+    - `fun lerp(start: Offset, stop: Offset, fraction: Float): Offset` 선형 보간 함수 구현 (비행기 위치 계산용)
 
-### 3. 🎨 Canvas 기본 렌더링
-- [ ] `Canvas` 컴포저블을 화면에 배치
-- [ ] `drawImage`를 사용하여 정적 세계지도 이미지를 배경으로 그리기
-- [ ] 다른 사용자 위치(점)를 `drawCircle`로 그리기 (Mock 데이터 우선 사용)
-- [ ] 내 위치(비행기 아이콘)를 `drawImage` 또는 `drawIcon`으로 그리기
+#### 2. ✈️ 비행 상태 관리 (ViewModel 및 UiState)
+- [ ] **`TimerUiState.kt` 수정:**
+    - `val departureCity: City? = null` (출발 공항)
+    - `val arrivalCity: City? = null` (도착 공항)
+    - `val flightProgress: Float = 0.0f` (비행 진행률, 0.0 ~ 1.0)
+- [ ] **`TimerViewModel` (또는 `TimerService.kt`) 로직 수정:**
+    - **(집중) 세션 시작 시:**
+        - `CityList`에서 `departureCity`와 `arrivalCity` 랜덤 선택
+        - `_uiState.update`로 `departureCity`, `arrivalCity` 설정 및 `flightProgress`를 `0.0f`로 리셋
+    - **타이머 진행 중 (OnTick):**
+        - `flightProgress` 계산: `1.0f - (남은 시간 / 총 집중 시간)`
+        - `_uiState.update`로 `flightProgress` 실시간 업데이트
+    - **세션 완료/스킵 시:**
+        - `_uiState.update`로 `flightProgress`를 `1.0f` (도착)로 강제 설정
 
-### 4. ✈️ 비행 상태 및 애니메이션
-- [ ] 뽀모도로 타이머 상태(집중/휴식)와 비행 상태(출발/비행/착륙) 연결
-    - `집중 시작` → `출발` (출발지에 비행기 표시)
-    - `집중 중` → `비행` (출발지에서 도착지로 비행기/점선 이동)
-    - `집중 완료/휴식 시작` → `착륙` (도착지 도착)
-- [ ] `animateFloatAsState` 또는 유사한 API를 사용하여 비행 진행률(0.0f ~ 1.0f) 상태 관리
-- [ ] 비행 진행률에 따라 출발지와 도착지 사이의 좌표를 계산(선형 보간)하여 비행기 아이콘 위치 실시간 업데이트
-- [ ] `PathEffect.dashPathEffect`를 사용하여 출발지-도착지 간 점선 경로 그리기
-- [ ] (선택) 비행기가 경로를 따라 이동할 때 점선도 함께 그려지는 애니메이션 구현
+#### 3. 🖌️ 메인 화면 UI 수정 (Canvas 렌더링)
+- [ ] **`PortraitMainScreen.kt` / `MainScreen.kt` 수정:**
+    - 기존의 큰 타이머 텍스트, `CycleIndicator` 컴포저블 제거 또는 주석 처리
+- [ ] **`Box` 및 `Canvas` 배치:**
+    - `Box(modifier = Modifier.fillMaxSize())`를 최상위에 배치
+    - `Canvas(modifier = Modifier.fillMaxSize())`를 `Box`의 맨 아래에 배치
+- [ ] **`Canvas` 렌더링 (onDraw):**
+    - `drawImage(worldMapImage)`로 배경 지도 그리기 (지도 원본 크기 `mapWidth`, `mapHeight` 기억)
+    - `departureCity`, `arrivalCity`의 픽셀 좌표(Offset) 계산 (`latLngToOffset` 사용)
+    - `PathEffect.dashPathEffect`를 사용해 출발-도착 간 점선(항로) 그리기
+    - `flightProgress`를 이용해 현재 비행기 좌표 계산 (`lerp` 사용)
+    - `drawImage(airplaneIcon, topLeft = currentPlaneOffset)`로 비행기 그리기
 
-### 5. 🎥 시점 전환 (핵심 기능)
-- [ ] `ViewModel` 또는 `StateHolder`에서 현재 시점(`ViewMode.FULL_MAP` / `ViewMode.MY_LOCATION`) 상태 관리
-- [ ] 시점 전환 버튼 UI 구현 (e.g., `FloatingActionButton` 또는 `IconToggleButton`)
-- [ ] `graphicsLayer` 또는 `drawWithContent`의 `scale` 및 `offset` 파라미터 사용 준비
-- [ ] `animateFloatAsState` (Scale 용) 및 `animateOffsetAsState` (Offset/Translate 용)를 사용하여 부드러운 전환 구현
+#### 4.  overlay UI 및 컨트롤러 재배치
+- [ ] **`Box` 내 UI 재배치:**
+    - `Canvas` **위**에 타이머 정보와 컨트롤 버튼이 오도록 배치
+- [ ] **타이머 정보 오버레이:**
+    - `timerUiState.timeLeft`을 표시하는 `Text`를 화면 상단/하단에 작은 크기로 다시 추가
+    - (디자인) 출발지(ICN) -> 도착지(JFK) 형태의 텍스트 오버레이 추가
+- [ ] **컨트롤 버튼 (`start`, `pause`, `skip` 등):**
+    - 화면 하단에 `Row` 또는 `Column`으로 재배치
 
-#### 5-1. [전체 지도 보기] 상태
-- [ ] `scale`: 지도가 화면에 꽉 차도록 계산된 값 (고정)
-- [ ] `offset`: 지도가 화면 중앙에 오도록 (0, 0) 또는 계산된 중앙값 (고정)
-- [ ] 이 상태에서 모든 점과 비행기가 축소된 비율로 표시되어야 함
+#### 5. 🎥 시점 전환 및 카메라 구현 (핵심)
+- [ ] **시점 상태 관리:**
+    - `MainViewModel` (또는 `TimerViewModel`)에 `val mapViewMode: StateFlow<MapViewMode>` 추가
+    - `enum class MapViewMode { FULL, MY_LOCATION }` 정의
+- [ ] **시점 전환 버튼 UI:**
+    - `Box` 내부에 `IconToggleButton` (지도/비행기 아이콘) 추가, `onClick` 시 `viewModel.toggleMapViewMode()` 호출
+- [ ] **`Canvas`에 `graphicsLayer` 적용:**
+    - `Canvas(modifier = Modifier.fillMaxSize().graphicsLayer { ... })`
+- [ ] **애니메이션 상태 정의 (컴포저블 내):**
+    - `val scale = animateFloatAsState(targetValue = if (mapViewMode == MapViewMode.FULL) 1.0f else 3.0f)` (값은 예시)
+    - `val animatedOffset = animateOffsetAsState(targetValue = ...)`
+- [ ] **`targetOffset` 계산 로직 (중요):**
+    - `[FULL 모드 시]`: `Offset.Zero` (또는 지도를 중앙에 맞추는 고정값)
+    - `[MY_LOCATION 모드 시]`: **(비행기가 화면 중앙에 오도록)**
+        - `targetOffset = (screenCenter - currentPlaneOffset) * scale.value`
+        - `currentPlaneOffset`은 `onDraw`에서 계산된 픽셀 좌표여야 함.
+- [ ] **`graphicsLayer` 로직 구현:**
+    - `scaleX = scale.value`, `scaleY = scale.value`
+    - `translationX = animatedOffset.value.x`
+    - `translationY = animatedOffset.value.y`
+- [ ] **자동 추적 확인:**
+    - `MY_LOCATION` 모드에서 비행기가 움직일 때(`flightProgress` 변경), 화면(Canvas)이 부드럽게 따라 움직이는지 확인
 
-#### 5-2. [내 위치 보기] 상태
-- [ ] `scale`: 확대된 줌 레벨 (고정값, 예: 3.0f)
-- [ ] `offset`: **(중요)** 내 비행기 아이콘의 현재 *화면 좌표*를 계산하고, 그 위치가 *화면 중앙*에 오도록 `offset` 값을 동적으로 계산
-    - `targetOffset = (screenCenter - airplaneScreenPosition) * scale`
-- [ ] `animateOffsetAsState`의 `targetValue`를 이 `targetOffset`으로 설정
+#### 6. 🔒 입력 제한 및 폴리싱
+- [ ] **드래그/핀치 줌 비활성화:** `Canvas`의 `pointerInput`에서 `detectTransformGestures` (핀치 줌), `detectDragGestures` (드래그)를 **호출하지 않음**
+- [ ] **화면 방향 대응:** `LandscapeMainScreen.kt`에도 동일한 `Canvas` 및 `graphicsLayer` 로직 적용
 
-### 6. 📸 카메라 자동 추적 (내 위치 보기)
-- [ ] [내 위치 보기] 모드일 때, 뽀모도로 타이머가 진행(비행)됨에 따라 비행기 위치가 변경됨
-- [ ] 비행기 위치가 변경될 때마다 5-2에서 계산한 `targetOffset` 값이 자동으로 업데이트되어야 함
-- [ ] `animateOffsetAsState`가 이 변경 사항을 감지하고 카메라(Canvas의 offset)를 부드럽게 패닝(panning)하여 비행기를 계속 중앙에 유지
+---
 
-### 7. 🔒 사용자 입력 제한
-- [ ] `Canvas`의 `pointerInput` 수정자(modifier)에서 `detectDragGestures` 및 `detectTransformGestures` (핀치 줌)를 **사용하지 않음** 또는 비활성화
-- [ ] 오직 버튼 클릭을 통해서만 시점 전환(Zoom/Pan)이 발생하도록 보장
+### 🌐 Phase 2: 함께 비행 (Supabase 실시간 공유)
+> **목표:** (로그인 된) 사용자들이 자신의 비행 상태를 Supabase를 통해 실시간 공유하고, 다른 사용자들의 위치를 지도 위에 '점'으로 표시합니다.
 
-### 8. 🌐 (선택) 데이터 연동
-- [ ] Supabase 또는 Firebase의 실시간 기능을 사용하여 다른 사용자들의 현재 비행 상태(출발지, 도착지, 진행률) 데이터 구독
-- [ ] 구독한 데이터를 바탕으로 지도 위에 다른 사용자들의 점/비행기/점선 실시간 렌더링
+#### 1. ☁️ Supabase 설정 및 연동
+- [ ] **Supabase 프로젝트 생성:**
+    - `pomodoro_flights` (예시) 테이블 생성
+    - RLS(Row Level Security) 설정 (인증된 사용자만 읽기/쓰기 가능하도록)
+- [ ] **`android-app`에 Supabase 클라이언트 의존성 추가** (build.gradle.kts)
+- [ ] **`SupabaseProvider.kt` 확인:** 기존 Supabase 클라이언트가 `AuthViewModel` 외에서도 사용 가능한지 확인 (필요시 Hilt/DI 설정)
+- [ ] **테이블 정의:** `pomodoro_flights`
+    - `user_id` (uuid, primary key, foreign key to auth.users)
+    - `nickname` (text)
+    - `departure_city` (text)
+    - `arrival_city` (text)
+    - `flight_progress` (float4, 0.0 ~ 1.0)
+    - `updated_at` (timestampz)
+
+#### 2. 📡 데이터 모델 및 ViewModel
+- [ ] **데이터 모델:** `networkRepo/Models.kt`에 `FlightStatus.kt` (테이블과 매칭) data class 정의 (`@Serializable` 어노테이션 포함)
+- [ ] **`SharedFlightsViewModel` (가칭) 신규 생성:**
+    - `SupabaseRepository` 의존성 주입
+    - `val otherUsersFlights: StateFlow<List<FlightStatus>>` 상태 정의
+- [ ] **`SupabaseRepository.kt` 수정:**
+    - `fun upsertMyFlightStatus(status: FlightStatus)` 함수 추가 (내 상태 `upsert`)
+    - `fun getFlightStatusChanges(): Flow<List<FlightStatus>>` 함수 추가 (실시간 구독)
+        - `supabase.realtime.channel(...).postgresChangeFlow(...)` 사용
+
+#### 3. 📤 내 상태 송신 (Upsert)
+- [ ] **`TimerViewModel` 수정:**
+    - `SupabaseRepository` 의존성 주입
+    - **(집중) 세션 시작 시:** `repository.upsertMyFlightStatus(...)` 호출 (출발지, 도착지, progress 0.0)
+    - **타이머 진행 중 (OnTick):** (성능 고려) 5~10초에 한 번씩 `repository.upsertMyFlightStatus(...)` 호출 (현재 `flightProgress` 업데이트)
+    - **세션 완료/중지 시:** `repository.upsertMyFlightStatus(...)` 호출 (progress 1.0 또는 상태 삭제)
+
+#### 4. 📥 다른 사용자 상태 수신 (Subscribe)
+- [ ] **`SharedFlightsViewModel` 구현:**
+    - `init { ... }` 블록에서 `repository.getFlightStatusChanges()`를 구독
+    - (중요) `myUserId`와 비교하여 **'나'를 제외한** 다른 사용자 목록만 `_otherUsersFlights`에 업데이트
+
+#### 5. 🌍 다른 사용자 렌더링 (Canvas 수정)
+- [ ] **`MainScreen.kt` 수정:**
+    - `SharedFlightsViewModel`에서 `otherUsersFlights` 상태를 수집(collect)
+- [ ] **`Canvas` 렌더링 (onDraw) 수정:**
+    - `otherUsersFlights` 리스트를 `onDraw` 스코프로 전달
+    - `otherUsersFlights.forEach { flightStatus -> ... }` 루프 실행
+    - 각 `flightStatus`의 `departureCity`, `arrivalCity` 이름으로 `CityList`에서 좌표 조회
+    - `latLngToOffset`으로 픽셀 좌표 계산
+    - (선택) 다른 사용자 항로(점선)를 연한 색으로 그리기
+    - `flightStatus.flightProgress`로 `lerp`를 사용해 현재 위치 계산
+    - `drawCircle(...)`을 사용해 해당 위치에 **'점'** 그리기
+- [ ] **시점별 렌더링:**
+    - `[FULL 모드 시]`: 모든 점(dot)을 그리기
+    - `[MY_LOCATION 모드 시]`: (성능 최적화) 내 위치 주변의 점(dot)만 그리거나, `graphicsLayer`의 `scale`로 인해 자연스럽게 안 보이도록 처리
