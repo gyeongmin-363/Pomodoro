@@ -1,7 +1,6 @@
 package com.malrang.pomodoro.ui.screen.whitelist
 
 import android.content.Intent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,10 +14,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,10 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
 /**
@@ -73,12 +70,10 @@ fun WhitelistScreen(
     }
 
     Scaffold(
-        containerColor = Color.Transparent,
-        contentColor = Color.White
     ) { paddingValues ->
-
         Column(
             modifier = Modifier
+                .fillMaxSize() // Scaffold 내부를 채우도록 fillMaxSize 추가
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
@@ -88,10 +83,10 @@ fun WhitelistScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("앱 허용 목록 (전체)", fontSize = 16.sp, color = Color.White)
+                Text("앱 허용 목록 (전체)", style = MaterialTheme.typography.titleLarge)
 
                 IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                 }
             }
 
@@ -106,25 +101,12 @@ fun WhitelistScreen(
                     Icon(Icons.Default.Search, contentDescription = "검색 아이콘")
                 },
                 singleLine = true,
-                colors = TextFieldDefaults.colors().copy(
-                    unfocusedLabelColor = Color.White,
-                    focusedLabelColor = Color.White,
-                    focusedLeadingIconColor = Color.White,
-                    unfocusedLeadingIconColor = Color.White,
-                    cursorColor = Color.White,
-                    focusedTextColor = Color.White,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.White,
-                    unfocusedIndicatorColor = Color.White,
-                )
             )
 
             Text(
                 "공부 중에 사용을 허용할 앱을 선택해주세요.",
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium, // M3 타이포그래피 적용
                 modifier = Modifier.padding(bottom = 8.dp),
-                color = Color.White
             )
 
             LazyColumn(
@@ -134,6 +116,7 @@ fun WhitelistScreen(
                     val appName = packageManager.getApplicationLabel(appInfo).toString()
                     val packageName = appInfo.packageName
                     val appIcon = appInfo.loadIcon(packageManager)
+                    // ✅ uiState.whitelistedApps는 SettingsUiState에 통합되어 있습니다.
                     val isChecked = uiState.whitelistedApps.contains(packageName)
 
                     AppListItem(

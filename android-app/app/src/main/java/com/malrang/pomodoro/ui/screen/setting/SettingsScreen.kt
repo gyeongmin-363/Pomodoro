@@ -16,13 +16,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,7 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,7 +67,8 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-//            .background()
+            // 배경색을 테마의 surface 색상으로 변경
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -79,76 +77,66 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⚙️ $title 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            // color = Color.White 제거 (테마의 onSurface 색상이 자동 적용됨)
+            Text("⚙️ $title 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(Modifier.height(24.dp))
 
-        Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+        // color = Color.White 제거
+        Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
 
-        val sliderColors = SliderDefaults.colors(
-            thumbColor = Color.White,
-            activeTrackColor = Color(0xFF3F51B5),
-            inactiveTrackColor = Color.Gray
-        )
+        // sliderColors 변수 및 colors 속성 제거 (M3 기본 스타일 적용)
 
-        Text("공부 시간: ${settings.studyTime}분", color = Color.White)
+        Text("공부 시간: ${settings.studyTime}분") // color 제거
         Slider(
             value = settings.studyTime.toFloat(),
             onValueChange = { settingsViewModel.updateStudyTime(it.toInt()) },
-            valueRange = 1f..60f,
-            colors = sliderColors
+            valueRange = 1f..60f
         )
 
-        Text("짧은 휴식 시간: ${settings.shortBreakTime}분", color = Color.White)
+        Text("짧은 휴식 시간: ${settings.shortBreakTime}분") // color 제거
         Slider(
             value = settings.shortBreakTime.toFloat(),
             onValueChange = { settingsViewModel.updateShortBreakTime(it.toInt()) },
-            valueRange = 1f..30f,
-            colors = sliderColors
+            valueRange = 1f..30f
         )
 
-        Text("긴 휴식 시간: ${settings.longBreakTime}분", color = Color.White)
+        Text("긴 휴식 시간: ${settings.longBreakTime}분") // color 제거
         Slider(
             value = settings.longBreakTime.toFloat(),
             onValueChange = { settingsViewModel.updateLongBreakTime(it.toInt()) },
-            valueRange = 1f..60f,
-            colors = sliderColors
+            valueRange = 1f..60f
         )
 
-        Text("긴 휴식 간격: ${settings.longBreakInterval}회 마다", color = Color.White)
+        Text("긴 휴식 간격: ${settings.longBreakInterval}회 마다") // color 제거
         Slider(
             value = settings.longBreakInterval.toFloat(),
             onValueChange = { settingsViewModel.updateLongBreakInterval(it.toInt()) },
             valueRange = 2f..12f,
-            steps = 9,
-            colors = sliderColors
+            steps = 9
         )
         Spacer(Modifier.height(24.dp))
 
-        Text("알림 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+        Text("알림 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium) // color 제거
         Spacer(Modifier.height(8.dp))
 
-        val checkboxColors = CheckboxDefaults.colors(
-            checkedColor = Color(0xFF3F51B5),
-            uncheckedColor = Color.White,
-            checkmarkColor = Color.White
-        )
+        // checkboxColors 변수 및 colors 속성 제거 (M3 기본 스타일 적용)
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.soundEnabled, onCheckedChange = { settingsViewModel.toggleSound(it) }, colors = checkboxColors)
-            Text("알림음 사용", color = Color.White)
+            Checkbox(checked = settings.soundEnabled, onCheckedChange = { settingsViewModel.toggleSound(it) })
+            Text("알림음 사용") // color 제거
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { settingsViewModel.toggleVibration(it) }, colors = checkboxColors)
-            Text("진동 사용", color = Color.White)
+            Checkbox(checked = settings.vibrationEnabled, onCheckedChange = { settingsViewModel.toggleVibration(it) })
+            Text("진동 사용") // color 제거
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = settings.autoStart, onCheckedChange = { settingsViewModel.toggleAutoStart(it) }, colors = checkboxColors)
-            Text("자동 시작", color = Color.White)
+            Checkbox(checked = settings.autoStart, onCheckedChange = { settingsViewModel.toggleAutoStart(it) })
+            Text("자동 시작") // color 제거
         }
         Spacer(Modifier.height(24.dp))
 
@@ -157,7 +145,7 @@ fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+            Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium) // color 제거
             TextButton(onClick = { onNavigateTo(Screen.Whitelist) }) {
                 Text("예외 목록 설정")
             }
@@ -184,13 +172,10 @@ fun SettingsScreen(
                 ) {
                     RadioButton(
                         selected = (settings.blockMode == mode),
-                        onClick = { settingsViewModel.updateBlockMode(mode) },
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = Color.White,
-                            unselectedColor = Color.Gray
-                        )
+                        onClick = { settingsViewModel.updateBlockMode(mode) }
+                        // colors 속성 제거
                     )
-                    Text(text = text, color = Color.White, modifier = Modifier.padding(start = 8.dp))
+                    Text(text = text, modifier = Modifier.padding(start = 8.dp)) // color 제거
                 }
             }
         }
@@ -207,18 +192,19 @@ fun SettingsScreen(
                     onNavigateTo(Screen.Main)
                 },
             ) {
-                Icon(Icons.Default.Close, "취소", tint = Color.White)
+                Icon(Icons.Default.Close, "취소") // tint 제거
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             IconButton(onClick = { showDialog = true }) {
-                Icon(painterResource(R.drawable.ic_save),"저장", tint = Color.White)
+                Icon(painterResource(R.drawable.ic_save),"저장") // tint 제거
             }
         }
     }
 
     if (showDialog) {
+        // PixelArtConfirmDialog를 ModernConfirmDialog로 교체
         ModernConfirmDialog(
             onDismissRequest = { showDialog = false },
             title = "저장하시겠습니까?",
@@ -227,12 +213,8 @@ fun SettingsScreen(
                 onSave()
                 showDialog = false
             },
-            content = {
-                Text(
-                    text = "저장하면 타이머가 초기화됩니다.\n계속 진행할까요?",
-                    color = Color.LightGray
-                )
-            }
+            // content 람다 대신 text 파라미터 사용
+            text = "저장하면 타이머가 초기화됩니다.\n계속 진행할까요?"
         )
     }
 }

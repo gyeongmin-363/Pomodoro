@@ -2,7 +2,6 @@ package com.malrang.pomodoro.ui.screen.main
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -20,9 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
@@ -34,8 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -118,8 +112,8 @@ fun MainScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerShape = RoundedCornerShape(0.dp),
                 modifier = Modifier.fillMaxWidth(0.7f),
+                // drawerShape = RoundedCornerShape(0.dp) (제거)
             ) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Column(
@@ -158,18 +152,6 @@ fun MainScreen(
                                 },
                                 modifier = Modifier
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
-                                    .border(
-                                        2.dp,
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                    ),
-                                shape = RectangleShape,
-                                colors = NavigationDrawerItemDefaults.colors(
-                                    unselectedContainerColor = MaterialTheme.colorScheme.surface.copy(
-                                        alpha = 0.7f
-                                    ),
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurface,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurface,
-                                )
                             )
                         }
                     }
@@ -181,18 +163,14 @@ fun MainScreen(
             ModernConfirmDialog(
                 onDismissRequest = { presetIdToSelect = null },
                 title = "Work 변경",
+                confirmText = "확인",
                 onConfirm = {
                     settingsViewModel.selectWorkPreset(presetIdToSelect!!) { newSettings ->
                         timerViewModel.reset(newSettings)
                     }
                     presetIdToSelect = null
                 },
-                content = {
-                    Text(
-                        "Work를 변경하면 현재 진행상황이 초기화됩니다. 계속하시겠습니까?",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                text = "Work를 변경하면 현재 진행상황이 초기화됩니다. 계속하시겠습니까?"
             )
         }
 
@@ -200,12 +178,13 @@ fun MainScreen(
             ModernConfirmDialog(
                 onDismissRequest = { presetToRename = null },
                 title = "Work 이름 변경",
+                confirmText = "확인",
                 confirmButtonEnabled = newPresetName.isNotBlank(),
                 onConfirm = {
                     settingsViewModel.updateWorkPresetName(presetToRename!!.id, newPresetName)
                     presetToRename = null
                 },
-                content =  {
+                content = {
                     OutlinedTextField(
                         value = newPresetName,
                         onValueChange = {
@@ -214,16 +193,8 @@ fun MainScreen(
                             }
                         },
                         label = { Text("새 이름") },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                        )
+                        singleLine = true
+                        // colors = ... (제거)
                     )
                 }
             )
@@ -254,7 +225,9 @@ fun MainScreen(
                             }
                             append("' Work를 삭제하시겠습니까?")
                         },
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        // Material 3 Dialog의 기본 텍스트 스타일을 따르도록 color 속성 제거
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant // Dialog 본문 색상 통일
                     )
                 }
             )
@@ -269,12 +242,7 @@ fun MainScreen(
                     timerViewModel.skipSession()
                     showSkipConfirm = false
                 },
-                content = {
-                    Text(
-                        "현재 세션을 건너뛰시겠습니까?",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                text = "현재 세션을 건너뛰시겠습니까?"
             )
         }
 
@@ -292,12 +260,7 @@ fun MainScreen(
                         timerViewModel.reset(settingsState.settings)
                         showResetConfirm = false
                     },
-                    content = {
-                        Text(
-                            "정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    text = "정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다."
                 )
             }
 
