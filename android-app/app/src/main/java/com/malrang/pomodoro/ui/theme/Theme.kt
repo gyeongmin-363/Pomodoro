@@ -10,45 +10,69 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color.Companion.Black
-import androidx.compose.ui.graphics.Color.Companion.DarkGray
-import androidx.compose.ui.graphics.Color.Companion.Gray
-import androidx.compose.ui.graphics.Color.Companion.LightGray
-import androidx.compose.ui.graphics.Color.Companion.White
+// import androidx.compose.ui.graphics.Color.Companion.Black // 삭제
+// import androidx.compose.ui.graphics.Color.Companion.DarkGray // 삭제
+// import androidx.compose.ui.graphics.Color.Companion.Gray // 삭제
+// import androidx.compose.ui.graphics.Color.Companion.LightGray // 삭제
+// import androidx.compose.ui.graphics.Color.Companion.White // 삭제
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.malrang.pomodoro.dataclass.ui.ThemeOption
 
-// 다크 모드 색상 정의
+// 다크 모드 색상 정의 (Color.kt에서 정의한 모던 팔레트 변수 사용)
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
-    background = DarkGray,
-    surface = DarkGray,
-//    onPrimary = Purple20,
-//    onSecondary = PurpleGrey20,
-//    onTertiary = Pink20,
-    onBackground = White,
-    onSurface = White,
-    onSurfaceVariant = LightGray
+    primary = primaryDark,
+    onPrimary = onPrimaryDark,
+    primaryContainer = primaryContainerDark,
+    onPrimaryContainer = onPrimaryContainerDark,
+    secondary = secondaryDark,
+    onSecondary = onSecondaryDark,
+    secondaryContainer = secondaryContainerDark,
+    onSecondaryContainer = onSecondaryContainerDark,
+    tertiary = tertiaryDark,
+    onTertiary = onTertiaryDark,
+    tertiaryContainer = tertiaryContainerDark,
+    onTertiaryContainer = onTertiaryContainerDark,
+    error = errorDark,
+    onError = onErrorDark,
+    errorContainer = errorContainerDark,
+    onErrorContainer = onErrorContainerDark,
+    background = backgroundDark,
+    onBackground = onBackgroundDark,
+    surface = surfaceDark,
+    onSurface = onSurfaceDark,
+    surfaceVariant = surfaceVariantDark,
+    onSurfaceVariant = onSurfaceVariantDark,
+    outline = outlineDark
 )
 
-// 라이트 모드 색상 정의
+// 라이트 모드 색상 정의 (Color.kt에서 정의한 모던 팔레트 변수 사용)
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-    background = White,
-    surface = White,
-    onPrimary = White,
-    onSecondary = White,
-    onTertiary = White,
-    onBackground = Black,
-    onSurface = Black,
-    onSurfaceVariant = Gray
+    primary = primaryLight,
+    onPrimary = onPrimaryLight,
+    primaryContainer = primaryContainerLight,
+    onPrimaryContainer = onPrimaryContainerLight,
+    secondary = secondaryLight,
+    onSecondary = onSecondaryLight,
+    secondaryContainer = secondaryContainerLight,
+    onSecondaryContainer = onSecondaryContainerLight,
+    tertiary = tertiaryLight,
+    onTertiary = onTertiaryLight,
+    tertiaryContainer = tertiaryContainerLight,
+    onTertiaryContainer = onTertiaryContainerLight,
+    error = errorLight,
+    onError = onErrorLight,
+    errorContainer = errorContainerLight,
+    onErrorContainer = onErrorContainerLight,
+    background = backgroundLight,
+    onBackground = onBackgroundLight,
+    surface = surfaceLight,
+    onSurface = onSurfaceLight,
+    surfaceVariant = surfaceVariantLight,
+    onSurfaceVariant = onSurfaceVariantLight,
+    outline = outlineLight
 )
 
 @Composable
@@ -85,7 +109,7 @@ fun PomodoroTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-//        typography = Typography,
+        typography = Typography, // Type.kt 수정 후 주석 해제
         content = content
     )
 }
