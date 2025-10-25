@@ -34,7 +34,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.malrang.pomodoro.dataclass.ui.PermissionType
 import com.malrang.pomodoro.ui.theme.SetBackgroundImage
-import com.malrang.pomodoro.ui.theme.Typography
 import com.malrang.pomodoro.viewmodel.PermissionUiState
 
 @Composable
@@ -138,7 +137,6 @@ fun PermissionScreen(
                         "모든 권AN 설정 완료"
                     },
                     fontSize = 16.sp,
-                    style = Typography.bodyLarge
                 )
             }
         }

@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.theme.Typography
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
@@ -75,7 +74,7 @@ fun PortraitMainScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 TextButton(onClick = { showWorkManager = !showWorkManager }) {
-                    Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor, style = Typography.bodyLarge)
+                    Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
                     Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
                 }
 

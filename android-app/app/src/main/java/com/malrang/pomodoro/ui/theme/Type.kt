@@ -9,13 +9,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
 
-val CustomFontFamily = FontFamily(
-    Font(R.font.neo_dunggeunmo_pro_regular) // res/font/custom_font.ttf
-)
+//val CustomFontFamily = FontFamily(
+//    Font(R.font.neo_dunggeunmo_pro_regular) // res/font/custom_font.ttf
+//)
 
 // Set of Material typography styles to start with
 val Typography = Typography(
-    bodyLarge = TextStyle(fontFamily = CustomFontFamily)
+//    bodyLarge = TextStyle(fontFamily = CustomFontFamily)
     /* Other default text styles to override
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
