@@ -87,11 +87,11 @@
     - [x] 집중 / 휴식 / 긴 휴식 타이머 로직 (`TimerService.kt`)
     - [x] 타이머 UI 및 컨트롤 (시작, 정지, 재설정) (`MainScreen.kt`)
 - **디자인 시스템 리팩토링 (신규/최우선)**
-    - [ ] `Type.kt`: 픽셀 폰트(`neo_dunggeunmo_pro`) 제거 및 시스템 기본 폰트(또는 Pretendard)로 교체
-    - [ ] `Color.kt`: 모던한 앱 컨셉에 맞게 Primary/Secondary 색상을 차분한 톤(예: Muted Blue, Gray 계열)으로 재정의
-    - [ ] `PixelSwitch.kt` 사용처를 Material 3 `Switch`로 전면 교체
-    - [ ] `PixelArtConfirmDialog.kt` 사용처를 Material 3 `AlertDialog`로 전면 교체
-    - [ ] 전반적인 레이아웃 리팩토링 (충분한 여백 확보)
+    - [x] `Type.kt`: 픽셀 폰트(`neo_dunggeunmo_pro`) 제거 및 시스템 기본 폰트(또는 Pretendard)로 교체
+    - [x] `Color.kt`: 모던한 앱 컨셉에 맞게 Primary/Secondary 색상을 차분한 톤(예: Muted Blue, Gray 계열)으로 재정의
+    - [x] `PixelSwitch.kt` 사용처를 Material 3 `Switch`로 전면 교체
+    - [x] `PixelArtConfirmDialog.kt` 사용처를 Material 3 `AlertDialog`로 전면 교체
+    - [x] 전반적인 레이아웃 리팩토링 (충분한 여백 확보)
 - **스터디 카페 UI (신규)**
     - [ ] '스터디 카페' 메인 화면 (하단 탭 메뉴 추가)
     - [ ] 공개 룸 리스트 UI (카드 형태, 룸 이름, 테마 이미지 표시)
