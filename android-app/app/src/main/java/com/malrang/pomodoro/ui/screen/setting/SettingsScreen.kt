@@ -43,7 +43,6 @@ import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.PixelArtConfirmDialog
-import com.malrang.pomodoro.ui.theme.dialogColor
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
 @Composable
@@ -71,7 +70,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(dialogColor)
+//            .background()
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {

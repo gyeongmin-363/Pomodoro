@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -32,8 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.rememberAsyncImagePainter
-import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
 /**
@@ -79,7 +76,6 @@ fun WhitelistScreen(
         containerColor = Color.Transparent,
         contentColor = Color.White
     ) { paddingValues ->
-        SetBackgroundImage()
 
         Column(
             modifier = Modifier
@@ -138,20 +134,13 @@ fun WhitelistScreen(
                     val appName = packageManager.getApplicationLabel(appInfo).toString()
                     val packageName = appInfo.packageName
                     val appIcon = appInfo.loadIcon(packageManager)
-                    // ✅ uiState.whitelistedApps는 SettingsUiState에 통합되어 있습니다.
                     val isChecked = uiState.whitelistedApps.contains(packageName)
 
                     AppListItem(
                         appName = appName,
-                        appIcon = {
-                            Image(
-                                painter = rememberAsyncImagePainter(model = appIcon),
-                                contentDescription = appName,
-                                modifier = Modifier.size(40.dp)
-                            )
-                        },
-                        isChecked = isChecked,
-                        onCheckedChange = {
+                        appIcon = appIcon,
+                        isWhitelisted = isChecked,
+                        onWhitelistToggle = {
                             // ✅ settingsViewModel의 함수를 호출합니다.
                             if (it) {
                                 settingsViewModel.addToWhitelist(packageName)
