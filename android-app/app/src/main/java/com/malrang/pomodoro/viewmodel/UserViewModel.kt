@@ -32,14 +32,10 @@ class UserViewModel(
     private val _userState = MutableStateFlow(UserState())
     val userState = _userState.asStateFlow()
 
-    init {
-        fetchUserProfile()
-    }
-
     fun fetchUserProfile() {
         viewModelScope.launch {
-            // init에서 이미 isLoading이 true이므로 여기서 업데이트할 필요가 없습니다.
-            // _userState.update { it.copy(isLoading = true) }
+            // ✅ 프로필 조회를 시작할 때 isLoading = true로 설정합니다.
+            _userState.update { it.copy(isLoading = true) }
             val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
             if (userId != null) {
                 try {

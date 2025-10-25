@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,6 +44,12 @@ fun PomodoroApp(
 
     when (authState) {
         is AuthViewModel.AuthState.Authenticated -> {
+            // ✅ 인증 상태가 확인되면 사용자 프로필을 가져옵니다.
+            // 이 LaunchedEffect는 'Authenticated' 상태가 될 때 한 번만 실행됩니다.
+            LaunchedEffect(Unit) {
+                userViewModel.fetchUserProfile()
+            }
+
             // ✅ 사용자 프로필을 로딩하는 동안 로딩 인디케이터를 표시합니다.
             if (userState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
