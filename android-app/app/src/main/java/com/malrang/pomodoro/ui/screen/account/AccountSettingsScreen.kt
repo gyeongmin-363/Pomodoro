@@ -28,7 +28,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.PixelArtConfirmDialog
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import com.malrang.pomodoro.ui.ModernConfirmDialog
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 
 /**
@@ -54,7 +56,7 @@ fun AccountSettingsScreen(
     }
 
     if (showLogoutConfirmDialog) {
-        PixelArtConfirmDialog(
+        ModernConfirmDialog(
             title = "로그아웃",
             content = { Text("정말로 로그아웃 하시겠습니까?") },
             onConfirm = {
@@ -69,7 +71,7 @@ fun AccountSettingsScreen(
     }
 
     if (showDeleteConfirmDialog) {
-        PixelArtConfirmDialog(
+        ModernConfirmDialog(
             title = "회원 탈퇴",
             content = { Text("정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.") },
             onConfirm = {

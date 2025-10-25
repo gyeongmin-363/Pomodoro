@@ -29,7 +29,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import java.time.LocalDate
 
@@ -43,9 +42,6 @@ fun StatsScreen(
 
     var isCalendarExpanded by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-
-    SetBackgroundImage()
-
     Column(
         modifier = Modifier
             .fillMaxSize()

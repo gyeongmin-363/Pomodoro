@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
-import com.malrang.pomodoro.ui.PixelArtConfirmDialog
+import com.malrang.pomodoro.ui.ModernConfirmDialog
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 import kotlinx.coroutines.launch
@@ -178,59 +178,59 @@ fun MainScreen(
         }
     ) {
         if (presetIdToSelect != null) {
-            PixelArtConfirmDialog(
+            ModernConfirmDialog(
                 onDismissRequest = { presetIdToSelect = null },
                 title = "Work 변경",
-                confirmText = "확인",
                 onConfirm = {
                     settingsViewModel.selectWorkPreset(presetIdToSelect!!) { newSettings ->
                         timerViewModel.reset(newSettings)
                     }
                     presetIdToSelect = null
+                },
+                content = {
+                    Text(
+                        "Work를 변경하면 현재 진행상황이 초기화됩니다. 계속하시겠습니까?",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            ) {
-                Text(
-                    "Work를 변경하면 현재 진행상황이 초기화됩니다. 계속하시겠습니까?",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            )
         }
 
         if (presetToRename != null) {
-            PixelArtConfirmDialog(
+            ModernConfirmDialog(
                 onDismissRequest = { presetToRename = null },
                 title = "Work 이름 변경",
-                confirmText = "확인",
                 confirmButtonEnabled = newPresetName.isNotBlank(),
                 onConfirm = {
                     settingsViewModel.updateWorkPresetName(presetToRename!!.id, newPresetName)
                     presetToRename = null
-                }
-            ) {
-                OutlinedTextField(
-                    value = newPresetName,
-                    onValueChange = {
-                        if (it.length <= 10) {
-                            newPresetName = it
-                        }
-                    },
-                    label = { Text("새 이름") },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                },
+                content =  {
+                    OutlinedTextField(
+                        value = newPresetName,
+                        onValueChange = {
+                            if (it.length <= 10) {
+                                newPresetName = it
+                            }
+                        },
+                        label = { Text("새 이름") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        )
                     )
-                )
-            }
+                }
+            )
         }
 
         if (presetToDelete != null) {
-            PixelArtConfirmDialog(
+            ModernConfirmDialog(
                 onDismissRequest = { presetToDelete = null },
                 title = "Work 삭제",
                 confirmText = "삭제",
@@ -239,41 +239,43 @@ fun MainScreen(
                         timerViewModel.reset(newSettings)
                     }
                     presetToDelete = null
+                },
+                content = {
+                    Text(
+                        buildAnnotatedString {
+                            append("정말로 '")
+                            withStyle(
+                                style = SpanStyle(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            ) {
+                                append(presetToDelete!!.name)
+                            }
+                            append("' Work를 삭제하시겠습니까?")
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            ) {
-                Text(
-                    buildAnnotatedString {
-                        append("정말로 '")
-                        withStyle(
-                            style = SpanStyle(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) {
-                            append(presetToDelete!!.name)
-                        }
-                        append("' Work를 삭제하시겠습니까?")
-                    },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            )
         }
 
         if (showSkipConfirm) {
-            PixelArtConfirmDialog(
+            ModernConfirmDialog(
                 onDismissRequest = { showSkipConfirm = false },
                 title = "세션 건너뛰기",
                 confirmText = "확인",
                 onConfirm = {
                     timerViewModel.skipSession()
                     showSkipConfirm = false
+                },
+                content = {
+                    Text(
+                        "현재 세션을 건너뛰시겠습니까?",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            ) {
-                Text(
-                    "현재 세션을 건너뛰시겠습니까?",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            )
         }
 
         Box(
@@ -282,20 +284,21 @@ fun MainScreen(
                 .onSizeChanged { /* widthPx, heightPx are not used */ }
         ) {
             if (showResetConfirm) {
-                PixelArtConfirmDialog(
+                ModernConfirmDialog(
                     onDismissRequest = { showResetConfirm = false },
                     title = "리셋 확인",
                     confirmText = "확인",
                     onConfirm = {
                         timerViewModel.reset(settingsState.settings)
                         showResetConfirm = false
+                    },
+                    content = {
+                        Text(
+                            "정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                ) {
-                    Text(
-                        "정말 리셋할 건가요?\n세션과 공부시간 등이 모두 초기화됩니다.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                )
             }
 
             Box(

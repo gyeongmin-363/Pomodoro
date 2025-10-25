@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.ui.PixelArtConfirmDialog
+import com.malrang.pomodoro.ui.ModernConfirmDialog
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
 @Composable
@@ -219,19 +219,20 @@ fun SettingsScreen(
     }
 
     if (showDialog) {
-        PixelArtConfirmDialog(
+        ModernConfirmDialog(
             onDismissRequest = { showDialog = false },
             title = "저장하시겠습니까?",
             confirmText = "확인",
             onConfirm = {
                 onSave()
                 showDialog = false
+            },
+            content = {
+                Text(
+                    text = "저장하면 타이머가 초기화됩니다.\n계속 진행할까요?",
+                    color = Color.LightGray
+                )
             }
-        ) {
-            Text(
-                text = "저장하면 타이머가 초기화됩니다.\n계속 진행할까요?",
-                color = Color.LightGray
-            )
-        }
+        )
     }
 }
