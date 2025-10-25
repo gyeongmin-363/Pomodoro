@@ -59,13 +59,6 @@ private fun LoginScreenPortrait(viewModel: AuthViewModel) {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        Image(
-            painterResource(R.drawable.grass_background),
-            contentDescription = "배경",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
         // 중앙 UI
         Column(
             modifier = Modifier
@@ -135,14 +128,7 @@ private fun LoginScreenLandscape(viewModel: AuthViewModel) {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        Image(
-            painterResource(R.drawable.grass_background),
-            contentDescription = "배경",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // 가로 모드 레이아웃: Row를 사용하여 좌우로 분할합니다.
+                // 가로 모드 레이아웃: Row를 사용하여 좌우로 분할합니다.
         Row(
             modifier = Modifier
                 .fillMaxSize()

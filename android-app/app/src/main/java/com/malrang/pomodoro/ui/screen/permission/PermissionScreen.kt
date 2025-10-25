@@ -33,7 +33,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.malrang.pomodoro.dataclass.ui.PermissionType
-import com.malrang.pomodoro.ui.theme.SetBackgroundImage
 import com.malrang.pomodoro.viewmodel.PermissionUiState
 
 @Composable
@@ -76,8 +75,6 @@ fun PermissionScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        SetBackgroundImage()
-
         Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = "앱 사용을 위한 권한 설정", modifier = Modifier.padding(bottom = 24.dp))
 
