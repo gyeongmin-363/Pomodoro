@@ -57,18 +57,3 @@ class AuthVMFactory(
         throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
     }
 }
-
-//class StudyRoomVMFactory() : ViewModelProvider.Factory {
-//    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-//        if (modelClass.isAssignableFrom(StudyRoomViewModel::class.java)) {
-//            val studyRoomRepo = SupabaseRepository(
-//                postgrest = SupabaseProvider.client.postgrest,
-//                storage = SupabaseProvider.client.storage
-//            )
-//
-//            @Suppress("UNCHECKED_CAST")
-//            return StudyRoomViewModel(studyRoomRepo) as T
-//        }
-//        throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
-//    }
-//}

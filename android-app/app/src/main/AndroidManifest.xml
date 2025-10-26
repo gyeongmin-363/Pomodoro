@@ -65,7 +65,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="pixbbo"
-                    android:host="study-room" />
+                    android:host="friend" />
             </intent-filter>
         </activity>
         <service
