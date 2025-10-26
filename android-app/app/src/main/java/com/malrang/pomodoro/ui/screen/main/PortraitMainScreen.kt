@@ -146,7 +146,7 @@ fun PortraitMainScreen(
                 // 이 Box는 Lottie 아이콘과 버스 애니메이션의 컨테이너 역할을 합니다.
                 Box(
                     modifier = Modifier
-                        .height(370.dp), // 중앙 Lottie 크기(250dp) + 버스 크기(120dp) + 간격
+                        .height(250.dp), // 중앙 Lottie 크기(250dp)
                     contentAlignment = Alignment.Center
                 ) {
                     if (isReadyToStart) {
@@ -172,7 +172,6 @@ fun PortraitMainScreen(
                                     )
                             )
                             // --- 중앙 Lottie 끝 ---
-                            Spacer(Modifier.height(120.dp)) // 버스 애니메이션 자리 비움
                         }
                     } else {
                         // 2. "실행 중" 또는 "일시정지" 상태일 때
@@ -193,12 +192,12 @@ fun PortraitMainScreen(
                                 LottieAnimation(
                                     composition = busComposition,
                                     progress = { busProgress },
-                                    modifier = Modifier.size(120.dp) // 원하는 크기로 조절
+                                    modifier = Modifier.size(250.dp) // [수정] 원하는 크기로 조절
                                 )
                             }
                             // 버스가 안 보일 때도 동일한 높이의 Spacer
                             if (!(showBusAnimation && timerState.currentMode == Mode.STUDY)) {
-                                Spacer(Modifier.height(120.dp))
+                                Spacer(Modifier.height(250.dp)) // [수정]
                             }
                             // --- 버스 애니메이션 끝 ---
                         }
