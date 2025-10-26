@@ -56,7 +56,7 @@ fun PortraitMainScreen(
 
     val busProgress by animateLottieCompositionAsState(
         composition = busComposition,
-        isPlaying = showBusAnimation, // [수정] showBusAnimation 상태에 따라 재생
+        isPlaying = showBusAnimation, // showBusAnimation 상태에 따라 재생
         iterations = LottieConstants.IterateForever // 무한 반복
     )
     val ticketProgress by animateLottieCompositionAsState(
@@ -146,7 +146,7 @@ fun PortraitMainScreen(
                 // 이 Box는 Lottie 아이콘과 버스 애니메이션의 컨테이너 역할을 합니다.
                 Box(
                     modifier = Modifier
-                        .height(250.dp), // 중앙 Lottie 크기(250dp)
+                        .height(350.dp), // [중요] 모든 Lottie 이미지는 이 크기를 따라감
                     contentAlignment = Alignment.Center
                 ) {
                     if (isReadyToStart) {
@@ -161,7 +161,7 @@ fun PortraitMainScreen(
                                 composition = ticketComposition,
                                 progress = { 0.4f }, // 40% 진행된 프레임
                                 modifier = Modifier
-                                    .size(250.dp) // 원하는 큰 크기로 조절
+                                    .fillMaxSize() // 원하는 큰 크기로 조절
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null, // 클릭 효과 제거
@@ -187,29 +187,29 @@ fun PortraitMainScreen(
                             Spacer(Modifier.height(16.dp)) // 시간과 버스 사이 간격
 
                             // --- 버스 애니메이션 ---
-                            // [수정] showBusAnimation 상태와 STUDY 모드일 때만 보이도록
+                            // showBusAnimation 상태와 STUDY 모드일 때만 보이도록
                             AnimatedVisibility(visible = showBusAnimation && timerState.currentMode == Mode.STUDY) {
                                 LottieAnimation(
                                     composition = busComposition,
                                     progress = { busProgress },
-                                    modifier = Modifier.size(250.dp) // [수정] 원하는 크기로 조절
+                                    modifier = Modifier.fillMaxSize() // 원하는 크기로 조절
                                 )
                             }
                             // 버스가 안 보일 때도 동일한 높이의 Spacer
                             if (!(showBusAnimation && timerState.currentMode == Mode.STUDY)) {
-                                Spacer(Modifier.height(250.dp)) // [수정]
+                                Spacer(Modifier.height(350.dp)) // [수정]
                             }
                             // --- 버스 애니메이션 끝 ---
                         }
                     }
 
-                    // --- [수정] 티켓 오버레이 애니메이션 (중앙 Lottie 위치와 동일하게) ---
+                    // --- 티켓 오버레이 애니메이션 (중앙 Lottie 위치와 동일하게) ---
                     if (showTicketAnimation) {
                         LottieAnimation(
                             composition = ticketComposition,
                             progress = { ticketProgress },
                             modifier = Modifier
-                                .size(250.dp) // 중앙 Lottie와 동일한 크기
+                                .fillMaxSize() // 중앙 Lottie와 동일한 크기
                                 .align(Alignment.Center) // Box 내에서 중앙 정렬
                                 .clickable( // 애니메이션 중 클릭 방지
                                     interactionSource = remember { MutableInteractionSource() },
