@@ -194,7 +194,6 @@ fun MainScreen(
                         },
                         label = { Text("새 이름") },
                         singleLine = true
-                        // colors = ... (제거)
                     )
                 }
             )

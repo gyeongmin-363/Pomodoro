@@ -90,7 +90,6 @@ fun PortraitMainScreen(
                             settingsViewModel.startEditingWorkPreset(presetId)
                             onNavigateTo(Screen.Settings)
                         },
-                        useGrassBackground = false // 이 부분은 이제 테마로 관리되므로 false로 고정하거나 WorkPresetsManager에서 파라미터를 제거해야 합니다.
                     )
                 }
                 Spacer(Modifier.height(16.dp))

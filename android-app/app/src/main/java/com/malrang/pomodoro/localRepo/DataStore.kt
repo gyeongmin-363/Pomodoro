@@ -1,7 +1,6 @@
 package com.malrang.pomodoro.localRepo
 
 import android.content.Context
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -26,8 +25,6 @@ val Context.dataStore by preferencesDataStore(name = "pomodoro_ds")
  * DataStore에서 사용할 키들을 정의하는 객체입니다.
  */
 object DSKeys {
-    /** 사용자가 확인한 동물의 ID 목록을 저장하기 위한 키 */
-    val SEEN_IDS = stringSetPreferencesKey("seen_animal_ids")
     /** 일일 통계 데이터를 JSON 형태로 저장하기 위한 키 */
     val DAILY_JSON = stringPreferencesKey("daily_stats_json")
     /** 일반 설정 데이터를 JSON 형태로 저장하기 위한 키 */
@@ -36,8 +33,6 @@ object DSKeys {
     val WORK_PRESETS_JSON = stringPreferencesKey("work_presets_json")
     /** 현재 선택된 작업 프리셋의 ID를 저장하기 위한 키 */
     val CURRENT_WORK_ID = stringPreferencesKey("current_work_id")
-    /** 잔디 배경화면 사용 여부를 저장하기 위한 키 */
-    val USE_GRASS_BACKGROUND = booleanPreferencesKey("use_grass_background")
     /** ✅ 화이트리스트 앱 목록을 저장하기 위한 키 */
     val WHITELISTED_APPS = stringSetPreferencesKey("whitelisted_apps")
     /** 알림 권한 거부 '횟수'를 저장하기 위한 Int 키 */
@@ -87,12 +82,6 @@ class PomodoroRepository(private val context: Context) {
     }
     suspend fun saveCurrentWorkId(id: String) {
         context.dataStore.edit { it[DSKeys.CURRENT_WORK_ID] = id }
-    }
-    suspend fun loadUseGrassBackground(): Boolean {
-        return context.dataStore.data.first()[DSKeys.USE_GRASS_BACKGROUND] ?: true
-    }
-    suspend fun saveUseGrassBackground(useGrass: Boolean) {
-        context.dataStore.edit { it[DSKeys.USE_GRASS_BACKGROUND] = useGrass }
     }
     suspend fun loadWhitelistedApps(): Set<String> =
         context.dataStore.data.first()[DSKeys.WHITELISTED_APPS] ?: emptySet()

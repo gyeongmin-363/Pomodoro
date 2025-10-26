@@ -117,7 +117,6 @@ fun LandscapeMainScreen(
                             settingsViewModel.startEditingWorkPreset(presetId)
                             onNavigateTo(Screen.Settings)
                         },
-                        useGrassBackground = false
                     )
                 }
                 Spacer(Modifier.height(16.dp))

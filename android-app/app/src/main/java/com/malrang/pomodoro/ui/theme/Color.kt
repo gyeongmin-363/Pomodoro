@@ -21,16 +21,9 @@ val White = Color(0xFFFFFFFF) // 라이트 모드 텍스트
 val Black = Color(0xFF000000) // 다크 모드 텍스트
 
 
-// 2. 기존 레트로 색상 (Pink80 등) 제거
-/*
-val Pink80 = Color(0xFFEFB8C8)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink40 = Color(0xFF7D5260)
-val PurpleGrey40 = Color(0xFF625b71)
-*/
+val KtxBackgroundLight = Color(0xFFF0F2F5) // KTX 느낌의 밝은 회색 배경 (라이트 모드)
+val KtxBackgroundDark = Color(0xFF212121)  // KTX 느낌의 어두운 회색 배경 (다크 모드)
 
-// 3. (참고) Material 3 색상 이름에 맞춰 재정의 (선택 사항이지만 권장)
-// 이 색상들은 Theme.kt의 ColorScheme에서 사용됩니다.
 
 val primaryLight = MutedBlue
 val onPrimaryLight = Color.White
@@ -48,9 +41,11 @@ val errorLight = Color(0xFFBA1A1A)
 val onErrorLight = Color.White
 val errorContainerLight = Color(0xFFFFDAD6)
 val onErrorContainerLight = Color(0xFF410002)
-val backgroundLight = OffWhite // 가이드라인 적용
+// --- 배경 색상 변경 ---
+val backgroundLight = KtxBackgroundLight // KTX 스타일 배경 적용
 val onBackgroundLight = Color(0xFF1A1C1E)
-val surfaceLight = OffWhite // 가이드라인 적용
+val surfaceLight = KtxBackgroundLight // KTX 스타일 배경 적용
+// -----------------------
 val onSurfaceLight = Color(0xFF1A1C1E)
 val surfaceVariantLight = LightGray // 가이드라인 적용
 val onSurfaceVariantLight = Color(0xFF44474F)
@@ -73,9 +68,11 @@ val errorDark = Color(0xFFFFB4AB)
 val onErrorDark = Color(0xFF690005)
 val errorContainerDark = Color(0xFF93000A)
 val onErrorContainerDark = Color(0xFFFFDAD6)
-val backgroundDark = DarkNavy // 가이드라인 적용
+// --- 배경 색상 변경 ---
+val backgroundDark = KtxBackgroundDark // KTX 스타일 배경 적용
 val onBackgroundDark = Color(0xFFE3E2E6)
-val surfaceDark = DarkNavy // 가이드라인 적용
+val surfaceDark = KtxBackgroundDark // KTX 스타일 배경 적용
+// -----------------------
 val onSurfaceDark = Color(0xFFE3E2E6)
 val surfaceVariantDark = DarkGray // 가이드라인 적용
 val onSurfaceVariantDark = Color(0xFFC4C6D0)

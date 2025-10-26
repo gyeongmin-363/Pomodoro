@@ -39,9 +39,9 @@ private val DarkColorScheme = darkColorScheme(
     onError = onErrorDark,
     errorContainer = errorContainerDark,
     onErrorContainer = onErrorContainerDark,
-    background = backgroundDark,
+    background = backgroundDark, // Color.kt에서 KtxBackgroundDark로 이미 정의됨
     onBackground = onBackgroundDark,
-    surface = surfaceDark,
+    surface = surfaceDark, // Color.kt에서 KtxBackgroundDark로 이미 정의됨
     onSurface = onSurfaceDark,
     surfaceVariant = surfaceVariantDark,
     onSurfaceVariant = onSurfaceVariantDark,
@@ -66,9 +66,9 @@ private val LightColorScheme = lightColorScheme(
     onError = onErrorLight,
     errorContainer = errorContainerLight,
     onErrorContainer = onErrorContainerLight,
-    background = backgroundLight,
+    background = backgroundLight, // Color.kt에서 KtxBackgroundLight로 이미 정의됨
     onBackground = onBackgroundLight,
-    surface = surfaceLight,
+    surface = surfaceLight, // Color.kt에서 KtxBackgroundLight로 이미 정의됨
     onSurface = onSurfaceLight,
     surfaceVariant = surfaceVariantLight,
     onSurfaceVariant = onSurfaceVariantLight,
@@ -102,7 +102,9 @@ fun PomodoroTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb() // 상태바 색상 변경
+            // 상태 표시줄 색상을 테마의 배경색과 일치시킵니다.
+            window.statusBarColor = colorScheme.background.toArgb()
+            // 상태 표시줄 아이콘 색상을 테마에 맞게 조정합니다 (true: 밝은 배경용 어두운 아이콘, false: 어두운 배경용 밝은 아이콘).
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

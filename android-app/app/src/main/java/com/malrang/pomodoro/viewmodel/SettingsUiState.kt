@@ -16,7 +16,6 @@ data class SettingsUiState(
     val settings: Settings = Settings(),
     val workPresets: List<WorkPreset> = emptyList(),
     val currentWorkId: String? = null,
-    val useGrassBackground: Boolean = false,
     val editingWorkPreset: WorkPreset? = null,
     val draftSettings: Settings? = null,
     val whitelistedApps: Set<String> = emptySet() // ✅ 화이트리스트 상태 추가
@@ -33,7 +32,6 @@ class SettingsViewModel(
         viewModelScope.launch {
             val presets = localRepo.loadWorkPresets()
             val currentWorkId = localRepo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
-            val useGrassBackground = localRepo.loadUseGrassBackground()
             val currentWork = presets.find { it.id == currentWorkId }
             val currentSettings = currentWork?.settings ?: Settings()
             val whitelistedApps = localRepo.loadWhitelistedApps() // ✅ 화이트리스트 로드
@@ -43,7 +41,6 @@ class SettingsViewModel(
                     settings = currentSettings,
                     workPresets = presets,
                     currentWorkId = currentWorkId,
-                    useGrassBackground = useGrassBackground,
                     whitelistedApps = whitelistedApps // ✅ 상태 업데이트
                 )
             }
@@ -160,13 +157,6 @@ class SettingsViewModel(
         _uiState.update { it.copy(settings = currentSettings) }
     }
 
-    fun toggleBackground() {
-        viewModelScope.launch {
-            val newPreference = !_uiState.value.useGrassBackground
-            localRepo.saveUseGrassBackground(newPreference)
-            _uiState.update { it.copy(useGrassBackground = newPreference) }
-        }
-    }
 
     fun updateBlockMode(mode: BlockMode) = updateDraftSettings { copy(blockMode = mode) }
     fun updateStudyTime(v: Int) = updateDraftSettings { copy(studyTime = v) }
