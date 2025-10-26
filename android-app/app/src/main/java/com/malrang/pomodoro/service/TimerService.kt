@@ -60,7 +60,7 @@ class TimerService : Service() {
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
     }
 
-    // ✅ [추가] 세션 전환 로직을 별도 함수로 분리하여 재사용성 및 일관성 확보
+    // 세션 전환 로직을 별도 함수로 분리하여 재사용성 및 일관성 확보
     private fun advanceToNextSession() {
         val currentSettings = settings ?: return
 
@@ -93,7 +93,7 @@ class TimerService : Service() {
                         totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
                         timeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
 
-                        // ✅ [수정] 타이머 시작 시 남은 시간이 0이면, 현재 모드에 맞는 시간으로 재설정
+                        // 타이머 시작 시 남은 시간이 0이면, 현재 모드에 맞는 시간으로 재설정
                         if (timeLeft <= 0) {
                             timeLeft = when (currentMode) {
                                 Mode.STUDY -> s.studyTime * 60
@@ -116,7 +116,7 @@ class TimerService : Service() {
                 isRunning = false
                 if (wakeLock.isHeld) { wakeLock.release() }
 
-                advanceToNextSession() // ✅ [수정] 통합된 세션 전환 로직 호출
+                advanceToNextSession() //  통합된 세션 전환 로직 호출
 
                 // 스킵 후에는 항상 '일시정지' 상태이므로, 변경된 상태를 즉시 저장하고 UI에 알립니다.
                 CoroutineScope(Dispatchers.IO).launch {
@@ -186,9 +186,9 @@ class TimerService : Service() {
 
             handleSessionCompletion(finishedMode)
 
-            advanceToNextSession() // ✅ [수정] 통합된 세션 전환 로직 호출
+            advanceToNextSession() // 통합된 세션 전환 로직 호출
 
-            // ✅ [중요] 다음 동작(자동시작/일시정지) 전에 UI에 변경된 상태를 먼저 알립니다.
+            // 다음 동작(자동시작/일시정지) 전에 UI에 변경된 상태를 먼저 알립니다.
             broadcastStatus()
             updateNotification()
 
@@ -226,7 +226,7 @@ class TimerService : Service() {
                 }
             }
 
-            // 👇 [추가] 데이터 업데이트 신호 보내기
+            // 데이터 업데이트 신호 보내기
             val intent = Intent(ACTION_DATA_UPDATED).apply {
                 setPackage("com.malrang.pomodoro")
             }
@@ -289,9 +289,9 @@ class TimerService : Service() {
 
 
         val modeText = when (currentMode) {
-            Mode.STUDY -> "공부 시간"
-            Mode.SHORT_BREAK -> "짧은 휴식"
-            Mode.LONG_BREAK -> "긴 휴식"
+            Mode.STUDY -> "운행 중"
+            Mode.SHORT_BREAK -> "짧은 정차 중"
+            Mode.LONG_BREAK -> "긴 정차 중"
         }
 
         val statusText = if (isRunning) {
@@ -310,7 +310,7 @@ class TimerService : Service() {
         val contentText = "$statusText$sessionText"
 
         return NotificationCompat.Builder(this, "pomodoro_timer")
-            .setContentTitle("뽀모도로 타이머: $modeText")
+            .setContentTitle("Focus Route: $modeText")
             .setContentText(contentText)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)

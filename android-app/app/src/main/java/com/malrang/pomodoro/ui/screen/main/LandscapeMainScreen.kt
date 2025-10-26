@@ -57,8 +57,8 @@ fun LandscapeMainScreen(
 
     val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
     val titleText = when (timerState.currentMode) {
-        Mode.STUDY -> "📖 공부 시간"
-        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
+        Mode.STUDY -> "운행 중"
+        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중"
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -141,18 +141,18 @@ fun LandscapeMainScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!timerState.isRunning) {
                         IconButton(onClick = { timerViewModel.startTimer(settingsState.settings) }) {
-                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = contentColor)
+                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "운행 시작", tint = contentColor)
                         }
                     } else {
                         IconButton(onClick = { timerViewModel.pauseTimer() }) {
-                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = contentColor)
+                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시 정차", tint = contentColor)
                         }
                     }
                     IconButton(onClick = { events.onShowResetConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = contentColor)
+                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "회차", tint = contentColor)
                     }
                     IconButton(onClick = { events.onShowSkipConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = contentColor)
+                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "다음 구간으로", tint = contentColor)
                     }
                 }
             }

@@ -57,8 +57,8 @@ fun PortraitMainScreen(
 
 
     val titleText = when (timerState.currentMode) {
-        Mode.STUDY -> "📖 공부 시간"
-        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "☕ 휴식 시간"
+        Mode.STUDY -> "운행 중"
+        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중"
     }
     val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
 
@@ -107,7 +107,7 @@ fun PortraitMainScreen(
                 Spacer(Modifier.height(24.dp))
                 Text(
                     buildAnnotatedString {
-                        withStyle(style = SpanStyle(color = secondaryTextColor)) { append("연속 완료 세션 : ") }
+                        withStyle(style = SpanStyle(color = secondaryTextColor)) { append("구간 완료 : ") }
                         withStyle(style = SpanStyle(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -129,20 +129,20 @@ fun PortraitMainScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (!timerState.isRunning) {
                         IconButton(onClick = { timerViewModel.startTimer(settingsState.settings) }) {
-                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = contentColor)
+                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "운행 시작", tint = contentColor)
                         }
                     } else {
                         IconButton(onClick = { timerViewModel.pauseTimer() }) {
-                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시정지", tint = contentColor)
+                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시 정차", tint = contentColor)
                         }
                     }
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = { events.onShowResetConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = contentColor)
+                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "회차", tint = contentColor)
                     }
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = { events.onShowSkipConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "건너뛰기", tint = contentColor)
+                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "다음 구간으로", tint = contentColor)
                     }
                 }
             }
