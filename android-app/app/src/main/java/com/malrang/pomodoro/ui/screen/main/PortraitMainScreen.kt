@@ -153,7 +153,6 @@ fun PortraitMainScreen(
                         // 1. "준비" 상태일 때
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(text = readyTitle, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
-                            Spacer(Modifier.height(16.dp)) // 간격 추가
 
                             // --- 중앙 Lottie 티켓 (클릭 가능) ---
                             // 오버레이와 겹치게 하므로 Box로 감쌀 필요 없음
@@ -172,6 +171,8 @@ fun PortraitMainScreen(
                                     )
                             )
                             // --- 중앙 Lottie 끝 ---
+
+                            Text(text = "티켓을 눌러 타이머 시작하기", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
                         }
                     } else {
                         // 2. "실행 중" 또는 "일시정지" 상태일 때
@@ -186,20 +187,16 @@ fun PortraitMainScreen(
                             )
                             Spacer(Modifier.height(16.dp)) // 시간과 버스 사이 간격
 
-                            // --- 버스 애니메이션 ---
-                            // showBusAnimation 상태와 STUDY 모드일 때만 보이도록
-                            AnimatedVisibility(visible = showBusAnimation && timerState.currentMode == Mode.STUDY) {
+                            // --- 버스 ---
+                            //STUDY 모드일 때만 보이도록
+                            if(timerState.currentMode == Mode.STUDY){
                                 LottieAnimation(
                                     composition = busComposition,
                                     progress = { busProgress },
                                     modifier = Modifier.fillMaxSize() // 원하는 크기로 조절
                                 )
                             }
-                            // 버스가 안 보일 때도 동일한 높이의 Spacer
-                            if (!(showBusAnimation && timerState.currentMode == Mode.STUDY)) {
-                                Spacer(Modifier.height(350.dp)) // [수정]
-                            }
-                            // --- 버스 애니메이션 끝 ---
+                            // --- 버스 끝 ---
                         }
                     }
 
@@ -223,7 +220,6 @@ fun PortraitMainScreen(
                 // --- 중앙 영역 끝 ---
 
 
-                Spacer(Modifier.height(24.dp))
                 Text(
                     buildAnnotatedString {
                         withStyle(style = SpanStyle(color = secondaryTextColor)) { append("구간 완료 : ") } // 용어 변경
