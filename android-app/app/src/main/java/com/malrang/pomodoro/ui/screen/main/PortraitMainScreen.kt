@@ -187,16 +187,19 @@ fun PortraitMainScreen(
                             )
                             Spacer(Modifier.height(16.dp)) // 시간과 버스 사이 간격
 
-                            // --- 버스 ---
-                            //STUDY 모드일 때만 보이도록
-                            if(timerState.currentMode == Mode.STUDY){
+                            // --- 버스 애니메이션 ---
+                            // showBusAnimation 상태와 STUDY 모드일 때만 보이도록
+                            if (showBusAnimation && timerState.currentMode == Mode.STUDY) {
                                 LottieAnimation(
                                     composition = busComposition,
                                     progress = { busProgress },
                                     modifier = Modifier.fillMaxSize() // 원하는 크기로 조절
                                 )
+                            } else {
+                                // 버스가 안 보일 때도 동일한 높이의 Spacer
+                                Spacer(Modifier.height(350.dp)) //
                             }
-                            // --- 버스 끝 ---
+                            // --- 버스 애니메이션 끝 ---
                         }
                     }
 
