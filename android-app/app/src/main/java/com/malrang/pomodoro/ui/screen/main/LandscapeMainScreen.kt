@@ -16,13 +16,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.airbnb.lottie.compose.* // Lottie import 추가
+// import com.airbnb.lottie.compose.* // Lottie import 제거
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
-import kotlinx.coroutines.delay
+// import kotlinx.coroutines.delay // 제거
 
 @Composable
 fun LandscapeMainScreen(
@@ -45,30 +45,7 @@ fun LandscapeMainScreen(
         Mode.STUDY -> "운행 중" // 용어 변경
         Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중" // 용어 변경
     }
-
-    // --- Lottie 애니메이션 상태 ---
-    var showTicketAnimation by remember { mutableStateOf(false) }
-    val busComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.bus_ticket))
-    val ticketComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.ticket_icon_animation))
-
-    val busProgress by animateLottieCompositionAsState(
-        composition = busComposition,
-        iterations = LottieConstants.IterateForever // 무한 반복
-    )
-    val ticketProgress by animateLottieCompositionAsState(
-        composition = ticketComposition,
-        isPlaying = showTicketAnimation, // 재생 제어
-        restartOnPlay = true // 다시 재생될 때 처음부터
-    )
-
-    // 티켓 애니메이션이 끝나면 상태 변경
-    LaunchedEffect(ticketProgress) {
-        if (ticketProgress == 1f) {
-            showTicketAnimation = false
-        }
-    }
-    // --- Lottie 끝 ---
-
+    
     Box(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -140,14 +117,10 @@ fun LandscapeMainScreen(
                     color = contentColor
                 )
 
-                // --- 버스 애니메이션 추가 ---
-                AnimatedVisibility(visible = timerState.isRunning && timerState.currentMode == Mode.STUDY) {
-                    LottieAnimation(
-                        composition = busComposition,
-                        progress = { busProgress },
-                        modifier = Modifier.size(100.dp) // 가로 모드에 맞게 크기 조절
-                    )
-                }
+                // --- 버스 애니메이션 제거 ---
+                // AnimatedVisibility(visible = timerState.isRunning && timerState.currentMode == Mode.STUDY) { ... } 블록 제거
+                // 대신 Spacer 추가
+                Spacer(Modifier.height(100.dp))
                 // --- 버스 애니메이션 끝 ---
             }
 
@@ -159,7 +132,7 @@ fun LandscapeMainScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!timerState.isRunning) {
                         IconButton(onClick = {
-                            showTicketAnimation = true // 티켓 애니메이션 시작
+                            // showTicketAnimation = true 제거
                             timerViewModel.startTimer(settingsState.settings)
                         }) {
                             Icon(painterResource(id = R.drawable.ic_play), contentDescription = "운행 시작", tint = contentColor) // 용어 변경
@@ -178,23 +151,6 @@ fun LandscapeMainScreen(
                 }
             }
         }
-
-        // --- 티켓 애니메이션 (버튼 위에 겹치도록) ---
-        if (showTicketAnimation) {
-            Box(
-                modifier = Modifier.fillMaxSize(), // 전체 화면을 차지하도록
-                contentAlignment = Alignment.Center // 중앙 정렬
-            ) {
-                LottieAnimation(
-                    composition = ticketComposition,
-                    progress = { ticketProgress },
-                    modifier = Modifier
-                        .size(180.dp) // 가로 모드에 맞게 크기 조절
-                        .align(Alignment.Center)
-                )
-            }
-        }
-        // --- 티켓 애니메이션 끝 ---
 
         IconButton(
             onClick = events.onMenuClick,
