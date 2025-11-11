@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -10,11 +11,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
+import com.malrang.pomodoro.ui.screen.groups.GroupsList
 import com.malrang.pomodoro.ui.screen.login.LoginScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
 import com.malrang.pomodoro.ui.screen.nickname.NicknameSetupScreen
@@ -135,6 +140,49 @@ fun PomodoroApp(
                                 }
                             }
                         )
+                    }
+                    // 딥링크 처리
+                    composable(
+                        route = "${Screen.GroupsList.name}?inviteId={inviteId}",
+                        arguments = listOf(navArgument("inviteId") {
+                            type = NavType.StringType
+                            nullable = true
+                        }),
+                        deepLinks = listOf(
+                            // App Links (https://) 하지만 작동은 안함
+                            navDeepLink {
+                                action = Intent.ACTION_VIEW
+                                uriPattern = "https://pixbbo.netlify.app/groups/{inviteId}"
+                            },
+                            // Custom Scheme (pixbbo://)
+                            navDeepLink {
+                                action = Intent.ACTION_VIEW
+                                uriPattern = "pixbbo://groups/{inviteId}"
+                            }
+                        )
+                    ) { backStackEntry ->
+                        val inviteId = backStackEntry.arguments?.getString("inviteId")
+                        GroupsList(
+//                            roomVM = studyRoomViewModel,
+//                            inviteStudyRoomId = inviteId, // ✅ 여기서 uuid 주입됨
+//                            onNavigateBack = { navController.navigate(Screen.Main.name) },
+//                            onNavigateToDelete = { navController.navigate(Screen.DeleteStudyRoom.name) }
+                        )
+                    }
+                    // 챌린지룸 상세 화면을 위한 composable 경로
+                    composable(
+                        route = "${Screen.Group.name}/{groupId}",
+                        arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val groupId = backStackEntry.arguments?.getString("groupId")
+//                        StudyRoomDetailScreen(
+//                            roomId = roomId,
+//                            roomVm = studyRoomViewModel,
+//                            onNavigateBack = { navController.popBackStack() },
+//                            onNavigateToChat = { studyRoomId ->
+//                                navController.navigate("chat/$studyRoomId")
+//                            }
+//                        )
                     }
                 }
             }
