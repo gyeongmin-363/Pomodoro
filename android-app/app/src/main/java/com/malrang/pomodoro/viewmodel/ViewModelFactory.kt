@@ -49,11 +49,6 @@ class AuthVMFactory(
             @Suppress("UNCHECKED_CAST")
             return AuthViewModel(supabase) as T
         }
-        // UserViewModel 생성 로직 추가
-        else if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return UserViewModel(supabase) as T
-        }
         throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
     }
 }

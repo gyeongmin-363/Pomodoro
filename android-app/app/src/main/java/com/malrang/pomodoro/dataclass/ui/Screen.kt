@@ -15,5 +15,4 @@ enum class Screen {
     /** 권한 설정 화면 */
     Permission,
     AccountSettings, // 계정 설정 화면
-    NicknameSetup, // 닉네임 설정 화면,
 }
