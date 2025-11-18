@@ -1,45 +1,66 @@
 package com.malrang.pomodoro.ui.screen.whitelist
 
-import androidx.compose.foundation.clickable
+import android.graphics.drawable.Drawable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+
+// 1. Material 3 Switch를 import합니다.
+import androidx.compose.material3.Switch
+import coil3.compose.rememberAsyncImagePainter
+
+// 2. 기존 PixelSwitch import를 삭제합니다.
+// import com.malrang.pomodoro.ui.screen.whitelist.PixelSwitch
 
 @Composable
 fun AppListItem(
     appName: String,
-    appIcon: @Composable () -> Unit,
-    isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    appIcon: Drawable,
+    isWhitelisted: Boolean,
+    onWhitelistToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!isChecked) }
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        onClick = { onWhitelistToggle(!isWhitelisted) }, // 행 전체 클릭 가능
+        color = MaterialTheme.colorScheme.surface
     ) {
-        appIcon()
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = appName,
-            modifier = Modifier.weight(1f),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium
-        )
-        PixelSwitch(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp), // 여백 추가
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = rememberAsyncImagePainter(model = appIcon),
+                contentDescription = "$appName icon",
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = appName,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1.0f)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // 3. PixelSwitch를 Material 3 Switch로 교체합니다.
+            Switch(
+                checked = isWhitelisted,
+                onCheckedChange = onWhitelistToggle
+            )
+        }
     }
 }
-

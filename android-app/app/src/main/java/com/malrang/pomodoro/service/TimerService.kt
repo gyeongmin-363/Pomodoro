@@ -13,26 +13,23 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.malrang.pomodoro.MainActivity
 import com.malrang.pomodoro.R
-import com.malrang.pomodoro.dataclass.animalInfo.Animal
-import com.malrang.pomodoro.dataclass.animalInfo.AnimalsTable
-import com.malrang.pomodoro.dataclass.animalInfo.Rarity
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
-import com.malrang.pomodoro.dataclass.sprite.SpriteData
-import com.malrang.pomodoro.dataclass.sprite.SpriteMap
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
+import com.malrang.pomodoro.networkRepo.SupabaseProvider
+import com.malrang.pomodoro.networkRepo.SupabaseRepository
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.UUID
-import kotlin.random.Random
 
 class TimerService : Service() {
 
@@ -46,7 +43,7 @@ class TimerService : Service() {
     private lateinit var soundPlayer: SoundPlayer
     private lateinit var vibratorHelper: VibratorHelper
     private lateinit var repo: PomodoroRepository
-
+    private lateinit var supabaseRepo: SupabaseRepository
     private lateinit var wakeLock: PowerManager.WakeLock
 
 
@@ -57,128 +54,119 @@ class TimerService : Service() {
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
         repo = PomodoroRepository(this)
+        supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
     }
 
+    // 세션 전환 로직을 별도 함수로 분리하여 재사용성 및 일관성 확보
+    private fun advanceToNextSession() {
+        val currentSettings = settings ?: return
+
+        if (currentMode == Mode.STUDY) {
+            totalSessions++
+            val isLongBreakTime = totalSessions > 0 && totalSessions % currentSettings.longBreakInterval == 0
+            currentMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
+            timeLeft = (if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime) * 60
+        } else { // 현재 모드가 휴식 시간이면 다음은 공부 시간
+            currentMode = Mode.STUDY
+            timeLeft = currentSettings.studyTime * 60
+        }
+    }
+
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             "START" -> {
                 if (!isRunning) {
-                    timeLeft = intent.getIntExtra("TIME_LEFT", 0)
                     settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getSerializableExtra("SETTINGS", Settings::class.java)
+                        intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                     } else {
                         @Suppress("DEPRECATION")
-                        intent.getSerializableExtra("SETTINGS") as? Settings
+                        intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                     }
-                    currentMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getSerializableExtra("CURRENT_MODE", Mode::class.java) ?: Mode.STUDY
-                    } else {
-                        @Suppress("DEPRECATION")
-                        (intent.getSerializableExtra("CURRENT_MODE") as? Mode) ?: Mode.STUDY
-                    }
-                    totalSessions = intent.getIntExtra("TOTAL_SESSIONS", 0)
 
-                    isRunning = true
-                    startTimer()
+                    settings?.let { s ->
+                        // ViewModel이 전달한 상태를 우선적으로 사용
+                        currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
+                        totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
+                        timeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
+
+                        // 타이머 시작 시 남은 시간이 0이면, 현재 모드에 맞는 시간으로 재설정
+                        if (timeLeft <= 0) {
+                            timeLeft = when (currentMode) {
+                                Mode.STUDY -> s.studyTime * 60
+                                Mode.SHORT_BREAK -> s.shortBreakTime * 60
+                                Mode.LONG_BREAK -> s.longBreakTime * 60
+                            }
+                        }
+                        startTimer()
+                    }
                 }
             }
             "PAUSE" -> {
-                isRunning = false
                 pauseTimer()
             }
             "REQUEST_STATUS" -> {
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", isRunning)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                    setPackage("com.malrang.pomodoro")
-                })
+                broadcastStatus()
             }
             "SKIP" -> {
                 job?.cancel()
-                if (wakeLock.isHeld) {
-                    wakeLock.release()
-                }
-                val currentSettings = settings ?: return START_STICKY
-
-                var nextMode = Mode.STUDY
-                var nextTime = 0
-                var newTotalSessions = totalSessions
-
-                if (currentMode == Mode.STUDY) {
-                    newTotalSessions++
-                    val isLongBreakTime = newTotalSessions > 0 &&
-                            newTotalSessions % currentSettings.longBreakInterval == 0
-                    nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
-                    nextTime = if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime
-                } else {
-                    nextMode = Mode.STUDY
-                    nextTime = currentSettings.studyTime
-                }
-
-                currentMode = nextMode
-                totalSessions = newTotalSessions
-                timeLeft = nextTime * 60
                 isRunning = false
+                if (wakeLock.isHeld) { wakeLock.release() }
 
+                advanceToNextSession() //  통합된 세션 전환 로직 호출
+
+                // 스킵 후에는 항상 '일시정지' 상태이므로, 변경된 상태를 즉시 저장하고 UI에 알립니다.
+                CoroutineScope(Dispatchers.IO).launch {
+                    repo.saveTimerState(timeLeft, currentMode, totalSessions)
+                }
                 updateNotification()
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", isRunning)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                    setPackage("com.malrang.pomodoro")
-
-                })
+                broadcastStatus()
             }
             "RESET" -> {
                 job?.cancel()
                 isRunning = false
-                if (wakeLock.isHeld) {
-                    wakeLock.release()
-                }
-                CoroutineScope(Dispatchers.IO).launch {
-                    repo.clearTimerState()
-                }
+                if (wakeLock.isHeld) { wakeLock.release() }
+                CoroutineScope(Dispatchers.IO).launch { repo.clearTimerState() }
+
                 val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getSerializableExtra("SETTINGS", Settings::class.java)
+                    intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                 } else {
                     @Suppress("DEPRECATION")
-                    intent.getSerializableExtra("SETTINGS") as? Settings
+                    intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                 }
-
-                if (newSettings != null) {
-                    settings = newSettings
-                }
+                if (newSettings != null) { settings = newSettings }
 
                 currentMode = Mode.STUDY
                 totalSessions = 0
                 timeLeft = settings?.studyTime?.times(60) ?: (25 * 60)
 
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", false)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                    setPackage("com.malrang.pomodoro")
-
-                })
-
+                broadcastStatus()
                 updateNotification()
             }
-            // [추가] 알림이 지워졌을 때 호출될 액션
             "STOP_SERVICE_ACTION" -> {
-                stopSelf() // 서비스 종료
+                stopSelf()
             }
         }
         return START_STICKY
     }
 
+    private fun broadcastStatus() {
+        val intent = Intent(ACTION_STATUS_UPDATE).apply {
+            putExtra(EXTRA_TIME_LEFT, timeLeft)
+            putExtra(EXTRA_IS_RUNNING, isRunning)
+            putExtra(EXTRA_CURRENT_MODE, currentMode.name)
+            putExtra(EXTRA_TOTAL_SESSIONS, totalSessions)
+            setPackage("com.malrang.pomodoro")
+        }
+        sendBroadcast(intent)
+    }
+
     private fun startTimer() {
+        isRunning = true
+
         job?.cancel()
         wakeLock.acquire(90*60*1000L /*90 minutes*/)
         job = CoroutineScope(Dispatchers.Main).launch {
@@ -186,18 +174,9 @@ class TimerService : Service() {
                 delay(1000)
                 timeLeft--
                 updateNotification()
-                sendBroadcast(Intent(TIMER_TICK).apply {
-                    putExtra("TIME_LEFT", timeLeft)
-                    putExtra("IS_RUNNING", true)
-                    putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-                    putExtra("TOTAL_SESSIONS", totalSessions)
-                    setPackage("com.malrang.pomodoro")
-
-                })
+                broadcastStatus()
             }
-            if (wakeLock.isHeld) {
-                wakeLock.release()
-            }
+            if (wakeLock.isHeld) { wakeLock.release() }
 
             val finishedMode = currentMode
             val currentSettings = settings ?: return@launch
@@ -207,29 +186,15 @@ class TimerService : Service() {
 
             handleSessionCompletion(finishedMode)
 
-            var nextMode = Mode.STUDY
-            var nextTime = 0
-            var newTotalSessions = totalSessions
+            advanceToNextSession() // 통합된 세션 전환 로직 호출
 
-            if (finishedMode == Mode.STUDY) {
-                newTotalSessions++
-                val isLongBreakTime = newTotalSessions > 0 && newTotalSessions % currentSettings.longBreakInterval == 0
-                nextMode = if (isLongBreakTime) Mode.LONG_BREAK else Mode.SHORT_BREAK
-                nextTime = if (isLongBreakTime) currentSettings.longBreakTime else currentSettings.shortBreakTime
-            } else {
-                nextMode = Mode.STUDY
-                nextTime = currentSettings.studyTime
-            }
-
-            timeLeft = nextTime * 60
-            currentMode = nextMode
-            totalSessions = newTotalSessions
+            // 다음 동작(자동시작/일시정지) 전에 UI에 변경된 상태를 먼저 알립니다.
+            broadcastStatus()
+            updateNotification()
 
             if (currentSettings.autoStart) {
-                isRunning = true
                 startTimer()
             } else {
-                isRunning = false
                 pauseTimer()
             }
         }
@@ -237,22 +202,15 @@ class TimerService : Service() {
     }
 
     private fun pauseTimer() {
+        isRunning = false
         job?.cancel()
-        if (wakeLock.isHeld) {
-            wakeLock.release()
-        }
+        if (wakeLock.isHeld) { wakeLock.release() }
+        // 일시정지 할 때마다 현재 상태를 저장합니다.
         CoroutineScope(Dispatchers.IO).launch {
             repo.saveTimerState(timeLeft, currentMode, totalSessions)
         }
         updateNotification()
-        sendBroadcast(Intent(TIMER_TICK).apply {
-            putExtra("TIME_LEFT", timeLeft)
-            putExtra("IS_RUNNING", false)
-            putExtra("CURRENT_MODE", currentMode as java.io.Serializable)
-            putExtra("TOTAL_SESSIONS", totalSessions)
-            setPackage("com.malrang.pomodoro")
-
-        })
+        broadcastStatus()
     }
 
     private fun handleSessionCompletion(finishedMode: Mode) {
@@ -260,15 +218,19 @@ class TimerService : Service() {
             updateTodayStats(finishedMode)
 
             if (finishedMode == Mode.STUDY) {
-                val animal = getRandomAnimal()
-                val sprite = makeSprite(animal)
-                val updatedSeenIds = repo.loadSeenIds() + animal.id
-                val updatedSprites = repo.loadActiveSprites() + sprite
-                repo.saveSeenIds(updatedSeenIds)
-                repo.saveActiveSprites(updatedSprites)
+                val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
+                val coinAmount = settings?.studyTime
 
-                sendBroadcast(Intent(NEW_ANIMAL_ADDED).apply { setPackage("com.malrang.pomodoro") })
+                if (userId != null && coinAmount != null && coinAmount > 0) {
+                    supabaseRepo.incrementUserCoins(userId, coinAmount)
+                }
             }
+
+            // 데이터 업데이트 신호 보내기
+            val intent = Intent(ACTION_DATA_UPDATED).apply {
+                setPackage("com.malrang.pomodoro")
+            }
+            sendBroadcast(intent)
         }
     }
 
@@ -302,37 +264,6 @@ class TimerService : Service() {
         repo.saveDailyStats(currentStatsMap)
     }
 
-    private fun getRandomAnimal(): Animal {
-        val roll = Random.nextInt(100)
-        val rarity = when {
-            roll < 40 -> Rarity.COMMON
-            roll < 70 -> Rarity.RARE
-            roll < 90 -> Rarity.EPIC
-            else -> Rarity.LEGENDARY
-        }
-        return AnimalsTable.randomByRarity(rarity)
-    }
-
-    private fun makeSprite(animal: Animal): AnimalSprite {
-        val spriteData = SpriteMap.map[animal]
-            ?: SpriteData(idleRes = R.drawable.classical_idle, jumpRes = R.drawable.classical_jump)
-        return AnimalSprite(
-            id = UUID.randomUUID().toString(),
-            animalId = animal.id,
-            idleSheetRes = spriteData.idleRes,
-            idleCols = spriteData.idleCols,
-            idleRows = spriteData.idleRows,
-            jumpSheetRes = spriteData.jumpRes,
-            jumpCols = spriteData.jumpCols,
-            jumpRows = spriteData.jumpRows,
-            x = Random.nextInt(0, 600).toFloat(),
-            y = Random.nextInt(0, 1000).toFloat(),
-            vx = listOf(-70f, 70f).random(),
-            vy = listOf(-50f, 50f).random(),
-            sizeDp = 48f
-        )
-    }
-
     private fun updateNotification() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, createNotification())
@@ -348,7 +279,6 @@ class TimerService : Service() {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        // [추가] 알림이 지워졌을 때 서비스를 종료시키기 위한 PendingIntent 생성
         val stopServiceIntent = Intent(this, TimerService::class.java).apply {
             action = "STOP_SERVICE_ACTION"
         }
@@ -359,9 +289,9 @@ class TimerService : Service() {
 
 
         val modeText = when (currentMode) {
-            Mode.STUDY -> "공부 시간"
-            Mode.SHORT_BREAK -> "짧은 휴식"
-            Mode.LONG_BREAK -> "긴 휴식"
+            Mode.STUDY -> "운행 중"
+            Mode.SHORT_BREAK -> "짧은 정차 중"
+            Mode.LONG_BREAK -> "긴 정차 중"
         }
 
         val statusText = if (isRunning) {
@@ -380,12 +310,12 @@ class TimerService : Service() {
         val contentText = "$statusText$sessionText"
 
         return NotificationCompat.Builder(this, "pomodoro_timer")
-            .setContentTitle("뽀모도로 타이머: $modeText")
+            .setContentTitle("Focus Route: $modeText")
             .setContentText(contentText)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
-            .setOngoing(isRunning) // isRunning이 true일 때 (타이머 작동 중) 알림을 못 지우게 설정
-            .setDeleteIntent(stopServicePendingIntent) // [추가] 알림을 지웠을 때 stopServicePendingIntent 실행
+            .setOngoing(isRunning)
+            .setDeleteIntent(stopServicePendingIntent)
             .build()
     }
 
@@ -404,8 +334,16 @@ class TimerService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 2022
-        const val TIMER_TICK = "com.malrang.pomodoro.TIMER_TICK"
-        const val NEW_ANIMAL_ADDED = "com.malrang.pomodoro.NEW_ANIMAL_ADDED"
+        const val ACTION_STATUS_UPDATE = "com.malrang.pomodoro.ACTION_STATUS_UPDATE"
+        const val EXTRA_IS_RUNNING = "com.malrang.pomodoro.EXTRA_IS_RUNNING"
+        const val EXTRA_TIME_LEFT = "com.malrang.pomodoro.EXTRA_TIME_LEFT"
+        const val EXTRA_CURRENT_MODE = "com.malrang.pomodoro.EXTRA_CURRENT_MODE"
+        const val EXTRA_TOTAL_SESSIONS = "com.malrang.pomodoro.EXTRA_TOTAL_SESSIONS"
+        const val EXTRA_SETTINGS = "com.malrang.pomodoro.EXTRA_SETTINGS"
+
+        //데이터 업데이트 후 신호
+        const val ACTION_DATA_UPDATED = "com.malrang.pomodoro.ACTION_DATA_UPDATED"
+
         private var isServiceActive = false
         fun isServiceActive(): Boolean = isServiceActive
     }

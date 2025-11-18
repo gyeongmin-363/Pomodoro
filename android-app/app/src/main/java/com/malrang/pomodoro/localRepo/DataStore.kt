@@ -1,7 +1,6 @@
 package com.malrang.pomodoro.localRepo
 
 import android.content.Context
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -9,7 +8,6 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.malrang.pomodoro.dataclass.sprite.AnimalSprite
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
@@ -27,8 +25,6 @@ val Context.dataStore by preferencesDataStore(name = "pomodoro_ds")
  * DataStore에서 사용할 키들을 정의하는 객체입니다.
  */
 object DSKeys {
-    /** 사용자가 확인한 동물의 ID 목록을 저장하기 위한 키 */
-    val SEEN_IDS = stringSetPreferencesKey("seen_animal_ids")
     /** 일일 통계 데이터를 JSON 형태로 저장하기 위한 키 */
     val DAILY_JSON = stringPreferencesKey("daily_stats_json")
     /** 일반 설정 데이터를 JSON 형태로 저장하기 위한 키 */
@@ -37,10 +33,6 @@ object DSKeys {
     val WORK_PRESETS_JSON = stringPreferencesKey("work_presets_json")
     /** 현재 선택된 작업 프리셋의 ID를 저장하기 위한 키 */
     val CURRENT_WORK_ID = stringPreferencesKey("current_work_id")
-    /** 현재 화면에 표시되는 활성 스프라이트(동물) 목록을 JSON 형태로 저장하기 위한 키 */
-    val ACTIVE_SPRITES_JSON = stringPreferencesKey("active_sprites_json")
-    /** 잔디 배경화면 사용 여부를 저장하기 위한 키 */
-    val USE_GRASS_BACKGROUND = booleanPreferencesKey("use_grass_background")
     /** ✅ 화이트리스트 앱 목록을 저장하기 위한 키 */
     val WHITELISTED_APPS = stringSetPreferencesKey("whitelisted_apps")
     /** 알림 권한 거부 '횟수'를 저장하기 위한 Int 키 */
@@ -63,11 +55,6 @@ data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSe
 class PomodoroRepository(private val context: Context) {
     private val gson = Gson()
 
-    suspend fun loadSeenIds(): Set<String> =
-        context.dataStore.data.first()[DSKeys.SEEN_IDS] ?: emptySet()
-    suspend fun saveSeenIds(ids: Set<String>) {
-        context.dataStore.edit { it[DSKeys.SEEN_IDS] = ids }
-    }
     suspend fun loadDailyStats(): Map<String, DailyStat> {
         val json = context.dataStore.data.first()[DSKeys.DAILY_JSON] ?: return emptyMap()
         val type = object : TypeToken<Map<String, DailyStat>>() {}.type
@@ -95,21 +82,6 @@ class PomodoroRepository(private val context: Context) {
     }
     suspend fun saveCurrentWorkId(id: String) {
         context.dataStore.edit { it[DSKeys.CURRENT_WORK_ID] = id }
-    }
-    suspend fun saveActiveSprites(sprites: List<AnimalSprite>) {
-        val json = gson.toJson(sprites)
-        context.dataStore.edit { it[DSKeys.ACTIVE_SPRITES_JSON] = json }
-    }
-    suspend fun loadActiveSprites(): List<AnimalSprite> {
-        val json = context.dataStore.data.first()[DSKeys.ACTIVE_SPRITES_JSON] ?: return emptyList()
-        val type = object : TypeToken<List<AnimalSprite>>() {}.type
-        return runCatching { gson.fromJson<List<AnimalSprite>>(json, type) }.getOrElse { emptyList() }
-    }
-    suspend fun loadUseGrassBackground(): Boolean {
-        return context.dataStore.data.first()[DSKeys.USE_GRASS_BACKGROUND] ?: true
-    }
-    suspend fun saveUseGrassBackground(useGrass: Boolean) {
-        context.dataStore.edit { it[DSKeys.USE_GRASS_BACKGROUND] = useGrass }
     }
     suspend fun loadWhitelistedApps(): Set<String> =
         context.dataStore.data.first()[DSKeys.WHITELISTED_APPS] ?: emptySet()

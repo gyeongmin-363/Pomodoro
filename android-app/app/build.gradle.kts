@@ -87,6 +87,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
     implementation(libs.firebase.crashlytics)
+//    implementation(libs.firebase.crashlytics.buildtools)
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation(libs.androidx.animation.core)
 
@@ -108,6 +109,9 @@ dependencies {
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
+    implementation("com.airbnb.android:lottie-compose:6.6.6")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

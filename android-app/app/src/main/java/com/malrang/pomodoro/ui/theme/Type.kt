@@ -1,22 +1,20 @@
 package com.malrang.pomodoro.ui.theme
 
-import android.R.attr.fontFamily
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.malrang.pomodoro.R
 
-val CustomFontFamily = FontFamily(
-    Font(R.font.neo_dunggeunmo_pro_regular) // res/font/custom_font.ttf
-)
-
-// Set of Material typography styles to start with
 val Typography = Typography(
-    bodyLarge = TextStyle(fontFamily = CustomFontFamily)
-    /* Other default text styles to override
+    // bodyLarge 스타일을 시스템 기본 폰트(Default)로 설정합니다.
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
+    ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
@@ -31,5 +29,4 @@ val Typography = Typography(
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     )
-    */
 )

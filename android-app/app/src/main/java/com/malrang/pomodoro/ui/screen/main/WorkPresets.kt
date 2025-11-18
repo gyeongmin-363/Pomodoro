@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 
 @Composable
 fun WorkPresetsManager(
@@ -36,19 +35,19 @@ fun WorkPresetsManager(
     onAddPreset: () -> Unit,
     onDeletePreset: (WorkPreset) -> Unit,
     onRenamePreset: (WorkPreset) -> Unit,
-    onEditSettings: (String) -> Unit,
-    useGrassBackground: Boolean
+    onEditSettings: (String) -> Unit
 ) {
-    val contentColor = if (useGrassBackground) Color.Black else Color.White
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    val cardBackgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) // 반투명 효과 유지
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .border(2.dp, contentColor),
+            .border(1.dp, contentColor.copy(alpha = 0.5f)),
         shape = RectangleShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (useGrassBackground) Color(0x99FFFFFF) else Color(0x992D2A5A)
+            containerColor = cardBackgroundColor
         )
     ) {
         Column {
@@ -62,12 +61,11 @@ fun WorkPresetsManager(
                         onSelect = { onPresetSelected(preset.id) },
                         onRename = { onRenamePreset(preset) },
                         onEditSettings = { onEditSettings(preset.id) },
-                        onDelete = { onDeletePreset(preset) },
-                        useGrassBackground = useGrassBackground
+                        onDelete = { onDeletePreset(preset) }
                     )
                 }
             }
-            Divider(color = contentColor.copy(alpha = 0.5f))
+            Divider(color = contentColor.copy(alpha = 0.3f))
             TextButton(
                 onClick = onAddPreset,
                 modifier = Modifier.fillMaxWidth()
@@ -87,24 +85,13 @@ fun WorkPresetItem(
     onSelect: () -> Unit,
     onRename: () -> Unit,
     onEditSettings: () -> Unit,
-    onDelete: () -> Unit,
-    useGrassBackground: Boolean
+    onDelete: () -> Unit
 ) {
-    val contentColor = if (useGrassBackground) Color.Black else Color.White
-    val radioColors = if (useGrassBackground) {
-        RadioButtonDefaults.colors(
-            selectedColor = Color.Black,
-            unselectedColor = Color.Gray
-        )
-    } else {
-        RadioButtonDefaults.colors(
-            selectedColor = Color.White,
-            unselectedColor = Color.Gray
-        )
-    }
-    val editIconTint = if (useGrassBackground) Color(0xFF0D47A1) else Color.Cyan
-    val settingsIconTint = if (useGrassBackground) Color(0xFFF9A825) else Color.Yellow
-    val deleteIconTint = if (useGrassBackground) Color(0xFFB71C1C) else Color(0xFFE91E63)
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    val radioColors = RadioButtonDefaults.colors()
+    val editIconTint = MaterialTheme.colorScheme.secondary
+    val settingsIconTint = MaterialTheme.colorScheme.tertiary
+    val deleteIconTint = MaterialTheme.colorScheme.error
 
     Row(
         modifier = Modifier
@@ -135,4 +122,3 @@ fun WorkPresetItem(
         }
     }
 }
-
