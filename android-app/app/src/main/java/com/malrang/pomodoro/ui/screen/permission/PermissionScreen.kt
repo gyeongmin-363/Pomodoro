@@ -39,7 +39,7 @@ fun PermissionScreen(
     onNavigateTo: () -> Unit
 ) {
     val context = LocalContext.current
-    val activity = context as Activity
+    val activity = context as? Activity
 
     // ✅ 상태 객체에서 직접 값을 가져옵니다.
     val permissions = permissionUiState.permissions
@@ -99,7 +99,13 @@ fun PermissionScreen(
                                         }
                                         context.startActivity(intent)
                                     } else {
-                                        ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
+                                        activity?.let{
+                                            ActivityCompat.requestPermissions(
+                                                it,
+                                                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                                                1001
+                                            )
+                                        }
                                     }
                                 }
                             }

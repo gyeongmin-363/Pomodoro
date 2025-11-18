@@ -27,6 +27,7 @@ import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -34,6 +35,7 @@ import java.time.LocalDate
 class TimerService : Service() {
 
     private var job: Job? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var timeLeft: Int = 0
     private var isRunning: Boolean = false
 
@@ -77,21 +79,23 @@ class TimerService : Service() {
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+        val safeIntent = intent ?: return START_NOT_STICKY
+
+        when (intent.action) {
             "START" -> {
                 if (!isRunning) {
                     settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
+                        safeIntent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                     } else {
                         @Suppress("DEPRECATION")
-                        intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
+                        safeIntent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                     }
 
                     settings?.let { s ->
                         // ViewModel이 전달한 상태를 우선적으로 사용
-                        currentMode = intent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
-                        totalSessions = intent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
-                        timeLeft = intent.getIntExtra(EXTRA_TIME_LEFT, 0)
+                        currentMode = safeIntent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
+                        totalSessions = safeIntent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
+                        timeLeft = safeIntent.getIntExtra(EXTRA_TIME_LEFT, 0)
 
                         // 타이머 시작 시 남은 시간이 0이면, 현재 모드에 맞는 시간으로 재설정
                         if (timeLeft <= 0) {
@@ -119,7 +123,7 @@ class TimerService : Service() {
                 advanceToNextSession() //  통합된 세션 전환 로직 호출
 
                 // 스킵 후에는 항상 '일시정지' 상태이므로, 변경된 상태를 즉시 저장하고 UI에 알립니다.
-                CoroutineScope(Dispatchers.IO).launch {
+                serviceScope.launch {
                     repo.saveTimerState(timeLeft, currentMode, totalSessions)
                 }
                 updateNotification()
@@ -129,13 +133,13 @@ class TimerService : Service() {
                 job?.cancel()
                 isRunning = false
                 if (wakeLock.isHeld) { wakeLock.release() }
-                CoroutineScope(Dispatchers.IO).launch { repo.clearTimerState() }
+                serviceScope.launch { repo.clearTimerState() }
 
                 val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
+                    safeIntent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
                 } else {
                     @Suppress("DEPRECATION")
-                    intent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
+                    safeIntent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
                 }
                 if (newSettings != null) { settings = newSettings }
 
@@ -206,7 +210,7 @@ class TimerService : Service() {
         job?.cancel()
         if (wakeLock.isHeld) { wakeLock.release() }
         // 일시정지 할 때마다 현재 상태를 저장합니다.
-        CoroutineScope(Dispatchers.IO).launch {
+        serviceScope.launch {
             repo.saveTimerState(timeLeft, currentMode, totalSessions)
         }
         updateNotification()
@@ -214,17 +218,8 @@ class TimerService : Service() {
     }
 
     private fun handleSessionCompletion(finishedMode: Mode) {
-        CoroutineScope(Dispatchers.IO).launch {
+        serviceScope.launch {
             updateTodayStats(finishedMode)
-
-            if (finishedMode == Mode.STUDY) {
-                val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
-                val coinAmount = settings?.studyTime
-
-                if (userId != null && coinAmount != null && coinAmount > 0) {
-                    supabaseRepo.incrementUserCoins(userId, coinAmount)
-                }
-            }
 
             // 데이터 업데이트 신호 보내기
             val intent = Intent(ACTION_DATA_UPDATED).apply {

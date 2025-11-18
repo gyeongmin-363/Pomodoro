@@ -110,9 +110,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // 앱이 화면에 보이기 시작하면 리시버를 등록합니다. (onStop과 짝을 이룸)
         val filter = IntentFilter(TimerService.ACTION_STATUS_UPDATE)
         ContextCompat.registerReceiver(this, updateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        timerViewModel.requestTimerStatus()
     }
 
     override fun onStop() {
@@ -179,24 +179,12 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onResume() {
         super.onResume()
-        val timerFilter = IntentFilter().apply {
-            addAction(TimerService.ACTION_STATUS_UPDATE)
-        }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                updateReceiver,
-                timerFilter,
-                Context.RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            registerReceiver(updateReceiver, timerFilter)
-        }
-
-        // [수정] 앱이 포그라운드로 돌아올 때 서비스의 최신 상태를 요청하고, 동물 목록을 새로고침합니다.
+        // 앱이 포그라운드로 돌아올 때 서비스의 최신 상태를 요청하고, 동물 목록을 새로고침합니다.
+        // onStart에서 등록한 리시버가 이 요청에 대한 응답을 받아서 처리해줍니다.
         timerViewModel.requestTimerStatus()
 
+        // 방해 금지 모니터링이나 경고창은 앱을 보고 있을 땐 필요 없으므로 끕니다.
         stopAppMonitoringService()
         stopWarningOverlay()
     }
