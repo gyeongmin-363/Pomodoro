@@ -16,7 +16,4 @@ enum class Screen {
     Permission,
     AccountSettings, // 계정 설정 화면
     NicknameSetup, // 닉네임 설정 화면,
-    GroupsList, // 전체 그룹 모아보기
-    Group, //단일 그룹
-    DeleteGroup //그룹 나가기 및 지우기
 }
