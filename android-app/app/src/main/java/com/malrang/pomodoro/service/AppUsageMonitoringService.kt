@@ -12,12 +12,14 @@ import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class AppUsageMonitoringService : AccessibilityService() {
 
-    private val serviceScope = CoroutineScope(Dispatchers.IO)
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(serviceJob + Dispatchers.IO)
     private lateinit var repo: PomodoroRepository
 
     private var currentBlockMode: BlockMode = BlockMode.NONE
@@ -138,9 +140,11 @@ class AppUsageMonitoringService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceJob.cancel()
         try {
             unregisterReceiver(tempPassReceiver)
         } catch (e: Exception) {
+            Log.w("POMODORO_SVC", "tempPassReceiver 이미 해제되었거나 등록되지 않음", e)
         }
     }
 }

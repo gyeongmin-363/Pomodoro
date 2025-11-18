@@ -183,15 +183,5 @@ fun PortraitMainScreen(
                 // --- 버튼 로직 끝 ---
             }
         }
-
-        // 탑 앱바 (메뉴 버튼) - 위치 유지
-        IconButton(
-            onClick = events.onMenuClick,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp)
-        ) {
-            Icon(imageVector = Icons.Default.Menu, contentDescription = "메뉴 열기", tint = contentColor)
-        }
     }
 }
