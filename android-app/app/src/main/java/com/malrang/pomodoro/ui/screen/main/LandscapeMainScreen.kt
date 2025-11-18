@@ -151,14 +151,5 @@ fun LandscapeMainScreen(
                 }
             }
         }
-
-        IconButton(
-            onClick = events.onMenuClick,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(8.dp)
-        ) {
-            Icon(imageVector = Icons.Default.Menu, contentDescription = "메뉴 열기", tint = contentColor)
-        }
     }
 }

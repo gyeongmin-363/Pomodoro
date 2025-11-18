@@ -14,5 +14,8 @@ enum class Screen {
     Whitelist,
     /** 권한 설정 화면 */
     Permission,
-    AccountSettings, // 계정 설정 화면
+    /** 계정 설정 화면 */
+    AccountSettings,
+    /** 배경 설정 화면 */
+    Background
 }
