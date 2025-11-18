@@ -37,12 +37,20 @@ fun PomodoroApp(
 ) {
     val context = LocalContext.current
     val authState by authViewModel.authState.collectAsState()
+    val permissionUiState by permissionViewModel.uiState.collectAsState()
+    val allPermissionsGranted =
+        permissionUiState.permissions.isNotEmpty() &&
+                permissionUiState.permissions.all { it.isGranted }
+
+    LaunchedEffect(authState) {
+        if (authState is AuthViewModel.AuthState.Authenticated) {
+            permissionViewModel.checkAndUpdatePermissions(context)
+        }
+    }
 
     when (authState) {
         is AuthViewModel.AuthState.Authenticated -> {
             val navController = rememberNavController()
-            // ✅ 권한 확인
-            val allPermissionsGranted = permissionViewModel.checkAndUpdatePermissions(context)
 
             // ✅ 권한과 닉네임 설정 여부에 따라 시작 화면을 결정합니다.
             val startDestination = when {

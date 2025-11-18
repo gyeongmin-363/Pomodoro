@@ -12,7 +12,5 @@ import java.util.UUID
 @Keep
 @Serializable
 data class User(
-    val id: String, // auth.users.id (UUID)
-    val nickname: String?, // users.nickname
-    val coins: Int = 0 // users.coins
+    val id: String? = null, // auth.users.id (UUID)
 )
