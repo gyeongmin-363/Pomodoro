@@ -22,14 +22,12 @@ class WarningOverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (overlayView == null) {
-            // ✅ 인텐트로부터 차단 모드를 받아옵니다.
             val blockModeString = intent?.getStringExtra("BLOCK_MODE")
             val blockMode = runCatching { BlockMode.valueOf(blockModeString ?: "") }.getOrElse { BlockMode.PARTIAL }
 
             windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
             val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
 
-            // ✅ 차단 모드에 따라 다른 레이아웃과 로직을 적용합니다.
             when (blockMode) {
                 BlockMode.PARTIAL -> {
                     overlayView = inflater.inflate(R.layout.overlay_warning, null)
@@ -40,22 +38,23 @@ class WarningOverlayService : Service() {
                     setupFullBlockButton()
                 }
                 BlockMode.NONE -> {
-                    stopSelf() // NONE 모드일 경우 즉시 서비스를 종료합니다.
+                    stopSelf()
                     return START_NOT_STICKY
                 }
             }
 
+            // ✅ [수정 핵심] 부분 차단이어도 높이를 MATCH_PARENT로 설정하여 터치를 막고 배경을 그림
             val params = WindowManager.LayoutParams(
-                // ✅ 완전 차단 시에는 화면 전체를 덮도록 수정합니다.
-                if (blockMode == BlockMode.FULL) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.MATCH_PARENT,
-                if (blockMode == BlockMode.FULL) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 } else {
                     @Suppress("DEPRECATION")
                     WindowManager.LayoutParams.TYPE_PHONE
                 },
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                // FLAG_LAYOUT_NO_LIMITS를 추가하여 상태바까지 덮을 수 있게 함
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.CENTER
@@ -66,7 +65,6 @@ class WarningOverlayService : Service() {
         return START_NOT_STICKY
     }
 
-    // ✅ 부분 차단 버튼 설정
     private fun setupPartialBlockButtons() {
         val backButton = overlayView?.findViewById<Button>(R.id.btn_back_to_app)
         backButton?.setOnClickListener {
@@ -76,12 +74,14 @@ class WarningOverlayService : Service() {
 
         val continueButton = overlayView?.findViewById<Button>(R.id.btn_continue_using)
         continueButton?.setOnClickListener {
-            sendBroadcast(Intent("com.malrang.pomodoro.ACTION_TEMP_PASS").apply { setPackage("com.malrang.pomodoro") })
+            // 임시 허용 브로드캐스트 발송
+            sendBroadcast(Intent("com.malrang.pomodoro.ACTION_TEMP_PASS").apply {
+                setPackage("com.malrang.pomodoro")
+            })
             stopSelf()
         }
     }
 
-    // ✅ 완전 차단 버튼 설정
     private fun setupFullBlockButton() {
         val backButton = overlayView?.findViewById<Button>(R.id.btn_back_to_app_full)
         backButton?.setOnClickListener {

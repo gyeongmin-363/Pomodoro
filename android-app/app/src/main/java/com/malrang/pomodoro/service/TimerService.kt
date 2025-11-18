@@ -13,6 +13,7 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.malrang.pomodoro.MainActivity
 import com.malrang.pomodoro.R
+import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
@@ -174,6 +175,10 @@ class TimerService : Service() {
         job?.cancel()
         wakeLock.acquire(90*60*1000L /*90 minutes*/)
         job = CoroutineScope(Dispatchers.Main).launch {
+            settings?.let {
+                repo.saveActiveBlockMode(it.blockMode)
+            }
+
             while (timeLeft > 0) {
                 delay(1000)
                 timeLeft--
@@ -212,6 +217,11 @@ class TimerService : Service() {
         // 일시정지 할 때마다 현재 상태를 저장합니다.
         serviceScope.launch {
             repo.saveTimerState(timeLeft, currentMode, totalSessions)
+        }
+        // ✅ 일시정지 시 차단 해제
+        serviceScope.launch {
+            repo.saveTimerState(timeLeft, currentMode, totalSessions)
+            repo.saveActiveBlockMode(BlockMode.NONE)
         }
         updateNotification()
         broadcastStatus()
@@ -319,6 +329,9 @@ class TimerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.launch {
+            repo.saveActiveBlockMode(BlockMode.NONE)
+        }
         job?.cancel()
         isRunning = false
         isServiceActive = false

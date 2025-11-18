@@ -1,5 +1,7 @@
 package com.malrang.pomodoro.ui.screen.setting
 
+import android.content.Intent
+import android.provider.Settings as AndroidSettings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -39,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.service.AccessibilityUtils
 import com.malrang.pomodoro.ui.ModernConfirmDialog
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
@@ -51,6 +55,7 @@ fun SettingsScreen(
     val uiState by settingsViewModel.uiState.collectAsState()
     val settings = uiState.draftSettings
     val title = uiState.editingWorkPreset?.name ?: "기본 설정"
+    val context = LocalContext.current // ✅ Context 가져오기 (인텐트 실행용)
 
     var showDialog by remember { mutableStateOf(false) }
 
@@ -165,14 +170,30 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .selectable(
                             selected = (settings.blockMode == mode),
-                            onClick = { settingsViewModel.updateBlockMode(mode) }
+                            onClick = {
+                                // ✅ 차단 모드 선택 시 권한 체크 로직 추가
+                                if (mode != BlockMode.NONE && !AccessibilityUtils.isAccessibilityServiceEnabled(context)) {
+                                    val intent = Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    context.startActivity(intent)
+                                } else {
+                                    settingsViewModel.updateBlockMode(mode)
+                                }
+                            }
                         )
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
                         selected = (settings.blockMode == mode),
-                        onClick = { settingsViewModel.updateBlockMode(mode) }
+                        onClick = {
+                            // ✅ 라디오 버튼 클릭 시에도 동일한 권한 체크 적용
+                            if (mode != BlockMode.NONE && !AccessibilityUtils.isAccessibilityServiceEnabled(context)) {
+                                val intent = Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)
+                                context.startActivity(intent)
+                            } else {
+                                settingsViewModel.updateBlockMode(mode)
+                            }
+                        }
                         // colors 속성 제거
                     )
                     Text(text = text, modifier = Modifier.padding(start = 8.dp)) // color 제거
