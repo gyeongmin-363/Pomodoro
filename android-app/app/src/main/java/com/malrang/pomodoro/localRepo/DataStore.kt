@@ -13,7 +13,9 @@ import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 /**
  * Preferences DataStore 인스턴스를 생성하는 확장 프로퍼티입니다.
@@ -42,6 +44,9 @@ object DSKeys {
     val SAVED_TIME_LEFT = intPreferencesKey("saved_time_left")
     val SAVED_CURRENT_MODE = stringPreferencesKey("saved_current_mode")
     val SAVED_TOTAL_SESSIONS = intPreferencesKey("saved_total_sessions")
+
+    /** 현재 활성화된 차단 모드 (TimerService가 기록하고 MonitoringService가 읽음) */
+    val ACTIVE_BLOCK_MODE = stringPreferencesKey("active_block_mode")
 }
 
 //  불러온 타이머 상태를 담기 위한 데이터 클래스
@@ -162,5 +167,20 @@ class PomodoroRepository(private val context: Context) {
             preferences.remove(DSKeys.SAVED_CURRENT_MODE)
             preferences.remove(DSKeys.SAVED_TOTAL_SESSIONS)
         }
+    }
+
+    // ✅ Flow로 상태를 관찰할 수 있도록 추가
+    val activeBlockModeFlow: Flow<BlockMode> = context.dataStore.data.map { preferences ->
+        preferences[DSKeys.ACTIVE_BLOCK_MODE]?.let {
+            runCatching { BlockMode.valueOf(it) }.getOrNull()
+        } ?: BlockMode.NONE
+    }
+
+    val whitelistedAppsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[DSKeys.WHITELISTED_APPS] ?: emptySet()
+    }
+
+    suspend fun saveActiveBlockMode(mode: BlockMode) {
+        context.dataStore.edit { it[DSKeys.ACTIVE_BLOCK_MODE] = mode.name }
     }
 }

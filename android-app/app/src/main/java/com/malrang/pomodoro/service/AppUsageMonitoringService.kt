@@ -1,101 +1,131 @@
 package com.malrang.pomodoro.service
 
-import android.app.Service
-import android.app.usage.UsageEvents
-import android.app.usage.UsageStatsManager
+import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.os.Build
-import android.os.IBinder
+import android.util.Log
+import android.view.accessibility.AccessibilityEvent
 import com.malrang.pomodoro.dataclass.ui.BlockMode
-import kotlinx.coroutines.*
+import com.malrang.pomodoro.localRepo.PomodoroRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
-class AppUsageMonitoringService : Service() {
+class AppUsageMonitoringService : AccessibilityService() {
 
-    private var job: Job? = null
-    private lateinit var usageStatsManager: UsageStatsManager
+    private val serviceScope = CoroutineScope(Dispatchers.IO)
+    private lateinit var repo: PomodoroRepository
+
+    private var currentBlockMode: BlockMode = BlockMode.NONE
+    private var whitelistedApps: Set<String> = emptySet()
     private val launcherPackageNames = mutableSetOf<String>()
+
     private var isOverlayShown = false
     private var isTemporaryPassActive = false
-    private var currentBlockMode: BlockMode = BlockMode.PARTIAL // 기본값 설정
 
-    // '앱 계속 사용' 버튼 클릭 시 신호를 받는 리시버
     private val tempPassReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.malrang.pomodoro.ACTION_TEMP_PASS") {
                 isTemporaryPassActive = true
-                isOverlayShown = false // 오버레이가 닫혔으므로 상태 동기화
+                // 버튼을 눌러서 닫혔으므로 상태 동기화
+                isOverlayShown = false
             }
         }
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        Log.d("POMODORO_SVC", "접근성 서비스 연결됨")
+
+        repo = PomodoroRepository(this)
         fetchLauncherPackageNames()
-        // 브로드캐스트 리시버 등록
-        registerReceiver(tempPassReceiver, IntentFilter("com.malrang.pomodoro.ACTION_TEMP_PASS"), RECEIVER_NOT_EXPORTED)
+
+        registerReceiver(tempPassReceiver, IntentFilter("com.malrang.pomodoro.ACTION_TEMP_PASS"), Context.RECEIVER_NOT_EXPORTED)
+
+
+        serviceScope.launch {
+            repo.activeBlockModeFlow.collectLatest { mode ->
+                currentBlockMode = mode
+                if (mode == BlockMode.NONE) {
+                    isTemporaryPassActive = false
+                    stopWarningOverlay()
+                }
+            }
+        }
+
+        serviceScope.launch {
+            repo.whitelistedAppsFlow.collectLatest { apps ->
+                whitelistedApps = apps
+            }
+        }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val whitelistedApps = intent?.getStringArrayExtra("WHITELISTED_APPS")?.toSet() ?: emptySet()
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (currentBlockMode == BlockMode.NONE) return
+
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val packageName = event.packageName?.toString()
+            if (packageName != null) {
+                checkAndBlockApp(packageName)
+            }
+        }
+    }
+
+    private fun checkAndBlockApp(foregroundApp: String) {
         val ownPackageName = packageName
 
-        // MainActivity로부터 현재 설정된 차단 모드를 받아옴
-        val blockModeString = intent?.getStringExtra("BLOCK_MODE")
-        currentBlockMode = runCatching {
-            BlockMode.valueOf(blockModeString ?: "")
-        }.getOrElse { BlockMode.PARTIAL }
+        val isForbiddenApp = foregroundApp != ownPackageName &&
+                !whitelistedApps.contains(foregroundApp) &&
+                !launcherPackageNames.contains(foregroundApp)
 
+        if (isForbiddenApp) {
+            // 차단해야 할 앱 감지됨
+            if (!isTemporaryPassActive && !isOverlayShown) {
+                Log.d("POMODORO_SVC", "차단 실행: $foregroundApp")
+                startWarningOverlay()
+                isOverlayShown = true
+            }
+        } else {
+            // 안전한 앱 감지됨 (홈 화면, 화이트리스트 앱, OR **우리 앱**)
 
-        job?.cancel()
-        job = CoroutineScope(Dispatchers.IO).launch {
-            // 차단 모드가 '없음'이면 감시할 필요가 없으므로 코루틴 종료
-            if (currentBlockMode == BlockMode.NONE) {
-                stopSelf() // 서비스 자체를 종료
-                return@launch
+            // ✅ [버그 수정 핵심]
+            // 감지된 앱이 '우리 앱(ownPackageName)'인 경우, 오버레이가 떠서 감지된 것일 수 있습니다.
+            // 이 경우 stopWarningOverlay()를 호출하면 오버레이가 뜨자마자 닫히게 되므로,
+            // 우리 앱일 때는 오버레이 종료 로직을 건너뜁니다.
+            if (foregroundApp == ownPackageName) {
+                return
             }
 
-            while (isActive) {
-                val foregroundApp = getForegroundApp()
+            // 그 외(홈 화면이나 다른 허용 앱)로 나갔을 때만 상태를 리셋하고 오버레이를 닫습니다.
+            isTemporaryPassActive = false
 
-                val isForbiddenApp = foregroundApp != null &&
-                        foregroundApp != ownPackageName &&
-                        !whitelistedApps.contains(foregroundApp) &&
-                        !launcherPackageNames.contains(foregroundApp)
-
-                if (isForbiddenApp) {
-                    // 금지된 앱 사용 중 + 임시 허용 상태 아님 + 오버레이 아직 안 뜸
-                    if (!isTemporaryPassActive && !isOverlayShown) {
-                        startWarningOverlay()
-                        isOverlayShown = true
-                    }
-                } else {
-                    // 안전한 앱 사용 중 (뽀모도로, 화이트리스트, 홈 화면 등)
-                    // 다음을 위해 임시 허용 상태를 초기화
-                    isTemporaryPassActive = false
-                }
-                delay(1000)
+            if (isOverlayShown) {
+                isOverlayShown = false
+                stopWarningOverlay()
             }
         }
-        return START_STICKY
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        job?.cancel()
-        unregisterReceiver(tempPassReceiver)
-        stopWarningOverlay()
+    private fun startWarningOverlay() {
+        val intent = Intent(this, WarningOverlayService::class.java).apply {
+            putExtra("BLOCK_MODE", currentBlockMode.name)
+            setPackage("com.malrang.pomodoro")
+        }
+        startService(intent)
+    }
+
+    private fun stopWarningOverlay() {
+        stopService(Intent(this, WarningOverlayService::class.java))
+        isOverlayShown = false
     }
 
     private fun fetchLauncherPackageNames() {
         val intent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
-            setPackage("com.malrang.pomodoro")
-
         }
         val resolveInfoList = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
         for (resolveInfo in resolveInfoList) {
@@ -103,33 +133,14 @@ class AppUsageMonitoringService : Service() {
         }
     }
 
-    private fun getForegroundApp(): String? {
-        var foregroundApp: String? = null
-        val time = System.currentTimeMillis()
-        val usageEvents = usageStatsManager.queryEvents(time - 1000 * 2, time)
-        val event = UsageEvents.Event()
-        while (usageEvents.hasNextEvent()) {
-            usageEvents.getNextEvent(event)
-            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
-                foregroundApp = event.packageName
-            }
+    override fun onInterrupt() {
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unregisterReceiver(tempPassReceiver)
+        } catch (e: Exception) {
         }
-        return foregroundApp
     }
-
-    private fun startWarningOverlay() {
-        // WarningOverlayService에 현재 차단 모드를 전달
-        val intent = Intent(this, WarningOverlayService::class.java).apply {
-            putExtra("BLOCK_MODE", currentBlockMode.name)
-            setPackage("com.malrang.pomodoro")
-
-        }
-        startService(intent)
-    }
-
-    private fun stopWarningOverlay() {
-        stopService(Intent(this, WarningOverlayService::class.java))
-    }
-
-    override fun onBind(intent: Intent?): IBinder? = null
 }
