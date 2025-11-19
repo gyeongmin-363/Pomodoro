@@ -1,9 +1,10 @@
 package com.malrang.pomodoro.ui.screen.setting
 
 import android.content.Intent
-import android.provider.Settings as AndroidSettings
-import android.widget.Toast // ✅ Toast import 추가
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,11 +18,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -37,36 +45,235 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.dataclass.ui.Settings
+import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.service.AccessibilityUtils
 import com.malrang.pomodoro.ui.ModernConfirmDialog
+import com.malrang.pomodoro.ui.screen.main.WorkPresetItem
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
+import android.provider.Settings as AndroidSettings
 
 @Composable
 fun SettingsScreen(
+    settingsViewModel: SettingsViewModel,
+    onNavigateTo: (Screen) -> Unit,
+    onSave: () -> Unit,
+    onPresetSelected: (Settings) -> Unit
+) {
+    val uiState by settingsViewModel.uiState.collectAsState()
+
+    // 편집 중인 Work가 있으면(상세 화면) 뒤로가기 시 목록으로 복귀
+    BackHandler(enabled = uiState.editingWorkPreset != null) {
+        settingsViewModel.stopEditingWorkPreset()
+    }
+
+    // 편집 중인 상태(editingWorkPreset != null)이면 상세 화면, 아니면 목록 화면 표시
+    if (uiState.editingWorkPreset != null) {
+        SettingsDetailScreen(
+            settingsViewModel = settingsViewModel,
+            onNavigateTo = onNavigateTo,
+            onSave = onSave
+        )
+    } else {
+        WorkListScreen(
+            settingsViewModel = settingsViewModel,
+            onPresetSelected = onPresetSelected
+        )
+    }
+}
+
+@Composable
+fun WorkListScreen(
+    settingsViewModel: SettingsViewModel,
+    onPresetSelected: (Settings) -> Unit
+) {
+    val uiState by settingsViewModel.uiState.collectAsState()
+
+    var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
+    var newPresetName by remember { mutableStateOf("") }
+    var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
+    var presetIdToSelect by remember { mutableStateOf<String?>(null) }
+
+    // 다이얼로그 로직 (이름 변경, 삭제, 선택 확인)
+    if (presetIdToSelect != null) {
+        ModernConfirmDialog(
+            onDismissRequest = { presetIdToSelect = null },
+            title = "Work 변경",
+            confirmText = "확인",
+            onConfirm = {
+                settingsViewModel.selectWorkPreset(presetIdToSelect!!) { newSettings ->
+                    onPresetSelected(newSettings)
+                }
+                presetIdToSelect = null
+            },
+            text = "Work를 변경하면 현재 진행상황이 초기화됩니다. 계속하시겠습니까?"
+        )
+    }
+
+    if (presetToRename != null) {
+        ModernConfirmDialog(
+            onDismissRequest = { presetToRename = null },
+            title = "Work 이름 변경",
+            confirmText = "확인",
+            confirmButtonEnabled = newPresetName.isNotBlank(),
+            onConfirm = {
+                settingsViewModel.updateWorkPresetName(presetToRename!!.id, newPresetName)
+                presetToRename = null
+            },
+            content = {
+                OutlinedTextField(
+                    value = newPresetName,
+                    onValueChange = { if (it.length <= 10) newPresetName = it },
+                    label = { Text("새 이름") },
+                    singleLine = true
+                )
+            }
+        )
+    }
+
+    if (presetToDelete != null) {
+        ModernConfirmDialog(
+            onDismissRequest = { presetToDelete = null },
+            title = "Work 삭제",
+            confirmText = "삭제",
+            onConfirm = {
+                settingsViewModel.deleteWorkPreset(presetToDelete!!.id) { newSettings ->
+                    onPresetSelected(newSettings)
+                }
+                presetToDelete = null
+            },
+            content = {
+                Text(
+                    buildAnnotatedString {
+                        append("정말로 '")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)) {
+                            append(presetToDelete!!.name)
+                        }
+                        append("' Work를 삭제하시겠습니까?")
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        )
+    }
+
+    // 화면 구성
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text("설정", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(24.dp))
+
+        // 1. 현재 선택된 Work (최상단 고정)
+        val currentWork = uiState.workPresets.find { it.id == uiState.currentWorkId }
+        if (currentWork != null) {
+            Text("현재 선택된 Work", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { settingsViewModel.startEditingWorkPreset(currentWork.id) }, // 클릭 시 상세 설정 이동
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(painterResource(R.drawable.ic_play), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = currentWork.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "탭하여 상세 설정",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        // 2. 저장된 Work 목록
+        Text("저장된 Work 목록", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+        ) {
+            Column {
+                uiState.workPresets.forEach { preset ->
+                    WorkPresetItem(
+                        preset = preset,
+                        isSelected = preset.id == uiState.currentWorkId,
+                        onSelect = {
+                            if (uiState.currentWorkId != preset.id) {
+                                presetIdToSelect = preset.id
+                            }
+                        },
+                        onItemClick = { settingsViewModel.startEditingWorkPreset(preset.id) }, // 아이템 클릭 시 상세 이동
+                        onRename = {
+                            newPresetName = preset.name
+                            presetToRename = preset
+                        },
+                        onEditSettings = { settingsViewModel.startEditingWorkPreset(preset.id) },
+                        onDelete = { presetToDelete = preset }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                }
+
+                // 새 Work 추가 버튼
+                TextButton(
+                    onClick = { settingsViewModel.addWorkPreset() },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Work 추가")
+                    Spacer(Modifier.width(4.dp))
+                    Text("새 Work 추가")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsDetailScreen(
     settingsViewModel: SettingsViewModel,
     onNavigateTo: (Screen) -> Unit,
     onSave: () -> Unit
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
     val settings = uiState.draftSettings
-    val title = uiState.editingWorkPreset?.name ?: "기본 설정"
+    val title = uiState.editingWorkPreset?.name ?: "설정"
     val context = LocalContext.current
-
-    var showDialog by remember { mutableStateOf(false) }
+    var showSaveDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         settingsViewModel.initializeDraftSettings()
     }
 
-    if (settings == null) {
-        return
-    }
+    if (settings == null) return
 
     Column(
         modifier = Modifier
@@ -75,16 +282,26 @@ fun SettingsScreen(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
+        // 상단 헤더 (뒤로가기 포함)
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⚙️ $title 설정", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            IconButton(onClick = { settingsViewModel.stopEditingWorkPreset() }) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "뒤로가기",
+                    modifier = Modifier.width(24.dp).height(24.dp)
+                )
+            }
+
+            Text("⚙️ $title 상세 설정", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
+        // 기존 설정 UI 내용들
         Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
 
@@ -157,12 +374,9 @@ fun SettingsScreen(
 
         Column {
             blockOptions.forEach { (mode, text) ->
-                // 중복되는 클릭 로직을 람다로 분리
                 val onBlockModeClick = {
                     if (mode != BlockMode.NONE && !AccessibilityUtils.isAccessibilityServiceEnabled(context)) {
-                        // ✅ [추가된 부분] 안내 메시지 출력
                         Toast.makeText(context, "[설치된 앱]->[포커스루트]를 찾아 접근성 권한을 허용해주세요.", Toast.LENGTH_LONG).show()
-
                         val intent = Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)
                         context.startActivity(intent)
                     } else {
@@ -196,30 +410,27 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.Center
         ) {
             IconButton(
-                onClick = {
-                    settingsViewModel.clearDraftSettings()
-                    onNavigateTo(Screen.Main)
-                },
+                onClick = { settingsViewModel.stopEditingWorkPreset() },
             ) {
                 Icon(Icons.Default.Close, "취소")
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            IconButton(onClick = { showDialog = true }) {
+            IconButton(onClick = { showSaveDialog = true }) {
                 Icon(painterResource(R.drawable.ic_save),"저장")
             }
         }
     }
 
-    if (showDialog) {
+    if (showSaveDialog) {
         ModernConfirmDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showSaveDialog = false },
             title = "저장하시겠습니까?",
             confirmText = "확인",
             onConfirm = {
                 onSave()
-                showDialog = false
+                showSaveDialog = false
             },
             text = "저장하면 타이머가 초기화됩니다.\n계속 진행할까요?"
         )

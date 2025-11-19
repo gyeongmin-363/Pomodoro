@@ -39,22 +39,15 @@ import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
-// ✅ 수정됨: iconRes(Int) 하나만 사용하도록 변경
 sealed class BottomNavItem(
     val screen: Screen,
     val title: String,
-    @DrawableRes val icon: Int // 리소스 ID만 받음
+    @DrawableRes val icon: Int
 ) {
-    // 업로드된 리소스 파일들을 매핑했습니다.
     object Background : BottomNavItem(Screen.Background, "배경", R.drawable.ic_wallpaper)
     object Settings : BottomNavItem(Screen.Settings, "설정", R.drawable.ic_settings)
-
-    // '타이머'는 ic_play (또는 적절한 ic_timer가 있다면 교체) 사용
     object Home : BottomNavItem(Screen.Main, "타이머", R.drawable.ic_play)
-
     object Stats : BottomNavItem(Screen.Stats, "통계", R.drawable.ic_stats)
-
-    // '계정'은 ic_user_attributes_24px 사용
     object Account : BottomNavItem(Screen.AccountSettings, "계정", R.drawable.ic_user_attributes_24px)
 }
 
@@ -82,7 +75,6 @@ fun PomodoroApp(
     when (authState) {
         is AuthViewModel.AuthState.Authenticated -> {
             val navController = rememberNavController()
-
             val navItems = listOf(
                 BottomNavItem.Background,
                 BottomNavItem.Settings,
@@ -92,11 +84,9 @@ fun PomodoroApp(
             )
 
             val startDestination = if (!allPermissionsGranted) Screen.Permission.name else Screen.Main.name
-
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
             val currentRoute = currentDestination?.route
-
             val showBottomBar = currentRoute in navItems.map { it.screen.name }
 
             Scaffold(
@@ -106,7 +96,6 @@ fun PomodoroApp(
                             navItems.forEach { item ->
                                 val selected = currentDestination?.hierarchy?.any { it.route == item.screen.name } == true
                                 NavigationBarItem(
-                                    // ✅ 수정됨: painterResource를 사용하여 리소스 ID로 아이콘을 그림
                                     icon = {
                                         Icon(
                                             painter = painterResource(id = item.icon),
@@ -148,6 +137,7 @@ fun PomodoroApp(
                             onNavigateTo = { screen -> navController.navigate(screen.name) }
                         )
                     }
+                    // ✅ SettingsScreen: Work 변경 시 timerViewModel.reset 호출
                     composable(Screen.Settings.name) {
                         SettingsScreen(
                             settingsViewModel = settingsViewModel,
@@ -159,10 +149,14 @@ fun PomodoroApp(
                                         popUpTo(Screen.Settings.name) { inclusive = true }
                                     }
                                 }
+                            },
+                            onPresetSelected = { newSettings ->
+                                timerViewModel.reset(newSettings)
                             }
                         )
                     }
                     composable(Screen.Permission.name) {
+                        // ... 동일 ...
                         val permissionUiStateVal by permissionViewModel.uiState.collectAsState()
                         PermissionScreen(
                             permissionUiState = permissionUiStateVal,

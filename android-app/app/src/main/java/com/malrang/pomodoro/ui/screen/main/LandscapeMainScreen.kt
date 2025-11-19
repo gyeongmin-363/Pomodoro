@@ -1,10 +1,6 @@
 package com.malrang.pomodoro.ui.screen.main
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,25 +12,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// import com.airbnb.lottie.compose.* // Lottie import 제거
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
-// import kotlinx.coroutines.delay // 제거
 
 @Composable
 fun LandscapeMainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
-    events: MainScreenEvents, // 여러 파라미터를 하나로 받음
+    events: MainScreenEvents,
     onNavigateTo: (Screen) -> Unit,
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
 
-    var showWorkManager by remember { mutableStateOf(false) }
+    // showWorkManager 상태 제거됨
 
     val contentColor = MaterialTheme.colorScheme.onBackground
     val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -42,10 +36,10 @@ fun LandscapeMainScreen(
 
     val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
     val titleText = when (timerState.currentMode) {
-        Mode.STUDY -> "운행 중" // 용어 변경
-        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중" // 용어 변경
+        Mode.STUDY -> "운행 중"
+        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중"
     }
-    
+
     Box(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -54,13 +48,14 @@ fun LandscapeMainScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // 왼쪽: 구간 정보 및 사이클 인디케이터
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     buildAnnotatedString {
-                        withStyle(style = SpanStyle(color = secondaryTextColor)) { append("구간 완료 : ") } // 용어 변경
+                        withStyle(style = SpanStyle(color = secondaryTextColor)) { append("구간 완료 : ") }
                         withStyle(style = SpanStyle(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -80,31 +75,22 @@ fun LandscapeMainScreen(
                 )
             }
 
+            // 중앙: 타이머 및 상태 텍스트
             Column(
                 modifier = Modifier.weight(2f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                TextButton(onClick = { showWorkManager = !showWorkManager }) {
-                    Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
-                }
+                // ✅ Work 선택 버튼 제거 -> 텍스트만 표시
+                Text(
+                    text = currentWorkName,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor
+                )
 
-                AnimatedVisibility(visible = showWorkManager) {
-                    WorkPresetsManager(
-                        presets = settingsState.workPresets,
-                        currentPresetId = settingsState.currentWorkId,
-                        onPresetSelected = events.onSelectPreset,
-                        onAddPreset = { settingsViewModel.addWorkPreset() },
-                        onDeletePreset = { preset -> events.onPresetToDeleteChange(preset) },
-                        onRenamePreset = { preset -> events.onPresetToRenameChange(preset) },
-                        onEditSettings = { presetId ->
-                            settingsViewModel.startEditingWorkPreset(presetId)
-                            onNavigateTo(Screen.Settings)
-                        },
-                        // useGrassBackground 제거됨
-                    )
-                }
+                // AnimatedVisibility(visible = showWorkManager) 제거됨
+
                 Spacer(Modifier.height(16.dp))
 
                 Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
@@ -117,13 +103,11 @@ fun LandscapeMainScreen(
                     color = contentColor
                 )
 
-                // --- 버스 애니메이션 제거 ---
-                // AnimatedVisibility(visible = timerState.isRunning && timerState.currentMode == Mode.STUDY) { ... } 블록 제거
-                // 대신 Spacer 추가
-                Spacer(Modifier.height(100.dp))
-                // --- 버스 애니메이션 끝 ---
+                // 하단 여백 (기존 버스 애니메이션 자리)
+                Spacer(Modifier.height(60.dp))
             }
 
+            // 오른쪽: 제어 버튼
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -132,21 +116,20 @@ fun LandscapeMainScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!timerState.isRunning) {
                         IconButton(onClick = {
-                            // showTicketAnimation = true 제거
                             timerViewModel.startTimer(settingsState.settings)
                         }) {
-                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "운행 시작", tint = contentColor) // 용어 변경
+                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "운행 시작", tint = contentColor)
                         }
                     } else {
                         IconButton(onClick = { timerViewModel.pauseTimer() }) {
-                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시 정차", tint = contentColor) // 용어 변경
+                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시 정차", tint = contentColor)
                         }
                     }
                     IconButton(onClick = { events.onShowResetConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "회차", tint = contentColor) // 용어 변경
+                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "회차", tint = contentColor)
                     }
                     IconButton(onClick = { events.onShowSkipConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "다음 구간으로", tint = contentColor) // 용어 변경
+                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "다음 구간으로", tint = contentColor)
                     }
                 }
             }
