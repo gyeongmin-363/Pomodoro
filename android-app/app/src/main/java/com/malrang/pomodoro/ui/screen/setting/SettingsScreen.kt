@@ -20,8 +20,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -71,12 +71,10 @@ fun SettingsScreen(
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
 
-    // 편집 중인 Work가 있으면(상세 화면) 뒤로가기 시 목록으로 복귀
     BackHandler(enabled = uiState.editingWorkPreset != null) {
         settingsViewModel.stopEditingWorkPreset()
     }
 
-    // 편집 중인 상태(editingWorkPreset != null)이면 상세 화면, 아니면 목록 화면 표시
     if (uiState.editingWorkPreset != null) {
         SettingsDetailScreen(
             settingsViewModel = settingsViewModel,
@@ -86,7 +84,8 @@ fun SettingsScreen(
     } else {
         WorkListScreen(
             settingsViewModel = settingsViewModel,
-            onPresetSelected = onPresetSelected
+            onPresetSelected = onPresetSelected,
+            onNavigateTo = onNavigateTo // [추가] 네비게이션 전달
         )
     }
 }
@@ -94,7 +93,8 @@ fun SettingsScreen(
 @Composable
 fun WorkListScreen(
     settingsViewModel: SettingsViewModel,
-    onPresetSelected: (Settings) -> Unit
+    onPresetSelected: (Settings) -> Unit,
+    onNavigateTo: (Screen) -> Unit // [추가]
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
 
@@ -103,7 +103,6 @@ fun WorkListScreen(
     var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
     var presetIdToSelect by remember { mutableStateOf<String?>(null) }
 
-    // 다이얼로그 로직 (이름 변경, 삭제, 선택 확인)
     if (presetIdToSelect != null) {
         ModernConfirmDialog(
             onDismissRequest = { presetIdToSelect = null },
@@ -167,7 +166,6 @@ fun WorkListScreen(
         )
     }
 
-    // 화면 구성
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -178,7 +176,37 @@ fun WorkListScreen(
         Text("설정", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(24.dp))
 
-        // 1. 현재 선택된 Work (최상단 고정)
+        // [추가] 차단 앱 관리 (전역 설정이므로 목록 상단에 배치)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onNavigateTo(Screen.Whitelist) }, // Route 이름은 유지하되 내용은 차단 목록
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "차단할 앱 관리",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Text(
+                        text = "공부 중 사용을 제한할 앱을 선택합니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+
+        // 1. 현재 선택된 Work
         val currentWork = uiState.workPresets.find { it.id == uiState.currentWorkId }
         if (currentWork != null) {
             Text("현재 선택된 Work", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
@@ -187,7 +215,7 @@ fun WorkListScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { settingsViewModel.startEditingWorkPreset(currentWork.id) }, // 클릭 시 상세 설정 이동
+                    .clickable { settingsViewModel.startEditingWorkPreset(currentWork.id) },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Row(
@@ -232,7 +260,7 @@ fun WorkListScreen(
                                 presetIdToSelect = preset.id
                             }
                         },
-                        onItemClick = { settingsViewModel.startEditingWorkPreset(preset.id) }, // 아이템 클릭 시 상세 이동
+                        onItemClick = { settingsViewModel.startEditingWorkPreset(preset.id) },
                         onRename = {
                             newPresetName = preset.name
                             presetToRename = preset
@@ -243,7 +271,6 @@ fun WorkListScreen(
                     Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                 }
 
-                // 새 Work 추가 버튼
                 TextButton(
                     onClick = { settingsViewModel.addWorkPreset() },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -282,7 +309,6 @@ fun SettingsDetailScreen(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        // 상단 헤더 (뒤로가기 포함)
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -301,7 +327,6 @@ fun SettingsDetailScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // 기존 설정 UI 내용들
         Text("타이머 설정", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
 
@@ -354,16 +379,8 @@ fun SettingsDetailScreen(
         }
         Spacer(Modifier.height(24.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("다른 앱 차단", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            TextButton(onClick = { onNavigateTo(Screen.Whitelist) }) {
-                Text("예외 목록 설정")
-            }
-        }
+        // [변경] 여기서 "다른 앱 차단" 목록 설정 버튼 제거함 (목록 화면으로 이동)
+        Text("차단 모드", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
 
         val blockOptions = listOf(

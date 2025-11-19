@@ -18,7 +18,7 @@ data class SettingsUiState(
     val currentWorkId: String? = null,
     val editingWorkPreset: WorkPreset? = null,
     val draftSettings: Settings? = null,
-    val whitelistedApps: Set<String> = emptySet() // ✅ 화이트리스트 상태 추가
+    val blockedApps: Set<String> = emptySet()
 )
 
 class SettingsViewModel(
@@ -34,33 +34,51 @@ class SettingsViewModel(
             val currentWorkId = localRepo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
             val currentWork = presets.find { it.id == currentWorkId }
             val currentSettings = currentWork?.settings ?: Settings()
-            val whitelistedApps = localRepo.loadWhitelistedApps() // ✅ 화이트리스트 로드
+            val blockedApps = localRepo.loadBlockedApps()
 
             _uiState.update {
                 it.copy(
                     settings = currentSettings,
                     workPresets = presets,
                     currentWorkId = currentWorkId,
-                    whitelistedApps = whitelistedApps // ✅ 상태 업데이트
+                    blockedApps = blockedApps
                 )
             }
         }
     }
 
-    // ✅ WhitelistViewModel의 기능들을 여기로 통합합니다.
-    fun addToWhitelist(packageName: String) {
+    fun addToBlockList(packageName: String) {
         viewModelScope.launch {
-            val updatedWhitelist = _uiState.value.whitelistedApps + packageName
-            localRepo.saveWhitelistedApps(updatedWhitelist)
-            _uiState.update { it.copy(whitelistedApps = updatedWhitelist) }
+            val updatedBlockList = _uiState.value.blockedApps + packageName
+            localRepo.saveBlockedApps(updatedBlockList)
+            _uiState.update { it.copy(blockedApps = updatedBlockList) }
         }
     }
 
-    fun removeFromWhitelist(packageName: String) {
+    fun removeFromBlockList(packageName: String) {
         viewModelScope.launch {
-            val updatedWhitelist = _uiState.value.whitelistedApps - packageName
-            localRepo.saveWhitelistedApps(updatedWhitelist)
-            _uiState.update { it.copy(whitelistedApps = updatedWhitelist) }
+            val updatedBlockList = _uiState.value.blockedApps - packageName
+            localRepo.saveBlockedApps(updatedBlockList)
+            _uiState.update { it.copy(blockedApps = updatedBlockList) }
+        }
+    }
+
+    // 모두 차단 (목록 추가)
+    fun blockAllApps(allPackages: List<String>) {
+        viewModelScope.launch {
+            val updatedBlockList = _uiState.value.blockedApps + allPackages
+            localRepo.saveBlockedApps(updatedBlockList)
+            _uiState.update { it.copy(blockedApps = updatedBlockList) }
+        }
+    }
+
+    // [수정] 모두 사용 (선택된 앱들만 차단 해제)
+    fun unblockAllApps(packagesToUnblock: List<String>) {
+        viewModelScope.launch {
+            // 기존 차단 목록에서 전달받은 패키지들을 제거
+            val updatedBlockList = _uiState.value.blockedApps - packagesToUnblock.toSet()
+            localRepo.saveBlockedApps(updatedBlockList)
+            _uiState.update { it.copy(blockedApps = updatedBlockList) }
         }
     }
 
@@ -69,7 +87,6 @@ class SettingsViewModel(
         _uiState.update { it.copy(draftSettings = settingsToEdit) }
     }
 
-    // 수정 후
     fun saveSettingsAndReset(onReset: (Settings) -> Unit) {
         viewModelScope.launch {
             val settingsToSave = _uiState.value.draftSettings ?: return@launch
@@ -156,7 +173,6 @@ class SettingsViewModel(
         val currentSettings = _uiState.value.workPresets.find { it.id == _uiState.value.currentWorkId }?.settings ?: Settings()
         _uiState.update { it.copy(settings = currentSettings) }
     }
-
 
     fun updateBlockMode(mode: BlockMode) = updateDraftSettings { copy(blockMode = mode) }
     fun updateStudyTime(v: Int) = updateDraftSettings { copy(studyTime = v) }

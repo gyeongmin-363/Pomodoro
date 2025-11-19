@@ -12,9 +12,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,16 +33,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
-/**
- * 설치된 앱 목록을 보여주고 화이트리스트를 관리하는 화면입니다.
- * 모든 시스템 앱을 포함하며, 검색 기능이 있습니다.
- */
 @Composable
 fun WhitelistScreen(
-    settingsViewModel: SettingsViewModel, // ✅ PomodoroViewModel 대신 SettingsViewModel 사용
+    settingsViewModel: SettingsViewModel,
     onNavigateBack: () -> Unit
 ) {
-    // ✅ settingsViewModel에서 상태를 가져옵니다.
     val uiState by settingsViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val packageManager = context.packageManager
@@ -59,21 +57,29 @@ fun WhitelistScreen(
             }
     }
 
-    val filteredApps = remember(searchQuery, allApps) {
-        if (searchQuery.isBlank()) {
+    val processedApps = remember(searchQuery, uiState.blockedApps, allApps) {
+        val filtered = if (searchQuery.isBlank()) {
             allApps
         } else {
             allApps.filter {
                 packageManager.getApplicationLabel(it).toString().contains(searchQuery, ignoreCase = true)
             }
         }
+
+        filtered.sortedWith(
+            compareByDescending<android.content.pm.ApplicationInfo> {
+                uiState.blockedApps.contains(it.packageName)
+            }.thenBy {
+                packageManager.getApplicationLabel(it).toString().lowercase()
+            }
+        )
     }
 
     Scaffold(
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .fillMaxSize() // Scaffold 내부를 채우도록 fillMaxSize 추가
+                .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
@@ -83,7 +89,7 @@ fun WhitelistScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("앱 허용 목록 (전체)", style = MaterialTheme.typography.titleLarge)
+                Text("차단 앱 관리", style = MaterialTheme.typography.titleLarge)
 
                 IconButton(onClick = onNavigateBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
@@ -103,32 +109,62 @@ fun WhitelistScreen(
                 singleLine = true,
             )
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // 모두 차단 버튼
+                Button(
+                    onClick = {
+                        val packagesToBlock = processedApps.map { it.packageName }
+                        settingsViewModel.blockAllApps(packagesToBlock)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("모두 차단")
+                }
+
+                // [수정] 모두 사용 버튼: 현재 필터링된 앱들만 해제
+                OutlinedButton(
+                    onClick = {
+                        val packagesToUnblock = processedApps.map { it.packageName }
+                        settingsViewModel.unblockAllApps(packagesToUnblock)
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("모두 사용")
+                }
+            }
+
             Text(
-                "공부 중에 사용을 허용할 앱을 선택해주세요.",
-                style = MaterialTheme.typography.bodyMedium, // M3 타이포그래피 적용
+                "체크된 앱은 공부 중에 실행이 차단됩니다.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(filteredApps, key = { it.packageName }) { appInfo ->
+                items(processedApps, key = { it.packageName }) { appInfo ->
                     val appName = packageManager.getApplicationLabel(appInfo).toString()
                     val packageName = appInfo.packageName
                     val appIcon = appInfo.loadIcon(packageManager)
-                    // ✅ uiState.whitelistedApps는 SettingsUiState에 통합되어 있습니다.
-                    val isChecked = uiState.whitelistedApps.contains(packageName)
+
+                    val isBlocked = uiState.blockedApps.contains(packageName)
 
                     AppListItem(
                         appName = appName,
                         appIcon = appIcon,
-                        isWhitelisted = isChecked,
-                        onWhitelistToggle = {
-                            // ✅ settingsViewModel의 함수를 호출합니다.
-                            if (it) {
-                                settingsViewModel.addToWhitelist(packageName)
+                        isBlocked = isBlocked,
+                        onBlockToggle = { shouldBlock ->
+                            if (shouldBlock) {
+                                settingsViewModel.addToBlockList(packageName)
                             } else {
-                                settingsViewModel.removeFromWhitelist(packageName)
+                                settingsViewModel.removeFromBlockList(packageName)
                             }
                         }
                     )
