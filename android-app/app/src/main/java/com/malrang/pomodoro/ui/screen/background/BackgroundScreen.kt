@@ -1,6 +1,5 @@
 package com.malrang.pomodoro.ui.screen.background
 
-import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -23,13 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.viewmodel.BackgroundType
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import java.io.File
@@ -99,7 +98,6 @@ fun BackgroundScreen(
             }
         } else {
             Column {
-                // [수정] 색상 변경 시 ViewModel이 더 이상 모드를 변경하지 않으므로 추가 로직 불필요
                 SimpleColorPicker(
                     label = "텍스트 색상 (이미지 위)",
                     colorInt = uiState.customTextColor,
@@ -148,9 +146,8 @@ fun ImageItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val bitmap = remember(path) {
-        BitmapFactory.decodeFile(path)?.asImageBitmap()
-    }
+    // [수정] 비동기 이미지 로더 사용 (Coil)
+    val painter = rememberAsyncImagePainter(model = File(path))
 
     Box(
         modifier = Modifier
@@ -163,16 +160,12 @@ fun ImageItem(
             )
             .clickable { onClick() }
     ) {
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Box(Modifier.fillMaxSize().background(Color.Gray))
-        }
+        Image(
+            painter = painter,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
 
         if (isSelected) {
             Box(

@@ -1,6 +1,5 @@
 package com.malrang.pomodoro.ui.screen.main
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,7 +8,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -18,12 +16,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.BackgroundType
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
+import java.io.File
 
 @Composable
 fun PortraitMainScreen(
@@ -31,7 +31,7 @@ fun PortraitMainScreen(
     settingsViewModel: SettingsViewModel,
     events: MainScreenEvents,
     onNavigateTo: (Screen) -> Unit,
-    paddingValues: PaddingValues // [추가]
+    paddingValues: PaddingValues
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
@@ -47,39 +47,34 @@ fun PortraitMainScreen(
     }
     val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
 
-    // 배경 렌더링: 화면 전체를 채움 (Nav Bar 뒤까지)
+    // 배경 렌더링
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .then(if (!isImageMode) Modifier.background(customBgColor) else Modifier)
+            .background(customBgColor) // [수정] 이미지가 로드되기 전이나 실패 시 색상 배경 표시 (Fallback)
     ) {
         if (isImageMode && imagePath != null) {
-            val bitmap = remember(imagePath) {
-                BitmapFactory.decodeFile(imagePath)?.asImageBitmap()
-            }
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                )
-            } else {
-                Box(Modifier.fillMaxSize().background(customBgColor))
-            }
+            // [수정] 비동기 이미지 로딩 (Coil)
+            Image(
+                painter = rememberAsyncImagePainter(model = File(imagePath)),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            // 텍스트 가독성을 위한 오버레이
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f))
+            )
         }
 
-        // 콘텐츠 영역: 전달받은 패딩(paddingValues)을 적용하여 Nav Bar 위에 표시
+        // 콘텐츠 영역
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 16.dp, start = 16.dp, end = 16.dp) // 상단, 좌우 패딩
-                .padding(bottom = paddingValues.calculateBottomPadding()) // [중요] 하단 패딩 적용
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                .padding(bottom = paddingValues.calculateBottomPadding())
         ) {
             Column(
                 modifier = Modifier
