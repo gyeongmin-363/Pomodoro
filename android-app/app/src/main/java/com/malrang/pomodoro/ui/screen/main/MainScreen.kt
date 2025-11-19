@@ -1,10 +1,9 @@
 package com.malrang.pomodoro.ui.screen.main
 
 import android.content.res.Configuration
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,23 +14,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.ui.ModernConfirmDialog
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
-// ✅ MainScreenEvents 정리: Work 관리 관련 이벤트 제거
 data class MainScreenEvents(
     val onShowResetConfirmChange: (Boolean) -> Unit,
     val onShowSkipConfirmChange: (Boolean) -> Unit,
-    // onPresetToDeleteChange, onPresetToRenameChange, onSelectPreset 제거됨
 )
 
 @Composable
 fun MainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
-    onNavigateTo: (Screen) -> Unit
+    onNavigateTo: (Screen) -> Unit,
+    paddingValues: PaddingValues // [추가] 상위 Scaffold로부터 받은 패딩
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
@@ -39,13 +36,10 @@ fun MainScreen(
     var showResetConfirm by remember { mutableStateOf(false) }
     var showSkipConfirm by remember { mutableStateOf(false) }
 
-    // ✅ 이벤트 정리
     val events = MainScreenEvents(
         onShowResetConfirmChange = { showResetConfirm = it },
         onShowSkipConfirmChange = { showSkipConfirm = it }
     )
-
-    // ✅ Work 관리 관련 Dialog 제거됨
 
     if (showSkipConfirm) {
         ModernConfirmDialog(
@@ -78,11 +72,8 @@ fun MainScreen(
             )
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        )
+        // MainScreen 자체가 배경을 그리기 때문에 별도의 background Box는 제거하거나 투명 처리
+        // PortraitMainScreen/LandscapeMainScreen 내부에서 배경 처리
 
         val configuration = LocalConfiguration.current
         when (configuration.orientation) {
@@ -92,6 +83,7 @@ fun MainScreen(
                     settingsViewModel = settingsViewModel,
                     events = events,
                     onNavigateTo = onNavigateTo,
+                    paddingValues = paddingValues // [추가] 패딩 전달
                 )
             }
             else -> {
@@ -100,6 +92,7 @@ fun MainScreen(
                     settingsViewModel = settingsViewModel,
                     events = events,
                     onNavigateTo = onNavigateTo,
+                    paddingValues = paddingValues // [추가] 패딩 전달
                 )
             }
         }
