@@ -3,8 +3,6 @@ package com.malrang.pomodoro.ui.screen.main
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,7 +34,8 @@ fun PortraitMainScreen(
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
-    var showWorkManager by remember { mutableStateOf(false) }
+
+    // showWorkManager 상태 제거됨
 
     val contentColor = MaterialTheme.colorScheme.onBackground
     val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -64,26 +63,14 @@ fun PortraitMainScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TextButton(onClick = { showWorkManager = !showWorkManager }) {
-                    Text(currentWorkName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Work 선택", tint = contentColor)
-                }
+                // ✅ WorkManager 토글 제거, 텍스트만 표시
+                Text(
+                    text = currentWorkName,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor
+                )
 
-                AnimatedVisibility(visible = showWorkManager) {
-                    WorkPresetsManager(
-                        presets = settingsState.workPresets,
-                        currentPresetId = settingsState.currentWorkId,
-                        onPresetSelected = events.onSelectPreset,
-                        onAddPreset = { settingsViewModel.addWorkPreset() },
-                        onDeletePreset = { preset -> events.onPresetToDeleteChange(preset) },
-                        onRenamePreset = { preset -> events.onPresetToRenameChange(preset) },
-                        onEditSettings = { presetId ->
-                            settingsViewModel.startEditingWorkPreset(presetId)
-                            onNavigateTo(Screen.Settings)
-                        },
-                        // useGrassBackground 제거됨
-                    )
-                }
                 Spacer(Modifier.height(16.dp))
 
                 // --- 중앙 타이머 영역 (Lottie 수정) ---
