@@ -159,8 +159,8 @@ fun WhitelistScreen(
                     AppListItem(
                         appName = appName,
                         appIcon = appIcon,
-                        isWhitelisted = isBlocked,
-                        onWhitelistToggle = { shouldBlock ->
+                        isBlocked = isBlocked,
+                        onBlockToggle = { shouldBlock ->
                             if (shouldBlock) {
                                 settingsViewModel.addToBlockList(packageName)
                             } else {

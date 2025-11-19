@@ -27,13 +27,13 @@ import coil3.compose.rememberAsyncImagePainter
 fun AppListItem(
     appName: String,
     appIcon: Drawable,
-    isWhitelisted: Boolean,
-    onWhitelistToggle: (Boolean) -> Unit,
+    isBlocked: Boolean,
+    onBlockToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        onClick = { onWhitelistToggle(!isWhitelisted) }, // 행 전체 클릭 가능
+        onClick = { onBlockToggle(!isBlocked) }, // 행 전체 클릭 가능
         color = MaterialTheme.colorScheme.surface
     ) {
         Row(
@@ -58,8 +58,8 @@ fun AppListItem(
 
             // 3. PixelSwitch를 Material 3 Switch로 교체합니다.
             Switch(
-                checked = isWhitelisted,
-                onCheckedChange = onWhitelistToggle
+                checked = isBlocked,
+                onCheckedChange = onBlockToggle
             )
         }
     }
