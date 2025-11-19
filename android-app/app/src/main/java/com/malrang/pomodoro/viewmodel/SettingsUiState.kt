@@ -18,7 +18,7 @@ data class SettingsUiState(
     val currentWorkId: String? = null,
     val editingWorkPreset: WorkPreset? = null,
     val draftSettings: Settings? = null,
-    val blockedApps: Set<String> = emptySet() // 차단 목록
+    val blockedApps: Set<String> = emptySet()
 )
 
 class SettingsViewModel(
@@ -34,7 +34,7 @@ class SettingsViewModel(
             val currentWorkId = localRepo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
             val currentWork = presets.find { it.id == currentWorkId }
             val currentSettings = currentWork?.settings ?: Settings()
-            val blockedApps = localRepo.loadBlockedApps() // 차단 목록 로드
+            val blockedApps = localRepo.loadBlockedApps()
 
             _uiState.update {
                 it.copy(
@@ -47,7 +47,6 @@ class SettingsViewModel(
         }
     }
 
-    // 개별 추가
     fun addToBlockList(packageName: String) {
         viewModelScope.launch {
             val updatedBlockList = _uiState.value.blockedApps + packageName
@@ -56,7 +55,6 @@ class SettingsViewModel(
         }
     }
 
-    // 개별 제거
     fun removeFromBlockList(packageName: String) {
         viewModelScope.launch {
             val updatedBlockList = _uiState.value.blockedApps - packageName
@@ -65,20 +63,20 @@ class SettingsViewModel(
         }
     }
 
-    // [추가] 모두 차단 (목록에 있는 모든 패키지 추가)
+    // 모두 차단 (목록 추가)
     fun blockAllApps(allPackages: List<String>) {
         viewModelScope.launch {
-            // 기존 목록에 새 목록을 합침 (Set이라 중복 자동 제거)
             val updatedBlockList = _uiState.value.blockedApps + allPackages
             localRepo.saveBlockedApps(updatedBlockList)
             _uiState.update { it.copy(blockedApps = updatedBlockList) }
         }
     }
 
-    // [추가] 모두 사용 (차단 목록 초기화)
-    fun unblockAllApps() {
+    // [수정] 모두 사용 (선택된 앱들만 차단 해제)
+    fun unblockAllApps(packagesToUnblock: List<String>) {
         viewModelScope.launch {
-            val updatedBlockList = emptySet<String>()
+            // 기존 차단 목록에서 전달받은 패키지들을 제거
+            val updatedBlockList = _uiState.value.blockedApps - packagesToUnblock.toSet()
             localRepo.saveBlockedApps(updatedBlockList)
             _uiState.update { it.copy(blockedApps = updatedBlockList) }
         }

@@ -4,11 +4,9 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -35,11 +33,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
-/**
- * 설치된 앱 목록을 보여주고 차단 목록(BlockList)을 관리하는 화면입니다.
- * - 체크된(차단된) 앱이 상단에 표시됩니다.
- * - 모두 차단 / 모두 사용(해제) 버튼을 제공합니다.
- */
 @Composable
 fun WhitelistScreen(
     settingsViewModel: SettingsViewModel,
@@ -51,7 +44,6 @@ fun WhitelistScreen(
 
     var searchQuery by remember { mutableStateOf("") }
 
-    // 1. 전체 앱 목록 로드 (이름순 정렬)
     val allApps = remember {
         packageManager.queryIntentActivities(
             Intent(Intent.ACTION_MAIN, null).apply {
@@ -65,8 +57,6 @@ fun WhitelistScreen(
             }
     }
 
-    // 2. 검색 필터링 및 "차단 여부"에 따른 정렬 로직 적용
-    // blockedApps(Set)가 변경될 때마다 재정렬하여 상단으로 이동시킴
     val processedApps = remember(searchQuery, uiState.blockedApps, allApps) {
         val filtered = if (searchQuery.isBlank()) {
             allApps
@@ -76,7 +66,6 @@ fun WhitelistScreen(
             }
         }
 
-        // 차단된 앱(true)을 우선(내림차순) 정렬하고, 그 다음 이름순 정렬
         filtered.sortedWith(
             compareByDescending<android.content.pm.ApplicationInfo> {
                 uiState.blockedApps.contains(it.packageName)
@@ -95,7 +84,6 @@ fun WhitelistScreen(
                 .padding(horizontal = 16.dp)
         ) {
 
-            // 상단 헤더
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -108,7 +96,6 @@ fun WhitelistScreen(
                 }
             }
 
-            // 검색창
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -122,7 +109,6 @@ fun WhitelistScreen(
                 singleLine = true,
             )
 
-            // [추가] 일괄 처리 버튼 영역
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -132,7 +118,6 @@ fun WhitelistScreen(
                 // 모두 차단 버튼
                 Button(
                     onClick = {
-                        // 현재 리스트(검색된 결과 또는 전체)에 있는 앱들을 모두 차단 목록에 추가
                         val packagesToBlock = processedApps.map { it.packageName }
                         settingsViewModel.blockAllApps(packagesToBlock)
                     },
@@ -142,10 +127,11 @@ fun WhitelistScreen(
                     Text("모두 차단")
                 }
 
-                // 모두 사용(해제) 버튼
+                // [수정] 모두 사용 버튼: 현재 필터링된 앱들만 해제
                 OutlinedButton(
                     onClick = {
-                        settingsViewModel.unblockAllApps()
+                        val packagesToUnblock = processedApps.map { it.packageName }
+                        settingsViewModel.unblockAllApps(packagesToUnblock)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -160,7 +146,6 @@ fun WhitelistScreen(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
-            // 앱 목록 (정렬된 리스트 사용)
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -174,7 +159,7 @@ fun WhitelistScreen(
                     AppListItem(
                         appName = appName,
                         appIcon = appIcon,
-                        isWhitelisted = isBlocked, // UI 컴포넌트의 변수명은 기존 유지 (의미는 차단 여부)
+                        isWhitelisted = isBlocked,
                         onWhitelistToggle = { shouldBlock ->
                             if (shouldBlock) {
                                 settingsViewModel.addToBlockList(packageName)
