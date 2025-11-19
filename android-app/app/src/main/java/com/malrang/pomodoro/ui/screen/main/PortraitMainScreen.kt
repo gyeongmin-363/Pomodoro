@@ -1,12 +1,16 @@
 package com.malrang.pomodoro.ui.screen.main
 
-import androidx.compose.animation.AnimatedVisibility
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -14,14 +18,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// Lottie 관련 import 추가
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.rememberLottieComposition
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
+import com.malrang.pomodoro.viewmodel.BackgroundType
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
@@ -29,145 +29,144 @@ import com.malrang.pomodoro.viewmodel.TimerViewModel
 fun PortraitMainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
-    events: MainScreenEvents, // 여러 파라미터를 하나로 받음
+    events: MainScreenEvents,
     onNavigateTo: (Screen) -> Unit,
+    paddingValues: PaddingValues // [추가]
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
 
-    // showWorkManager 상태 제거됨
-
-    val contentColor = MaterialTheme.colorScheme.onBackground
-    val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val highlightColor = MaterialTheme.colorScheme.primary
-
+    val customBgColor = Color(settingsState.customBgColor)
+    val customTextColor = Color(settingsState.customTextColor)
+    val isImageMode = settingsState.backgroundType == BackgroundType.IMAGE
+    val imagePath = settingsState.selectedImagePath
 
     val titleText = when (timerState.currentMode) {
-        Mode.STUDY -> "운행 중" // 용어 변경
-        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중" // 용어 변경
+        Mode.STUDY -> "운행 중"
+        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중"
     }
     val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
 
+    // 배경 렌더링: 화면 전체를 채움 (Nav Bar 뒤까지)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(if (!isImageMode) Modifier.background(customBgColor) else Modifier)
+    ) {
+        if (isImageMode && imagePath != null) {
+            val bitmap = remember(imagePath) {
+                BitmapFactory.decodeFile(imagePath)?.asImageBitmap()
+            }
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                )
+            } else {
+                Box(Modifier.fillMaxSize().background(customBgColor))
+            }
+        }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+        // 콘텐츠 영역: 전달받은 패딩(paddingValues)을 적용하여 Nav Bar 위에 표시
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp) // 상단, 좌우 패딩
+                .padding(bottom = paddingValues.calculateBottomPadding()) // [중요] 하단 패딩 적용
         ) {
-            // 메인 컨텐츠 영역 (세로 중앙 정렬 및 가중치 적용)
             Column(
                 modifier = Modifier
-                    .weight(1f) // 남은 공간을 모두 차지하도록
-                    .fillMaxWidth(), // 가로 폭 채우기
+                    .weight(1f)
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // ✅ WorkManager 토글 제거, 텍스트만 표시
                 Text(
                     text = currentWorkName,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = contentColor
+                    color = customTextColor
                 )
 
                 Spacer(Modifier.height(16.dp))
 
-                // --- 중앙 타이머 영역 (Lottie 수정) ---
                 Box(
-                    modifier = Modifier
-                        .height(350.dp), // 기존 높이 유지
+                    modifier = Modifier.height(350.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    // --- 'isReadyToStart' 분기 제거 ---
-                    // 2. "실행 중" 또는 "일시정지" 상태일 때 (항상 이 UI 표시)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = titleText, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
-                        Spacer(Modifier.height(8.dp))
-
-                        // --- Lottie 애니메이션 추가 ---
-                        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.flight))
-                        // '공부' 모드이고 '실행 중'일 때만 isPlaying = true
-                        val isPlaying = timerState.currentMode == Mode.STUDY && timerState.isRunning
-
-                        LottieAnimation(
-                            composition = composition,
-                            iterations = LottieConstants.IterateForever, // 계속 반복
-                            isPlaying = isPlaying, // 조건부 재생
-                            modifier = Modifier.height(150.dp) // 원하는 높이로 조절
+                        Text(
+                            text = titleText,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = customTextColor
                         )
-                        // --- Lottie 애니메이션 끝 ---
-
-                        Spacer(Modifier.height(8.dp)) // 애니메이션과 타이머 사이 간격
+                        Spacer(Modifier.height(24.dp))
 
                         Text(
                             text = "%02d:%02d".format(timerState.timeLeft / 60, timerState.timeLeft % 60),
                             fontSize = 60.sp,
                             fontWeight = FontWeight.Bold,
-                            color = contentColor
+                            color = customTextColor
                         )
-                        // --- 기존 Spacer 제거 ---
-                        // Spacer(Modifier.height(16.dp))
-                        // Spacer(Modifier.height(350.dp))
                     }
-
                 }
-                // --- 중앙 영역 끝 ---
-
 
                 Text(
                     buildAnnotatedString {
-                        withStyle(style = SpanStyle(color = secondaryTextColor)) { append("구간 완료 : ") } // 용어 변경
-                        withStyle(style = SpanStyle(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = highlightColor
-                        )
+                        withStyle(style = SpanStyle(color = customTextColor.copy(alpha = 0.7f))) { append("구간 완료 : ") }
+                        withStyle(
+                            style = SpanStyle(
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         ) { append("${timerState.totalSessions} ") }
                     }
                 )
                 Spacer(Modifier.height(16.dp))
+
                 CycleIndicator(
                     modifier = Modifier.fillMaxWidth(),
                     currentMode = timerState.currentMode,
                     totalSessions = timerState.totalSessions,
                     longBreakInterval = settingsState.settings.longBreakInterval,
-                    borderColor = contentColor.copy(alpha = 0.5f),
+                    borderColor = customTextColor.copy(alpha = 0.5f),
                     itemsPerRow = 8
                 )
                 Spacer(Modifier.height(16.dp))
 
-                // --- 버튼 로직 (isReadyToStart 분기 제거) ---
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. Play/Pause 버튼
-                    // 'isReadyToStart' 분기 제거. 이제 항상 Play/Pause 로직을 따름
                     if (!timerState.isRunning) {
                         IconButton(onClick = {
-                            // showTicketAnimation = true 제거
                             timerViewModel.startTimer(settingsState.settings)
                         }) {
-                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "운행 시작", tint = contentColor)
+                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "운행 시작", tint = customTextColor)
                         }
                     } else {
                         IconButton(onClick = { timerViewModel.pauseTimer() }) {
-                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시 정차", tint = contentColor)
+                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시 정차", tint = customTextColor)
                         }
                     }
 
-
-                    // 2. 리셋, 스킵 버튼 (항상 표시)
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = { events.onShowResetConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "회차", tint = contentColor) // 용어 변경
+                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "회차", tint = customTextColor)
                     }
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = { events.onShowSkipConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "다음 구간으로", tint = contentColor) // 용어 변경
+                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "다음 구간으로", tint = customTextColor)
                     }
                 }
-                // --- 버튼 로직 끝 ---
             }
         }
     }

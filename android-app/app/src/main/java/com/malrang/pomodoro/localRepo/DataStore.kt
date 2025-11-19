@@ -27,6 +27,12 @@ object DSKeys {
     val SAVED_CURRENT_MODE = stringPreferencesKey("saved_current_mode")
     val SAVED_TOTAL_SESSIONS = intPreferencesKey("saved_total_sessions")
     val ACTIVE_BLOCK_MODE = stringPreferencesKey("active_block_mode")
+
+    // [추가] 커스텀 배경 관련 키
+    val CUSTOM_BG_COLOR = intPreferencesKey("custom_bg_color")
+    val CUSTOM_TEXT_COLOR = intPreferencesKey("custom_text_color")
+    val BACKGROUND_TYPE = stringPreferencesKey("background_type") // "COLOR" or "IMAGE"
+    val SELECTED_BG_IMAGE_PATH = stringPreferencesKey("selected_bg_image_path")
 }
 
 data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSessions: Int)
@@ -52,28 +58,20 @@ class PomodoroRepository(private val context: Context) {
         val presets = dao.getActiveWorkPresets().map { it.toDomain() }
         return presets.ifEmpty {
             val defaultPresets = createDefaultPresets()
-            // [수정] 초기 생성 시에는 insertNewWorkPresets 사용
             insertNewWorkPresets(defaultPresets)
             defaultPresets
         }
     }
 
-    // [변경] 새 프리셋 삽입 (이미 존재하면 무시하여 기존 데이터/상태 보존)
     suspend fun insertNewWorkPresets(presets: List<WorkPreset>) {
         dao.insertWorkPresets(presets.map { it.toEntity() })
     }
 
-    // [변경] 기존 프리셋 업데이트 (isDeleted 상태 유지 및 값 갱신)
-    // UI에서 수정된 프리셋을 저장할 때 주로 사용됩니다.
     suspend fun updateWorkPresets(presets: List<WorkPreset>) {
         presets.forEach { preset ->
             dao.updateWorkPreset(preset.toEntity())
         }
     }
-
-    // (하위 호환성 유지용) 단순히 저장할 때는 업데이트로 처리하되,
-    // 필요하다면 insertNewWorkPresets와 병행하여 Upsert 로직을 구현할 수도 있습니다.
-    // 여기서는 요청하신 대로 분리된 메서드를 제공합니다.
 
     suspend fun deleteWorkPreset(id: String) {
         dao.softDeleteWorkPreset(id)
@@ -100,6 +98,27 @@ class PomodoroRepository(private val context: Context) {
     }
     suspend fun saveNotificationDenialCount(count: Int) {
         context.dataStore.edit { it[DSKeys.NOTIFICATION_PERMISSION_DENIAL_COUNT] = count }
+    }
+
+    // [추가] 커스텀 배경 관련 메서드
+    suspend fun loadCustomBgColor(): Int? = context.dataStore.data.first()[DSKeys.CUSTOM_BG_COLOR]
+    suspend fun loadCustomTextColor(): Int? = context.dataStore.data.first()[DSKeys.CUSTOM_TEXT_COLOR]
+    suspend fun loadBackgroundType(): String = context.dataStore.data.first()[DSKeys.BACKGROUND_TYPE] ?: "COLOR"
+    suspend fun loadSelectedBgImagePath(): String? = context.dataStore.data.first()[DSKeys.SELECTED_BG_IMAGE_PATH]
+
+    suspend fun saveCustomColors(bgColor: Int, textColor: Int) {
+        context.dataStore.edit {
+            it[DSKeys.CUSTOM_BG_COLOR] = bgColor
+            it[DSKeys.CUSTOM_TEXT_COLOR] = textColor
+        }
+    }
+
+    suspend fun saveBackgroundType(type: String) {
+        context.dataStore.edit { it[DSKeys.BACKGROUND_TYPE] = type }
+    }
+
+    suspend fun saveSelectedBgImagePath(path: String) {
+        context.dataStore.edit { it[DSKeys.SELECTED_BG_IMAGE_PATH] = path }
     }
 
     private fun createDefaultPresets(): List<WorkPreset> {
