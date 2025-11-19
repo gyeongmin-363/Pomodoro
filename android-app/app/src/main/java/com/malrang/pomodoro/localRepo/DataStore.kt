@@ -17,10 +17,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-/**
- * Preferences DataStore 인스턴스
- * (설정값 등 간단한 데이터 관리)
- */
 val Context.dataStore by preferencesDataStore(name = "pomodoro_ds")
 
 object DSKeys {
@@ -35,18 +31,12 @@ object DSKeys {
 
 data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSessions: Int)
 
-/**
- * Repository: DataStore와 Room Database를 통합 관리
- */
 class PomodoroRepository(private val context: Context) {
 
-    // Room Database 연결
     private val database = PomodoroDatabase.getDatabase(context)
     private val dao = database.pomodoroDao()
 
-    // ------------------------------------------------------------------
-    // [DailyStat] 일일 통계 - Room 사용
-    // ------------------------------------------------------------------
+    // --- DailyStat ---
     suspend fun loadDailyStats(): Map<String, DailyStat> {
         return dao.getAllDailyStats()
             .map { it.toDomain() }
@@ -57,38 +47,39 @@ class PomodoroRepository(private val context: Context) {
         dao.insertDailyStats(stats.values.map { it.toEntity() })
     }
 
-    // ------------------------------------------------------------------
-    // [WorkPreset] 작업 프리셋 - Room (Sync 지원) 사용
-    // ------------------------------------------------------------------
+    // --- WorkPreset ---
     suspend fun loadWorkPresets(): List<WorkPreset> {
-        // 삭제되지 않은(Active) 프리셋만 로드
         val presets = dao.getActiveWorkPresets().map { it.toDomain() }
-
-        return if (presets.isEmpty()) {
+        return presets.ifEmpty {
             val defaultPresets = createDefaultPresets()
-            saveWorkPresets(defaultPresets)
+            // [수정] 초기 생성 시에는 insertNewWorkPresets 사용
+            insertNewWorkPresets(defaultPresets)
             defaultPresets
-        } else {
-            presets
         }
     }
 
-    suspend fun saveWorkPresets(presets: List<WorkPreset>) {
-        // 주의: insertWorkPresets는 Replace 전략을 사용하므로,
-        // 기존의 isDeleted 상태를 덮어쓸 수 있습니다.
-        // 전체 리스트 저장 시에는 보통 활성 상태인 것들만 저장하므로 문제없으나,
-        // 개별 수정 로직이 필요할 경우 별도 함수를 분리하는 것이 좋습니다.
+    // [변경] 새 프리셋 삽입 (이미 존재하면 무시하여 기존 데이터/상태 보존)
+    suspend fun insertNewWorkPresets(presets: List<WorkPreset>) {
         dao.insertWorkPresets(presets.map { it.toEntity() })
     }
 
-    // [추가] 프리셋 삭제 (Soft Delete)
+    // [변경] 기존 프리셋 업데이트 (isDeleted 상태 유지 및 값 갱신)
+    // UI에서 수정된 프리셋을 저장할 때 주로 사용됩니다.
+    suspend fun updateWorkPresets(presets: List<WorkPreset>) {
+        presets.forEach { preset ->
+            dao.updateWorkPreset(preset.toEntity())
+        }
+    }
+
+    // (하위 호환성 유지용) 단순히 저장할 때는 업데이트로 처리하되,
+    // 필요하다면 insertNewWorkPresets와 병행하여 Upsert 로직을 구현할 수도 있습니다.
+    // 여기서는 요청하신 대로 분리된 메서드를 제공합니다.
+
     suspend fun deleteWorkPreset(id: String) {
         dao.softDeleteWorkPreset(id)
     }
 
-    // ------------------------------------------------------------------
-    // [DataStore] 기타 설정 데이터 (기존 유지)
-    // ------------------------------------------------------------------
+    // --- DataStore ---
 
     suspend fun loadCurrentWorkId(): String? {
         return context.dataStore.data.first()[DSKeys.CURRENT_WORK_ID]
