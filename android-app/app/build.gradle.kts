@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.google.firebase.crashlytics)
     kotlin("plugin.serialization") version "2.2.10"
+    id("com.google.devtools.ksp")
 }
 
 
@@ -111,6 +112,12 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation("com.airbnb.android:lottie-compose:6.6.6")
+
+    val room_version = "2.7.2"
+    implementation("androidx.room:room-runtime:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+
 
 
     testImplementation(libs.junit)
