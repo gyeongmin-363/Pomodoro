@@ -6,83 +6,90 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
+import com.malrang.pomodoro.localRepo.room.PomodoroDatabase
+import com.malrang.pomodoro.localRepo.room.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /**
- * Preferences DataStore 인스턴스를 생성하는 확장 프로퍼티입니다.
- * "pomodoro_ds"라는 이름으로 DataStore가 생성됩니다.
+ * Preferences DataStore 인스턴스
+ * (설정값 등 간단한 데이터 관리)
  */
 val Context.dataStore by preferencesDataStore(name = "pomodoro_ds")
 
-/**
- * DataStore에서 사용할 키들을 정의하는 객체입니다.
- */
 object DSKeys {
-    /** 일일 통계 데이터를 JSON 형태로 저장하기 위한 키 */
-    val DAILY_JSON = stringPreferencesKey("daily_stats_json")
-    /** 일반 설정 데이터를 JSON 형태로 저장하기 위한 키 */
-    val SETTINGS_JSON = stringPreferencesKey("settings_json")
-    /** 작업 프리셋 목록을 JSON 형태로 저장하기 위한 키 */
-    val WORK_PRESETS_JSON = stringPreferencesKey("work_presets_json")
-    /** 현재 선택된 작업 프리셋의 ID를 저장하기 위한 키 */
     val CURRENT_WORK_ID = stringPreferencesKey("current_work_id")
-
-    // [변경] 화이트리스트 -> 차단 목록(BlockList)
     val BLOCKED_APPS = stringSetPreferencesKey("blocked_apps")
-
     val NOTIFICATION_PERMISSION_DENIAL_COUNT = intPreferencesKey("notification_permission_denial_count")
-
-    //  서비스 종료 시 복원을 위한 타이머 상태 저장 키
     val SAVED_TIME_LEFT = intPreferencesKey("saved_time_left")
     val SAVED_CURRENT_MODE = stringPreferencesKey("saved_current_mode")
     val SAVED_TOTAL_SESSIONS = intPreferencesKey("saved_total_sessions")
-
-    /** 현재 활성화된 차단 모드 (TimerService가 기록하고 MonitoringService가 읽음) */
     val ACTIVE_BLOCK_MODE = stringPreferencesKey("active_block_mode")
 }
 
-//  불러온 타이머 상태를 담기 위한 데이터 클래스
 data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSessions: Int)
 
-
 /**
- * DataStore를 사용하여 앱의 데이터를 관리하는 클래스입니다.
- * @property context 애플리케이션 컨텍스트
+ * Repository: DataStore와 Room Database를 통합 관리
  */
 class PomodoroRepository(private val context: Context) {
-    private val gson = Gson()
 
+    // Room Database 연결
+    private val database = PomodoroDatabase.getDatabase(context)
+    private val dao = database.pomodoroDao()
+
+    // ------------------------------------------------------------------
+    // [DailyStat] 일일 통계 - Room 사용
+    // ------------------------------------------------------------------
     suspend fun loadDailyStats(): Map<String, DailyStat> {
-        val json = context.dataStore.data.first()[DSKeys.DAILY_JSON] ?: return emptyMap()
-        val type = object : TypeToken<Map<String, DailyStat>>() {}.type
-        return runCatching { gson.fromJson<Map<String, DailyStat>>(json, type) }.getOrElse { emptyMap() }
+        return dao.getAllDailyStats()
+            .map { it.toDomain() }
+            .associateBy { it.date }
     }
+
     suspend fun saveDailyStats(stats: Map<String, DailyStat>) {
-        val json = gson.toJson(stats)
-        context.dataStore.edit { it[DSKeys.DAILY_JSON] = json }
+        dao.insertDailyStats(stats.values.map { it.toEntity() })
     }
+
+    // ------------------------------------------------------------------
+    // [WorkPreset] 작업 프리셋 - Room (Sync 지원) 사용
+    // ------------------------------------------------------------------
     suspend fun loadWorkPresets(): List<WorkPreset> {
-        val json = context.dataStore.data.first()[DSKeys.WORK_PRESETS_JSON]
-        return if (json == null) {
-            createDefaultPresets()
+        // 삭제되지 않은(Active) 프리셋만 로드
+        val presets = dao.getActiveWorkPresets().map { it.toDomain() }
+
+        return if (presets.isEmpty()) {
+            val defaultPresets = createDefaultPresets()
+            saveWorkPresets(defaultPresets)
+            defaultPresets
         } else {
-            val type = object : TypeToken<List<WorkPreset>>() {}.type
-            runCatching { gson.fromJson<List<WorkPreset>>(json, type) }.getOrElse { createDefaultPresets() }
+            presets
         }
     }
+
     suspend fun saveWorkPresets(presets: List<WorkPreset>) {
-        val json = gson.toJson(presets)
-        context.dataStore.edit { it[DSKeys.WORK_PRESETS_JSON] = json }
+        // 주의: insertWorkPresets는 Replace 전략을 사용하므로,
+        // 기존의 isDeleted 상태를 덮어쓸 수 있습니다.
+        // 전체 리스트 저장 시에는 보통 활성 상태인 것들만 저장하므로 문제없으나,
+        // 개별 수정 로직이 필요할 경우 별도 함수를 분리하는 것이 좋습니다.
+        dao.insertWorkPresets(presets.map { it.toEntity() })
     }
+
+    // [추가] 프리셋 삭제 (Soft Delete)
+    suspend fun deleteWorkPreset(id: String) {
+        dao.softDeleteWorkPreset(id)
+    }
+
+    // ------------------------------------------------------------------
+    // [DataStore] 기타 설정 데이터 (기존 유지)
+    // ------------------------------------------------------------------
+
     suspend fun loadCurrentWorkId(): String? {
         return context.dataStore.data.first()[DSKeys.CURRENT_WORK_ID]
     }
@@ -90,7 +97,6 @@ class PomodoroRepository(private val context: Context) {
         context.dataStore.edit { it[DSKeys.CURRENT_WORK_ID] = id }
     }
 
-    // [변경] Blocked Apps 관련 함수로 이름 변경
     suspend fun loadBlockedApps(): Set<String> =
         context.dataStore.data.first()[DSKeys.BLOCKED_APPS] ?: emptySet()
 
@@ -104,6 +110,7 @@ class PomodoroRepository(private val context: Context) {
     suspend fun saveNotificationDenialCount(count: Int) {
         context.dataStore.edit { it[DSKeys.NOTIFICATION_PERMISSION_DENIAL_COUNT] = count }
     }
+
     private fun createDefaultPresets(): List<WorkPreset> {
         return listOf(
             WorkPreset(
@@ -135,9 +142,6 @@ class PomodoroRepository(private val context: Context) {
         )
     }
 
-    /**
-     *  일시정지 시 타이머 상태를 DataStore에 저장합니다.
-     */
     suspend fun saveTimerState(timeLeft: Int, currentMode: Mode, totalSessions: Int) {
         context.dataStore.edit { preferences ->
             preferences[DSKeys.SAVED_TIME_LEFT] = timeLeft
@@ -146,10 +150,6 @@ class PomodoroRepository(private val context: Context) {
         }
     }
 
-    /**
-     *  저장된 타이머 상태를 DataStore에서 불러옵니다.
-     * @return 저장된 상태가 있으면 SavedTimerState 객체를, 없으면 null을 반환합니다.
-     */
     suspend fun loadTimerState(): SavedTimerState? {
         val preferences = context.dataStore.data.first()
         val timeLeft = preferences[DSKeys.SAVED_TIME_LEFT]
@@ -163,9 +163,6 @@ class PomodoroRepository(private val context: Context) {
         }
     }
 
-    /**
-     *  저장된 타이머 상태를 DataStore에서 삭제합니다. (리셋 시 호출)
-     */
     suspend fun clearTimerState() {
         context.dataStore.edit { preferences ->
             preferences.remove(DSKeys.SAVED_TIME_LEFT)
@@ -174,14 +171,12 @@ class PomodoroRepository(private val context: Context) {
         }
     }
 
-    // ✅ Flow로 상태를 관찰할 수 있도록 추가
     val activeBlockModeFlow: Flow<BlockMode> = context.dataStore.data.map { preferences ->
         preferences[DSKeys.ACTIVE_BLOCK_MODE]?.let {
             runCatching { BlockMode.valueOf(it) }.getOrNull()
         } ?: BlockMode.NONE
     }
 
-    // [변경] blockedAppsFlow로 변경
     val blockedAppsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
         preferences[DSKeys.BLOCKED_APPS] ?: emptySet()
     }
