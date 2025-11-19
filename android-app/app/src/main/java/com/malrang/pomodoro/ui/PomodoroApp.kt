@@ -27,7 +27,6 @@ import androidx.navigation.compose.rememberNavController
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
-import com.malrang.pomodoro.ui.screen.login.LoginScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
 import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
 import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
@@ -67,137 +66,135 @@ fun PomodoroApp(
                 permissionUiState.permissions.all { it.isGranted }
 
     LaunchedEffect(authState) {
-        if (authState is AuthViewModel.AuthState.Authenticated) {
-            permissionViewModel.checkAndUpdatePermissions(context)
-        }
+        // 인증 여부와 상관없이 권한 체크는 수행 (필요 시)
+        permissionViewModel.checkAndUpdatePermissions(context)
     }
 
-    when (authState) {
-        is AuthViewModel.AuthState.Authenticated -> {
-            val navController = rememberNavController()
-            val navItems = listOf(
-                BottomNavItem.Background,
-                BottomNavItem.Settings,
-                BottomNavItem.Home,
-                BottomNavItem.Stats,
-                BottomNavItem.Account
-            )
+    // ✅ 수정: 로딩 중이거나 초기화 중일 때만 대기 화면 표시
+    // NotAuthenticated(비로그인) 상태여도 앱 진입 가능
+    val isLoading = authState is AuthViewModel.AuthState.Loading ||
+            authState is AuthViewModel.AuthState.Idle ||
+            authState is AuthViewModel.AuthState.WaitingForRedirect
 
-            val startDestination = if (!allPermissionsGranted) Screen.Permission.name else Screen.Main.name
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentDestination = navBackStackEntry?.destination
-            val currentRoute = currentDestination?.route
-            val showBottomBar = currentRoute in navItems.map { it.screen.name }
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        // ✅ 앱 메인 진입 (로그인 여부 무관)
+        val navController = rememberNavController()
 
-            Scaffold(
-                bottomBar = {
-                    if (showBottomBar) {
-                        NavigationBar {
-                            navItems.forEach { item ->
-                                val selected = currentDestination?.hierarchy?.any { it.route == item.screen.name } == true
-                                NavigationBarItem(
-                                    icon = {
-                                        Icon(
-                                            painter = painterResource(id = item.icon),
-                                            contentDescription = item.title
-                                        )
-                                    },
-                                    label = { Text(item.title) },
-                                    selected = selected,
-                                    onClick = {
-                                        navController.navigate(item.screen.name) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
+        val navItems = listOf(
+            BottomNavItem.Background,
+            BottomNavItem.Settings,
+            BottomNavItem.Home,
+            BottomNavItem.Stats,
+            BottomNavItem.Account
+        )
+
+        val startDestination = if (!allPermissionsGranted) Screen.Permission.name else Screen.Main.name
+
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
+        val currentRoute = currentDestination?.route
+
+        val showBottomBar = currentRoute in navItems.map { it.screen.name }
+
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    NavigationBar {
+                        navItems.forEach { item ->
+                            val selected = currentDestination?.hierarchy?.any { it.route == item.screen.name } == true
+                            NavigationBarItem(
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(id = item.icon),
+                                        contentDescription = item.title
+                                    )
+                                },
+                                label = { Text(item.title) },
+                                selected = selected,
+                                onClick = {
+                                    navController.navigate(item.screen.name) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
                                         }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            ) { innerPadding ->
-                NavHost(
-                    navController = navController,
-                    startDestination = startDestination,
-                    modifier = Modifier.padding(innerPadding)
-                ) {
-                    composable(Screen.Main.name) {
-                        MainScreen(
-                            timerViewModel = timerViewModel,
-                            settingsViewModel = settingsViewModel,
-                            onNavigateTo = { screen -> navController.navigate(screen.name) }
-                        )
-                    }
-                    composable(Screen.Stats.name) {
-                        StatsScreen(
-                            statsViewModel = statsViewModel,
-                            onNavigateTo = { screen -> navController.navigate(screen.name) }
-                        )
-                    }
-                    // ✅ SettingsScreen: Work 변경 시 timerViewModel.reset 호출
-                    composable(Screen.Settings.name) {
-                        SettingsScreen(
-                            settingsViewModel = settingsViewModel,
-                            onNavigateTo = { screen -> navController.navigate(screen.name) },
-                            onSave = {
-                                settingsViewModel.saveSettingsAndReset { newSettings ->
-                                    timerViewModel.reset(newSettings)
-                                    navController.navigate(Screen.Main.name) {
-                                        popUpTo(Screen.Settings.name) { inclusive = true }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
                                 }
-                            },
-                            onPresetSelected = { newSettings ->
-                                timerViewModel.reset(newSettings)
-                            }
-                        )
-                    }
-                    composable(Screen.Permission.name) {
-                        // ... 동일 ...
-                        val permissionUiStateVal by permissionViewModel.uiState.collectAsState()
-                        PermissionScreen(
-                            permissionUiState = permissionUiStateVal,
-                            onPermissionResult = { permissionViewModel.onPermissionRequestResult(context) },
-                            onSetPermissionAttempted = permissionViewModel::setPermissionAttemptedInSession,
-                            onNavigateTo = {
-                                navController.navigate(Screen.Main.name) {
-                                    popUpTo(Screen.Permission.name) { inclusive = true }
-                                }
-                            }
-                        )
-                    }
-                    composable(Screen.Whitelist.name) {
-                        WhitelistScreen(
-                            settingsViewModel = settingsViewModel,
-                            onNavigateBack = { navController.popBackStack() }
-                        )
-                    }
-                    composable(Screen.AccountSettings.name) {
-                        AccountSettingsScreen(
-                            authViewModel = authViewModel,
-                            onNavigateTo = { navController.navigate(Screen.Main.name) }
-                        )
-                    }
-                    composable(Screen.Background.name) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("배경 설정 (기상 API 연동 예정)")
+                            )
                         }
                     }
                 }
             }
-        }
-        is AuthViewModel.AuthState.NotAuthenticated,
-        is AuthViewModel.AuthState.Idle,
-        is AuthViewModel.AuthState.Error -> {
-            LoginScreen(viewModel = authViewModel)
-        }
-        is AuthViewModel.AuthState.Loading,
-        is AuthViewModel.AuthState.WaitingForRedirect -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable(Screen.Main.name) {
+                    MainScreen(
+                        timerViewModel = timerViewModel,
+                        settingsViewModel = settingsViewModel,
+                        onNavigateTo = { screen -> navController.navigate(screen.name) }
+                    )
+                }
+                composable(Screen.Stats.name) {
+                    StatsScreen(
+                        statsViewModel = statsViewModel,
+                        onNavigateTo = { screen -> navController.navigate(screen.name) }
+                    )
+                }
+                composable(Screen.Settings.name) {
+                    SettingsScreen(
+                        settingsViewModel = settingsViewModel,
+                        onNavigateTo = { screen -> navController.navigate(screen.name) },
+                        onSave = {
+                            settingsViewModel.saveSettingsAndReset { newSettings ->
+                                timerViewModel.reset(newSettings)
+                                navController.navigate(Screen.Main.name) {
+                                    popUpTo(Screen.Settings.name) { inclusive = true }
+                                }
+                            }
+                        },
+                        onPresetSelected = { newSettings ->
+                            timerViewModel.reset(newSettings)
+                        }
+                    )
+                }
+                composable(Screen.Permission.name) {
+                    val permissionUiStateVal by permissionViewModel.uiState.collectAsState()
+                    PermissionScreen(
+                        permissionUiState = permissionUiStateVal,
+                        onPermissionResult = { permissionViewModel.onPermissionRequestResult(context) },
+                        onSetPermissionAttempted = permissionViewModel::setPermissionAttemptedInSession,
+                        onNavigateTo = {
+                            navController.navigate(Screen.Main.name) {
+                                popUpTo(Screen.Permission.name) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                composable(Screen.Whitelist.name) {
+                    WhitelistScreen(
+                        settingsViewModel = settingsViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(Screen.AccountSettings.name) {
+                    AccountSettingsScreen(
+                        authViewModel = authViewModel,
+                        onNavigateTo = { navController.navigate(Screen.Main.name) }
+                    )
+                }
+                composable(Screen.Background.name) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("배경 설정 (기상 API 연동 예정)")
+                    }
+                }
             }
         }
     }
