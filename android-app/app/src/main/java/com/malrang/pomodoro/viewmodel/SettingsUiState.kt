@@ -72,10 +72,9 @@ class SettingsViewModel(
         }
     }
 
-    // [수정] 모두 사용 (선택된 앱들만 차단 해제)
+    // 모두 사용 (선택된 앱들만 차단 해제)
     fun unblockAllApps(packagesToUnblock: List<String>) {
         viewModelScope.launch {
-            // 기존 차단 목록에서 전달받은 패키지들을 제거
             val updatedBlockList = _uiState.value.blockedApps - packagesToUnblock.toSet()
             localRepo.saveBlockedApps(updatedBlockList)
             _uiState.update { it.copy(blockedApps = updatedBlockList) }
@@ -93,6 +92,8 @@ class SettingsViewModel(
             val editingId = _uiState.value.editingWorkPreset?.id
             val currentId = _uiState.value.currentWorkId
             val presetIdToUpdate = editingId ?: currentId
+
+            // UI 상태 업데이트를 위한 리스트 계산
             val updatedPresets = _uiState.value.workPresets.map { preset ->
                 if (preset.id == presetIdToUpdate) {
                     preset.copy(settings = settingsToSave)
@@ -100,7 +101,12 @@ class SettingsViewModel(
                     preset
                 }
             }
-            localRepo.saveWorkPresets(updatedPresets)
+
+            // [수정] DB 업데이트: 전체 저장(saveWorkPresets) 대신 변경된 항목만 updateWorkPresets 호출
+            val changedPreset = updatedPresets.find { it.id == presetIdToUpdate }
+            if (changedPreset != null) {
+                localRepo.updateWorkPresets(listOf(changedPreset))
+            }
 
             val newActiveSettings = updatedPresets.find { it.id == currentId }?.settings ?: Settings()
             _uiState.update {
@@ -136,17 +142,24 @@ class SettingsViewModel(
     fun addWorkPreset() {
         viewModelScope.launch {
             val newPreset = WorkPreset(name = "새 Work", settings = Settings())
+
+            // [수정] DB에 새 프리셋 추가 (IGNORE 전략 사용)
+            localRepo.insertNewWorkPresets(listOf(newPreset))
+
             val updatedPresets = _uiState.value.workPresets + newPreset
-            localRepo.saveWorkPresets(updatedPresets)
             _uiState.update { it.copy(workPresets = updatedPresets) }
         }
     }
 
     fun deleteWorkPreset(id: String, onReset: (Settings) -> Unit) {
         viewModelScope.launch {
+            // [수정] DB에서 프리셋 삭제 (Soft Delete)
+            localRepo.deleteWorkPreset(id)
+
             val updatedPresets = _uiState.value.workPresets.filterNot { it.id == id }
-            localRepo.saveWorkPresets(updatedPresets)
             _uiState.update { it.copy(workPresets = updatedPresets) }
+
+            // 현재 선택된 프리셋을 삭제했다면 다른 프리셋 선택
             if (_uiState.value.currentWorkId == id) {
                 selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "", onReset)
             }
@@ -158,7 +171,13 @@ class SettingsViewModel(
             val updatedPresets = _uiState.value.workPresets.map {
                 if (it.id == id) it.copy(name = newName) else it
             }
-            localRepo.saveWorkPresets(updatedPresets)
+
+            // [수정] 이름이 변경된 프리셋만 DB 업데이트
+            val changedPreset = updatedPresets.find { it.id == id }
+            if (changedPreset != null) {
+                localRepo.updateWorkPresets(listOf(changedPreset))
+            }
+
             _uiState.update { it.copy(workPresets = updatedPresets) }
         }
     }
