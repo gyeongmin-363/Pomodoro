@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
                         // PomodoroApp에 모든 ViewModel을 전달합니다.
-                         PomodoroApp(
+                        PomodoroApp(
                             timerViewModel = timerViewModel,
                             settingsViewModel = settingsViewModel,
                             permissionViewModel = permissionViewModel,
@@ -121,7 +121,8 @@ class MainActivity : ComponentActivity() {
         val timerState = timerViewModel.uiState.value
         val settingsState = settingsViewModel.uiState.value
         if (timerState.isRunning && timerState.currentMode == com.malrang.pomodoro.dataclass.ui.Mode.STUDY) {
-            startAppMonitoringService(settingsState.whitelistedApps, settingsState.settings.blockMode)
+            // [수정] whitelistedApps -> blockedApps 로 변경
+            startAppMonitoringService(settingsState.blockedApps, settingsState.settings.blockMode)
         }
         unregisterReceiver(updateReceiver)
     }
@@ -148,15 +149,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // [수정] 파라미터 이름 변경 (whitelist -> blockedApps)
     private fun startAppMonitoringService(
-        whitelist: Set<String>,
+        blockedApps: Set<String>,
         blockMode: com.malrang.pomodoro.dataclass.ui.BlockMode
     ) {
         // 권한 확인 로직을 PermissionViewModel의 상태를 사용하도록 수정합니다.
         if (permissionViewModel.uiState.value.permissions.any { !it.isGranted }) return
 
+        // [수정] AppUsageMonitoringService가 DataStore를 직접 구독하도록 변경되었으므로,
+        // Intent에 목록을 넣을 필요가 없어졌습니다. (서비스 시작만 호출)
         val intent = Intent(this, AppUsageMonitoringService::class.java).apply {
-            putExtra("WHITELISTED_APPS", whitelist.toTypedArray())
+            // 필요하다면 모드 정보 정도는 넘길 수 있으나, 서비스가 DataStore를 구독하므로 필수는 아닙니다.
+            // 여기서는 명시적으로 시작 의도를 알리기 위해 남겨두거나 제거할 수 있습니다.
+            // 기존 코드 호환성을 위해 Block Mode만 남기거나 제거해도 무방합니다.
             putExtra("BLOCK_MODE", blockMode.name)
         }
         startService(intent)

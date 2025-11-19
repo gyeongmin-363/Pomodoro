@@ -4,17 +4,22 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,21 +36,22 @@ import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
 /**
- * 설치된 앱 목록을 보여주고 화이트리스트를 관리하는 화면입니다.
- * 모든 시스템 앱을 포함하며, 검색 기능이 있습니다.
+ * 설치된 앱 목록을 보여주고 차단 목록(BlockList)을 관리하는 화면입니다.
+ * - 체크된(차단된) 앱이 상단에 표시됩니다.
+ * - 모두 차단 / 모두 사용(해제) 버튼을 제공합니다.
  */
 @Composable
 fun WhitelistScreen(
-    settingsViewModel: SettingsViewModel, // ✅ PomodoroViewModel 대신 SettingsViewModel 사용
+    settingsViewModel: SettingsViewModel,
     onNavigateBack: () -> Unit
 ) {
-    // ✅ settingsViewModel에서 상태를 가져옵니다.
     val uiState by settingsViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val packageManager = context.packageManager
 
     var searchQuery by remember { mutableStateOf("") }
 
+    // 1. 전체 앱 목록 로드 (이름순 정렬)
     val allApps = remember {
         packageManager.queryIntentActivities(
             Intent(Intent.ACTION_MAIN, null).apply {
@@ -59,37 +65,50 @@ fun WhitelistScreen(
             }
     }
 
-    val filteredApps = remember(searchQuery, allApps) {
-        if (searchQuery.isBlank()) {
+    // 2. 검색 필터링 및 "차단 여부"에 따른 정렬 로직 적용
+    // blockedApps(Set)가 변경될 때마다 재정렬하여 상단으로 이동시킴
+    val processedApps = remember(searchQuery, uiState.blockedApps, allApps) {
+        val filtered = if (searchQuery.isBlank()) {
             allApps
         } else {
             allApps.filter {
                 packageManager.getApplicationLabel(it).toString().contains(searchQuery, ignoreCase = true)
             }
         }
+
+        // 차단된 앱(true)을 우선(내림차순) 정렬하고, 그 다음 이름순 정렬
+        filtered.sortedWith(
+            compareByDescending<android.content.pm.ApplicationInfo> {
+                uiState.blockedApps.contains(it.packageName)
+            }.thenBy {
+                packageManager.getApplicationLabel(it).toString().lowercase()
+            }
+        )
     }
 
     Scaffold(
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .fillMaxSize() // Scaffold 내부를 채우도록 fillMaxSize 추가
+                .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
 
+            // 상단 헤더
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("앱 허용 목록 (전체)", style = MaterialTheme.typography.titleLarge)
+                Text("차단 앱 관리", style = MaterialTheme.typography.titleLarge)
 
                 IconButton(onClick = onNavigateBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                 }
             }
 
+            // 검색창
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -103,32 +122,64 @@ fun WhitelistScreen(
                 singleLine = true,
             )
 
+            // [추가] 일괄 처리 버튼 영역
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // 모두 차단 버튼
+                Button(
+                    onClick = {
+                        // 현재 리스트(검색된 결과 또는 전체)에 있는 앱들을 모두 차단 목록에 추가
+                        val packagesToBlock = processedApps.map { it.packageName }
+                        settingsViewModel.blockAllApps(packagesToBlock)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("모두 차단")
+                }
+
+                // 모두 사용(해제) 버튼
+                OutlinedButton(
+                    onClick = {
+                        settingsViewModel.unblockAllApps()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("모두 사용")
+                }
+            }
+
             Text(
-                "공부 중에 사용을 허용할 앱을 선택해주세요.",
-                style = MaterialTheme.typography.bodyMedium, // M3 타이포그래피 적용
+                "체크된 앱은 공부 중에 실행이 차단됩니다.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
+            // 앱 목록 (정렬된 리스트 사용)
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(filteredApps, key = { it.packageName }) { appInfo ->
+                items(processedApps, key = { it.packageName }) { appInfo ->
                     val appName = packageManager.getApplicationLabel(appInfo).toString()
                     val packageName = appInfo.packageName
                     val appIcon = appInfo.loadIcon(packageManager)
-                    // ✅ uiState.whitelistedApps는 SettingsUiState에 통합되어 있습니다.
-                    val isChecked = uiState.whitelistedApps.contains(packageName)
+
+                    val isBlocked = uiState.blockedApps.contains(packageName)
 
                     AppListItem(
                         appName = appName,
                         appIcon = appIcon,
-                        isWhitelisted = isChecked,
-                        onWhitelistToggle = {
-                            // ✅ settingsViewModel의 함수를 호출합니다.
-                            if (it) {
-                                settingsViewModel.addToWhitelist(packageName)
+                        isWhitelisted = isBlocked, // UI 컴포넌트의 변수명은 기존 유지 (의미는 차단 여부)
+                        onWhitelistToggle = { shouldBlock ->
+                            if (shouldBlock) {
+                                settingsViewModel.addToBlockList(packageName)
                             } else {
-                                settingsViewModel.removeFromWhitelist(packageName)
+                                settingsViewModel.removeFromBlockList(packageName)
                             }
                         }
                     )

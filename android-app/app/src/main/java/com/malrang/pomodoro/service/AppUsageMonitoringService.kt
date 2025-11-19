@@ -23,7 +23,7 @@ class AppUsageMonitoringService : AccessibilityService() {
     private lateinit var repo: PomodoroRepository
 
     private var currentBlockMode: BlockMode = BlockMode.NONE
-    private var whitelistedApps: Set<String> = emptySet()
+    private var blockedApps: Set<String> = emptySet()
     private val launcherPackageNames = mutableSetOf<String>()
 
     private var isOverlayShown = false
@@ -33,7 +33,6 @@ class AppUsageMonitoringService : AccessibilityService() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.malrang.pomodoro.ACTION_TEMP_PASS") {
                 isTemporaryPassActive = true
-                // 버튼을 눌러서 닫혔으므로 상태 동기화
                 isOverlayShown = false
             }
         }
@@ -48,7 +47,6 @@ class AppUsageMonitoringService : AccessibilityService() {
 
         registerReceiver(tempPassReceiver, IntentFilter("com.malrang.pomodoro.ACTION_TEMP_PASS"), Context.RECEIVER_NOT_EXPORTED)
 
-
         serviceScope.launch {
             repo.activeBlockModeFlow.collectLatest { mode ->
                 currentBlockMode = mode
@@ -59,9 +57,10 @@ class AppUsageMonitoringService : AccessibilityService() {
             }
         }
 
+        // [변경] 차단 목록 수집
         serviceScope.launch {
-            repo.whitelistedAppsFlow.collectLatest { apps ->
-                whitelistedApps = apps
+            repo.blockedAppsFlow.collectLatest { apps ->
+                blockedApps = apps
             }
         }
     }
@@ -80,9 +79,13 @@ class AppUsageMonitoringService : AccessibilityService() {
     private fun checkAndBlockApp(foregroundApp: String) {
         val ownPackageName = packageName
 
-        val isForbiddenApp = foregroundApp != ownPackageName &&
-                !whitelistedApps.contains(foregroundApp) &&
-                !launcherPackageNames.contains(foregroundApp)
+        // [변경] 1. 런처(홈 화면)이거나 우리 앱이면 절대 차단하지 않음 (안전 장치)
+        if (foregroundApp == ownPackageName || launcherPackageNames.contains(foregroundApp)) {
+            return
+        }
+
+        // [변경] 2. 차단 목록에 포함되어 있는지 확인
+        val isForbiddenApp = blockedApps.contains(foregroundApp)
 
         if (isForbiddenApp) {
             // 차단해야 할 앱 감지됨
@@ -92,17 +95,7 @@ class AppUsageMonitoringService : AccessibilityService() {
                 isOverlayShown = true
             }
         } else {
-            // 안전한 앱 감지됨 (홈 화면, 화이트리스트 앱, OR **우리 앱**)
-
-            // ✅ [버그 수정 핵심]
-            // 감지된 앱이 '우리 앱(ownPackageName)'인 경우, 오버레이가 떠서 감지된 것일 수 있습니다.
-            // 이 경우 stopWarningOverlay()를 호출하면 오버레이가 뜨자마자 닫히게 되므로,
-            // 우리 앱일 때는 오버레이 종료 로직을 건너뜁니다.
-            if (foregroundApp == ownPackageName) {
-                return
-            }
-
-            // 그 외(홈 화면이나 다른 허용 앱)로 나갔을 때만 상태를 리셋하고 오버레이를 닫습니다.
+            // 안전한 앱 (차단 목록에 없음)
             isTemporaryPassActive = false
 
             if (isOverlayShown) {

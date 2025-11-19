@@ -35,9 +35,10 @@ object DSKeys {
     val WORK_PRESETS_JSON = stringPreferencesKey("work_presets_json")
     /** 현재 선택된 작업 프리셋의 ID를 저장하기 위한 키 */
     val CURRENT_WORK_ID = stringPreferencesKey("current_work_id")
-    /** ✅ 화이트리스트 앱 목록을 저장하기 위한 키 */
-    val WHITELISTED_APPS = stringSetPreferencesKey("whitelisted_apps")
-    /** 알림 권한 거부 '횟수'를 저장하기 위한 Int 키 */
+
+    // [변경] 화이트리스트 -> 차단 목록(BlockList)
+    val BLOCKED_APPS = stringSetPreferencesKey("blocked_apps")
+
     val NOTIFICATION_PERMISSION_DENIAL_COUNT = intPreferencesKey("notification_permission_denial_count")
 
     //  서비스 종료 시 복원을 위한 타이머 상태 저장 키
@@ -88,11 +89,15 @@ class PomodoroRepository(private val context: Context) {
     suspend fun saveCurrentWorkId(id: String) {
         context.dataStore.edit { it[DSKeys.CURRENT_WORK_ID] = id }
     }
-    suspend fun loadWhitelistedApps(): Set<String> =
-        context.dataStore.data.first()[DSKeys.WHITELISTED_APPS] ?: emptySet()
-    suspend fun saveWhitelistedApps(apps: Set<String>) {
-        context.dataStore.edit { it[DSKeys.WHITELISTED_APPS] = apps }
+
+    // [변경] Blocked Apps 관련 함수로 이름 변경
+    suspend fun loadBlockedApps(): Set<String> =
+        context.dataStore.data.first()[DSKeys.BLOCKED_APPS] ?: emptySet()
+
+    suspend fun saveBlockedApps(apps: Set<String>) {
+        context.dataStore.edit { it[DSKeys.BLOCKED_APPS] = apps }
     }
+
     suspend fun loadNotificationDenialCount(): Int {
         return context.dataStore.data.first()[DSKeys.NOTIFICATION_PERMISSION_DENIAL_COUNT] ?: 0
     }
@@ -123,7 +128,7 @@ class PomodoroRepository(private val context: Context) {
                     longBreakInterval = 4,
                     soundEnabled = true,
                     vibrationEnabled = true,
-                    autoStart = true, // 긴 세션에서는 수동 시작을 선호할 수 있습니다.
+                    autoStart = true,
                     blockMode = BlockMode.PARTIAL
                 )
             )
@@ -176,8 +181,9 @@ class PomodoroRepository(private val context: Context) {
         } ?: BlockMode.NONE
     }
 
-    val whitelistedAppsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
-        preferences[DSKeys.WHITELISTED_APPS] ?: emptySet()
+    // [변경] blockedAppsFlow로 변경
+    val blockedAppsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[DSKeys.BLOCKED_APPS] ?: emptySet()
     }
 
     suspend fun saveActiveBlockMode(mode: BlockMode) {
