@@ -33,6 +33,7 @@ import com.malrang.pomodoro.ui.screen.background.BackgroundScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
 import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
 import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
+import com.malrang.pomodoro.ui.screen.stats.DailyDetailScreen
 import com.malrang.pomodoro.ui.screen.stats.StatsScreen
 import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
@@ -161,7 +162,10 @@ fun PomodoroApp(
                     Box(modifier = Modifier.padding(innerPadding)) {
                         StatsScreen(
                             statsViewModel = statsViewModel,
-                            onNavigateTo = { screen -> navController.navigate(screen.name) }
+                            onNavigateTo = { screen -> navController.navigate(screen.name) },
+                            onNavigateToDetail = { date ->
+                                navController.navigate("${Screen.DailyDetail.name}/${date}")
+                            }
                         )
                     }
                 }
@@ -219,6 +223,17 @@ fun PomodoroApp(
                     Box(modifier = Modifier.padding(innerPadding)) {
                         BackgroundScreen(settingsViewModel = settingsViewModel)
                     }
+                }
+                composable(
+                    route = "${Screen.DailyDetail.name}/{dateString}"
+                ) { backStackEntry ->
+                    val dateString = backStackEntry.arguments?.getString("dateString")
+                    // 상세 화면은 자체 Scaffold를 가지므로 padding을 무시하거나 적용 방식 결정 (여기선 꽉 채움)
+                    DailyDetailScreen(
+                        dateString = dateString,
+                        statsViewModel = statsViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
             }
         }
