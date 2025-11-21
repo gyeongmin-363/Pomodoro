@@ -16,7 +16,8 @@ fun MonthlyCalendarGrid(
     selectedDate: LocalDate,
     tappedDate: LocalDate?,
     onDateTap: (LocalDate) -> Unit,
-    hasRecord: (LocalDate) -> Boolean
+    onDateLongTap: (LocalDate) -> Unit, // ✅ 롱클릭 콜백 추가
+    getStudyTime: (LocalDate) -> Int
 ) {
     val today = LocalDate.now()
     val currentMonth = YearMonth.from(selectedDate)
@@ -36,10 +37,11 @@ fun MonthlyCalendarGrid(
             if (date != null) {
                 DayCell(
                     date = date,
-                    hasRecord = hasRecord(date),
+                    studyTimeMinutes = getStudyTime(date),
                     isToday = date == today,
                     isSelected = date == tappedDate,
-                    onClick = { onDateTap(date) }
+                    onClick = { onDateTap(date) },
+                    onLongClick = { onDateLongTap(date) } // ✅ 롱클릭 연결
                 )
             } else {
                 Spacer(modifier = Modifier.size(40.dp))
