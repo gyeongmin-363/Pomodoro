@@ -26,7 +26,6 @@ abstract class PomodoroDatabase : RoomDatabase() {
                     PomodoroDatabase::class.java,
                     "pomodoro_database"
                 )
-                    .fallbackToDestructiveMigration(false) // [추가] 마이그레이션 전략 (개발 중 데이터 초기화 허용 시)
                     .build()
                 INSTANCE = instance
                 instance
