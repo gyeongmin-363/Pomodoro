@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [DailyStatEntity::class, WorkPresetEntity::class],
-    version = 2, // [변경] 스키마 변경으로 버전 증가 (1 -> 2)
+    version = 1,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
