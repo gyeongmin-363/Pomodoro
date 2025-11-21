@@ -15,12 +15,18 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -29,17 +35,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.viewmodel.StatsViewModel
+import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,8 +67,14 @@ fun DailyDetailScreen(
 
     var selectedTab by remember { mutableStateOf(0) } // 0: 상세기록, 1: 체크리스트, 2: 회고
 
+    // [추가] 스낵바 상태 및 코루틴 스코프 (피드백 표시용)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         containerColor = Color(0xFF1E1E1E), // 어두운 배경
+        // [추가] 스낵바 호스트 설정
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("${date.monthValue}월 ${date.dayOfMonth}일 상세 기록", color = Color.White) },
@@ -99,7 +113,13 @@ fun DailyDetailScreen(
             when (selectedTab) {
                 0 -> TimeRecordTab(dailyStat)
                 1 -> ChecklistTab(dailyStat)
-                2 -> RetrospectTab(dailyStat)
+                2 -> RetrospectTab(dailyStat) { newRetrospect ->
+                    // [변경] 저장 로직 및 피드백
+                    statsViewModel.saveRetrospect(dailyStat.date, newRetrospect)
+                    scope.launch {
+                        snackbarHostState.showSnackbar("회고가 저장되었습니다.")
+                    }
+                }
             }
         }
     }
@@ -117,7 +137,7 @@ fun TimeRecordTab(dailyStat: DailyStat) {
         Spacer(modifier = Modifier.height(16.dp))
 
         val allWorks = (dailyStat.studyTimeByWork?.keys ?: emptySet()) + (dailyStat.breakTimeByWork?.keys ?: emptySet())
-        
+
         if (allWorks.isEmpty()) {
             Text("기록된 활동이 없습니다.", color = Color.Gray)
         } else {
@@ -175,7 +195,12 @@ fun ChecklistTab(dailyStat: DailyStat) {
 }
 
 @Composable
-fun RetrospectTab(dailyStat: DailyStat) {
+fun RetrospectTab(dailyStat: DailyStat, onSave: (String) -> Unit) {
+    var text by remember(dailyStat.retrospect) { mutableStateOf(dailyStat.retrospect ?: "") }
+
+    // [추가] 키보드 제어를 위한 FocusManager
+    val focusManager = LocalFocusManager.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -185,11 +210,36 @@ fun RetrospectTab(dailyStat: DailyStat) {
         Text("📝 오늘의 회고", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = dailyStat.retrospect ?: "작성된 회고가 없습니다.",
-            color = Color.White,
-            fontSize = 16.sp,
-            lineHeight = 24.sp
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = Color(0xFFFBBF24),
+                focusedBorderColor = Color(0xFFFBBF24),
+                unfocusedBorderColor = Color.Gray,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+            ),
+            placeholder = { Text("오늘 하루는 어땠나요?", color = Color.Gray) }
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                // [추가] 저장 시 키보드 숨기기 및 콜백 호출
+                focusManager.clearFocus()
+                onSave(text)
+            },
+            modifier = Modifier.align(Alignment.End),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFBBF24))
+        ) {
+            Text("저장", color = Color.Black, fontWeight = FontWeight.Bold)
+        }
     }
 }

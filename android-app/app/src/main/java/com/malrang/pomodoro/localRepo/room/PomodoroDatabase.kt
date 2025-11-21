@@ -25,7 +25,8 @@ abstract class PomodoroDatabase : RoomDatabase() {
                     context.applicationContext,
                     PomodoroDatabase::class.java,
                     "pomodoro_database"
-                ).build()
+                )
+                    .build()
                 INSTANCE = instance
                 instance
             }

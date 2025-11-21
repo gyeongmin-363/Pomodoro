@@ -53,6 +53,11 @@ class PomodoroRepository(private val context: Context) {
         dao.insertDailyStats(stats.values.map { it.toEntity() })
     }
 
+    // [추가] 단일 DailyStat 저장 (회고 저장 등 개별 업데이트용)
+    suspend fun saveDailyStat(dailyStat: DailyStat) {
+        dao.insertDailyStats(listOf(dailyStat.toEntity()))
+    }
+
     // --- WorkPreset ---
     suspend fun loadWorkPresets(): List<WorkPreset> {
         val presets = dao.getActiveWorkPresets().map { it.toDomain() }
