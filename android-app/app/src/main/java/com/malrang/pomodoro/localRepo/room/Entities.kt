@@ -13,16 +13,25 @@ data class DailyStatEntity(
     val studyTimeByWork: Map<String, Int>,
     val breakTimeByWork: Map<String, Int>,
 
+    // [추가] 회고 내용
+    val retrospect: String? = null,
+
     // [동기화 필수] 데이터가 마지막으로 수정된 시간 (Unix Timestamp)
     val updatedAt: Long = System.currentTimeMillis()
 ) {
-    fun toDomain() = DailyStat(date, studyTimeByWork, breakTimeByWork)
+    fun toDomain() = DailyStat(
+        date = date,
+        studyTimeByWork = studyTimeByWork,
+        breakTimeByWork = breakTimeByWork,
+        retrospect = retrospect
+    )
 }
 
 fun DailyStat.toEntity() = DailyStatEntity(
     date = date,
     studyTimeByWork = studyTimeByWork ?: emptyMap(),
     breakTimeByWork = breakTimeByWork ?: emptyMap(),
+    retrospect = retrospect,
     updatedAt = System.currentTimeMillis() // 저장 시점의 시간으로 갱신
 )
 
