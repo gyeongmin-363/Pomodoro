@@ -1,6 +1,9 @@
 package com.malrang.pomodoro.ui.screen.setting
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -35,6 +38,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -51,6 +56,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Screen
@@ -97,6 +104,30 @@ fun WorkListScreen(
     onNavigateTo: (Screen) -> Unit // [추가]
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
+
+    // [추가] 배터리 최적화 상태 확인을 위한 로직
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val powerManager = remember { context.getSystemService(Context.POWER_SERVICE) as PowerManager }
+    val packageName = context.packageName
+
+    // 현재 배터리 최적화 예외 여부 (true면 제한 없음, false면 제한 중)
+    var isIgnoringBatteryOptimizations by remember {
+        mutableStateOf(powerManager.isIgnoringBatteryOptimizations(packageName))
+    }
+
+    // 화면으로 돌아올 때마다(OnResume) 상태를 다시 확인해서 UI 갱신
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isIgnoringBatteryOptimizations = powerManager.isIgnoringBatteryOptimizations(packageName)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
     var newPresetName by remember { mutableStateOf("") }
@@ -205,6 +236,48 @@ fun WorkListScreen(
             }
         }
         Spacer(Modifier.height(24.dp))
+
+        // [추가] 배터리 최적화 예외 요청 카드 (최적화가 켜져있을 때만 표시)
+        if (!isIgnoringBatteryOptimizations) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        // 시스템 팝업을 띄워 사용자에게 허용 요청
+                        val intent = Intent(AndroidSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        context.startActivity(intent)
+                    },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings, // 적절한 아이콘 사용 (Settings 또는 Info 등)
+                        contentDescription = "경고",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "배터리 제한 해제 필요",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "타이머가 멈추지 않으려면 터치하여 제한을 해제해주세요.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
 
         // 1. 현재 선택된 Work
         val currentWork = uiState.workPresets.find { it.id == uiState.currentWorkId }
