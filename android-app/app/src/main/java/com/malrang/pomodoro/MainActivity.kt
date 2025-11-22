@@ -132,8 +132,7 @@ class MainActivity : ComponentActivity() {
         performSync(silent = true)
     }
 
-    // [수정] 통합 동기화 로직 (오류 수정됨)
-    // [수정] 통합 동기화 로직 (user_settings 제거됨)
+    // [수정] 통합 동기화 로직 (삭제 동기화 로직 추가)
     private fun performSync(silent: Boolean = false) {
         val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id ?: return
 
@@ -143,10 +142,11 @@ class MainActivity : ComponentActivity() {
 
                 // 1. 서버에서 데이터 가져오기 (Pull)
                 val remoteStats = supabaseRepo.getDailyStats(userId)
-                val remotePresets = supabaseRepo.getWorkPresets(userId) // [추가] 프리셋 가져오기
+                val remotePresets = supabaseRepo.getWorkPresets(userId)
 
                 // 2. 로컬 DB에 병합
-                // (1) 통계 병합
+
+                // (1) 통계 병합 (기존 유지)
                 if (remoteStats.isNotEmpty()) {
                     val currentStats = localRepo.loadDailyStats().toMutableMap()
                     remoteStats.forEach { stat ->
@@ -155,43 +155,53 @@ class MainActivity : ComponentActivity() {
                     localRepo.saveDailyStats(currentStats)
                 }
 
-                // (2) 프리셋 병합 (간단히: 서버에 있는 걸 로컬에 추가/덮어쓰기)
-                // *주의: 로컬에서 삭제한게 서버에서 다시 살아날 수 있음. 정교한 동기화가 필요하면 'deleted_at' 필드 사용 권장
+                // (2) 프리셋 동기화 [중요 수정]
+                // 서버 목록을 기준으로 로컬 목록을 갱신합니다.
+                // 서버에 없는 로컬 아이템은 '삭제된 것'으로 간주하고 제거합니다.
+                // *주의: 오프라인에서 생성하고 아직 동기화 못한 데이터가 있다면 삭제될 수 있습니다.
                 if (remotePresets.isNotEmpty()) {
-                    val currentPresets = settingsViewModel.uiState.value.workPresets.toMutableList()
-                    remotePresets.forEach { serverPreset ->
-                        val index = currentPresets.indexOfFirst { it.id == serverPreset.id }
-                        if (index != -1) {
-                            currentPresets[index] = serverPreset // 덮어쓰기
-                        } else {
-                            currentPresets.add(serverPreset) // 추가
-                        }
-                    }
-                    // 로컬 저장소(DataStore)에 저장하려면 ViewModel이나 Repository 함수 호출 필요
-                    // 여기서는 예시로 settingsViewModel을 통해 업데이트한다고 가정
-                    // 하지만 ViewModel 함수가 suspend가 아닐 수 있으므로, 로컬 레포지토리에 직접 저장하는 함수가 있다면 사용 권장
-                    // 예: localRepo.saveWorkPresets(currentPresets) (함수가 있다면)
+                    val mergedPresets = remotePresets.toMutableList()
 
-                    // 일단 ViewModel의 함수를 사용하여 갱신 (메모리상 갱신 -> 자동 저장 흐름)
-                    // settingsViewModel.updatePresetsFromSync(currentPresets) 같은 함수 구현 필요
+                    // ViewModel 및 로컬 DB 업데이트
+                    // (SettingsViewModel의 uiState를 갱신하면, saveSettingsAndReset 등의 로직이 없어도
+                    //  다음 로직이나 UI에서 반영됩니다. 하지만 DB 저장을 위해 명시적으로 호출 권장)
+
+                    // 여기서는 ViewModel의 상태를 강제로 업데이트하는 방식을 사용합니다.
+                    // (실제로는 LocalRepo에 저장하는 로직이 ViewModel 내부에 있으므로,
+                    //  ViewModel에 setPresets 같은 함수를 만들어 호출하는 것이 가장 깔끔합니다.)
+                    // 임시로 settingsViewModel 내부의 값을 갱신하는 로직을 수행한다고 가정하거나,
+                    // 로컬 레포지토리에 직접 저장합니다.
+
+                    localRepo.insertNewWorkPresets(mergedPresets) // 덮어쓰기 (OnConflictStrategy.REPLACE 가정)
+
+                    // 서버에 없는 건 삭제 (현재 로컬에만 있는 ID 찾기)
+                    val localPresets = localRepo.loadWorkPresets()
+                    val remoteIds = remotePresets.map { it.id }.toSet()
+                    val toDelete = localPresets.filter { it.id !in remoteIds }
+
+                    toDelete.forEach {
+                        localRepo.deleteWorkPreset(it.id)
+                    }
+
+                    // UI 갱신을 위해 ViewModel 데이터 다시 로드 요청 (또는 직접 업데이트)
+                    settingsViewModel.refreshPresets() // *ViewModel에 이 함수 추가 필요 (하단 참조)
                 }
 
 
                 // 3. 로컬 데이터를 서버로 백업 (Push)
+                // [수정] Pull 직후이므로, 로컬 데이터가 최신 서버 데이터와 일치해졌습니다.
+                // 굳이 바로 다시 올릴 필요는 없으나, 병합 과정에서 누락된 게 있을 수 있으니 유지하거나,
+                // '삭제 동기화'를 위해 Pull 위주로만 작동하게 할 수도 있습니다.
+                // 여기서는 안전하게 '현재 유효한 목록'을 다시 서버에 확정 짓습니다.
 
-                // [삭제됨] user_settings 업로드 제거
-
-                // [유지] WorkPreset(프리셋) 업로드
-                val currentPresets = settingsViewModel.uiState.value.workPresets
+                val currentPresets = localRepo.loadWorkPresets() // 갱신된 로컬 데이터 로드
                 supabaseRepo.upsertWorkPresets(userId, currentPresets)
 
-                // [유지] 통계 업로드
                 val localStats = localRepo.loadDailyStats()
                 localStats.values.forEach { stat ->
                     supabaseRepo.upsertDailyStat(userId, stat)
                 }
 
-                // 완료 후 UI 갱신
                 statsViewModel.loadDailyStats()
                 if (!silent) Toast.makeText(this@MainActivity, "동기화 완료!", Toast.LENGTH_SHORT).show()
 

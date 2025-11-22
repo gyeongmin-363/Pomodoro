@@ -13,7 +13,6 @@ class SupabaseRepository(
 ) {
 
     // --- Daily Stats (통계) ---
-
     suspend fun upsertDailyStat(userId: String, stat: DailyStat) {
         withContext(Dispatchers.IO) {
             val dto = DailyStatDto(
@@ -22,7 +21,7 @@ class SupabaseRepository(
                 total_study_time = stat.totalStudyTimeInMinutes,
                 study_time_by_work = stat.studyTimeByWork,
                 break_time_by_work = stat.breakTimeByWork,
-                checklist = stat.checklist,
+                checklist = stat.checklist ?: emptyMap(),
                 retrospect = stat.retrospect
             )
             postgrest["daily_stats"].upsert(dto) {
@@ -49,8 +48,6 @@ class SupabaseRepository(
         }
     }
 
-    // [삭제됨] Settings 관련 함수들 제거 (upsertSettings, getSettings)
-
     // --- Work Presets (프리셋) ---
 
     suspend fun upsertWorkPresets(userId: String, presets: List<WorkPreset>) {
@@ -70,6 +67,18 @@ class SupabaseRepository(
                 filter { eq("user_id", userId) }
             }.decodeList<WorkPresetDto>().map {
                 WorkPreset(id = it.id, name = it.name, settings = it.settings)
+            }
+        }
+    }
+
+    // [추가] 프리셋 삭제 기능
+    suspend fun deleteWorkPreset(userId: String, presetId: String) {
+        withContext(Dispatchers.IO) {
+            postgrest["work_presets"].delete {
+                filter {
+                    eq("user_id", userId)
+                    eq("id", presetId)
+                }
             }
         }
     }
