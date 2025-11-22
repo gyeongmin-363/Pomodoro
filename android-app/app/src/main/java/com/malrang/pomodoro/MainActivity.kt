@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -25,7 +26,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
+import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
+import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import com.malrang.pomodoro.service.AppUsageMonitoringService
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.WarningOverlayService
@@ -38,7 +42,11 @@ import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     // 분리된 ViewModel들을 AppViewModelFactory를 사용해 초기화합니다.
@@ -48,6 +56,9 @@ class MainActivity : ComponentActivity() {
     private val statsViewModel: StatsViewModel by viewModels { AppViewModelFactory(application) }
     private val authViewModel: AuthViewModel by viewModels { AuthVMFactory(SupabaseProvider.client) }
 
+    // [추가] 동기화를 위한 레포지토리 직접 생성 (ViewModel을 거치지 않고 전역 동기화를 수행하기 위함)
+    private lateinit var supabaseRepo: SupabaseRepository
+    private lateinit var localRepo: PomodoroRepository
 
     // 👇 [추가] 데이터 업데이트를 수신할 BroadcastReceiver
     private val dataUpdateReceiver = object : BroadcastReceiver() {
@@ -81,8 +92,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         SupabaseProvider.client.handleDeeplinks(intent)
+
+        // 레포지토리 초기화
+        supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
+        localRepo = PomodoroRepository(applicationContext)
 
         val intentFilter = IntentFilter(TimerService.ACTION_DATA_UPDATED)
         registerReceiver(dataUpdateReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
@@ -101,6 +115,7 @@ class MainActivity : ComponentActivity() {
                             permissionViewModel = permissionViewModel,
                             statsViewModel = statsViewModel,
                             authViewModel = authViewModel,
+                            onSyncClick = { performSync() }
                         )
                     }
                 }
@@ -113,6 +128,61 @@ class MainActivity : ComponentActivity() {
         // 앱이 화면에 보이기 시작하면 리시버를 등록합니다. (onStop과 짝을 이룸)
         val filter = IntentFilter(TimerService.ACTION_STATUS_UPDATE)
         ContextCompat.registerReceiver(this, updateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        // [추가] 앱 실행 시(Foreground 진입 시) 자동 동기화 시도
+        performSync(silent = true)
+    }
+
+    // [수정] 통합 동기화 로직 (오류 수정됨)
+    private fun performSync(silent: Boolean = false) {
+        val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id ?: return
+
+        lifecycleScope.launch {
+            try {
+                if (!silent) Toast.makeText(this@MainActivity, "동기화 중...", Toast.LENGTH_SHORT).show()
+
+                // 1. 서버에서 데이터 가져오기 (Pull)
+                val remoteStats = supabaseRepo.getDailyStats(userId)
+                // val remoteSettings = supabaseRepo.getSettings(userId) // 로컬 설정을 우선하려면 주석 처리하거나 병합 로직 추가
+                // val remotePresets = supabaseRepo.getWorkPresets(userId) // 프리셋도 가져오기 가능
+
+                // 2. 로컬 DB에 병합 (서버 데이터가 있으면 로컬에 추가)
+                if (remoteStats.isNotEmpty()) {
+                    val currentStats = localRepo.loadDailyStats().toMutableMap()
+                    remoteStats.forEach { stat ->
+                        // 서버 데이터를 로컬에 덮어쓰거나 없는 경우 추가
+                        currentStats[stat.date] = stat
+                    }
+                    localRepo.saveDailyStats(currentStats)
+                }
+
+                // (선택 사항) 서버 설정을 로컬에 적용하려면:
+                // if (remoteSettings != null) { ... }
+
+                // 3. 로컬 데이터를 서버로 백업 (Push) - [수정된 부분]
+
+                // [수정 1] 조건문 제거: 서버 데이터 유무와 상관없이 내 현재 설정을 서버에 저장(백업)
+                val currentSettings = settingsViewModel.uiState.value.settings
+                supabaseRepo.upsertSettings(userId, currentSettings)
+
+                // [수정 2] 누락되었던 WorkPreset(프리셋) 업로드 추가
+                val currentPresets = settingsViewModel.uiState.value.workPresets
+                supabaseRepo.upsertWorkPresets(userId, currentPresets)
+
+                // [기존] 통계 업로드
+                val localStats = localRepo.loadDailyStats()
+                localStats.values.forEach { stat ->
+                    supabaseRepo.upsertDailyStat(userId, stat)
+                }
+
+                // 완료 후 UI 갱신
+                statsViewModel.loadDailyStats()
+                if (!silent) Toast.makeText(this@MainActivity, "동기화 완료!", Toast.LENGTH_SHORT).show()
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                if (!silent) Toast.makeText(this@MainActivity, "동기화 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onStop() {

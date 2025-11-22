@@ -1,16 +1,26 @@
 package com.malrang.pomodoro.networkRepo
 
 import androidx.annotation.Keep
-import kotlinx.serialization.SerialName
+import com.malrang.pomodoro.dataclass.ui.Settings
 import kotlinx.serialization.Serializable
-import java.util.UUID
 
-
-/**
- * public.users 테이블에 매핑되는 데이터 클래스
- */
 @Keep
 @Serializable
-data class User(
-    val id: String? = null, // auth.users.id (UUID)
+data class DailyStatDto(
+    val user_id: String,
+    val date: String,
+    val total_study_time: Int,
+    val study_time_by_work: Map<String, Int>?,
+    val break_time_by_work: Map<String, Int>?,
+    val checklist: Map<String, Boolean>?,
+    val retrospect: String?
 )
+
+
+@Keep
+@Serializable
+data class SettingsDto(val user_id: String, val settings: Settings)
+
+@Keep
+@Serializable
+data class WorkPresetDto(val id: String, val user_id: String, val name: String, val settings: Settings)
