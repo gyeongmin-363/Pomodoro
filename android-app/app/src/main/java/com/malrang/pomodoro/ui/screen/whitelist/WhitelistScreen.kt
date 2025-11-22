@@ -1,38 +1,27 @@
 package com.malrang.pomodoro.ui.screen.whitelist
 
 import android.content.Intent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WhitelistScreen(
     settingsViewModel: SettingsViewModel,
@@ -44,6 +33,7 @@ fun WhitelistScreen(
 
     var searchQuery by remember { mutableStateOf("") }
 
+    // 설치된 앱 목록 로딩 (동일 로직 유지)
     val allApps = remember {
         packageManager.queryIntentActivities(
             Intent(Intent.ACTION_MAIN, null).apply {
@@ -75,7 +65,23 @@ fun WhitelistScreen(
         )
     }
 
+    val blockedCount = processedApps.count { uiState.blockedApps.contains(it.packageName) }
+
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("차단 앱 관리", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -83,91 +89,118 @@ fun WhitelistScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("차단 앱 관리", style = MaterialTheme.typography.titleLarge)
-
-                IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                }
-            }
-
+            // 1. 검색창
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                label = { Text("앱 이름 검색") },
+                placeholder = { Text("앱 이름으로 검색") },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "검색 아이콘")
+                    Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 },
+                shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                )
             )
 
+            // 2. 상태 요약 및 설명
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // 모두 차단 버튼
+                Text(
+                    text = "총 ${blockedCount}개 차단됨",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "체크된 앱은 공부 중 실행 불가",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // 3. 일괄 작업 버튼
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Button(
                     onClick = {
                         val packagesToBlock = processedApps.map { it.packageName }
                         settingsViewModel.blockAllApps(packagesToBlock)
                     },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
                 ) {
+                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("모두 차단")
                 }
 
-                // [수정] 모두 사용 버튼: 현재 필터링된 앱들만 해제
                 OutlinedButton(
                     onClick = {
                         val packagesToUnblock = processedApps.map { it.packageName }
                         settingsViewModel.unblockAllApps(packagesToUnblock)
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("모두 사용")
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("모두 허용")
                 }
             }
 
-            Text(
-                "체크된 앱은 공부 중에 실행이 차단됩니다.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
+            // 4. 앱 리스트
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             ) {
-                items(processedApps, key = { it.packageName }) { appInfo ->
-                    val appName = packageManager.getApplicationLabel(appInfo).toString()
-                    val packageName = appInfo.packageName
-                    val appIcon = appInfo.loadIcon(packageManager)
+                LazyColumn(
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(processedApps, key = { it.packageName }) { appInfo ->
+                        val appName = packageManager.getApplicationLabel(appInfo).toString()
+                        val packageName = appInfo.packageName
+                        val appIcon = appInfo.loadIcon(packageManager)
 
-                    val isBlocked = uiState.blockedApps.contains(packageName)
+                        val isBlocked = uiState.blockedApps.contains(packageName)
 
-                    AppListItem(
-                        appName = appName,
-                        appIcon = appIcon,
-                        isBlocked = isBlocked,
-                        onBlockToggle = { shouldBlock ->
-                            if (shouldBlock) {
-                                settingsViewModel.addToBlockList(packageName)
-                            } else {
-                                settingsViewModel.removeFromBlockList(packageName)
+                        AppListItem(
+                            appName = appName,
+                            appIcon = appIcon,
+                            isBlocked = isBlocked,
+                            onBlockToggle = { shouldBlock ->
+                                if (shouldBlock) {
+                                    settingsViewModel.addToBlockList(packageName)
+                                } else {
+                                    settingsViewModel.removeFromBlockList(packageName)
+                                }
                             }
-                        }
-                    )
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                        )
+                    }
                 }
             }
         }
