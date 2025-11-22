@@ -1,6 +1,10 @@
 package com.malrang.pomodoro.dataclass.ui
 
+import com.malrang.pomodoro.localRepo.room.DailyStatEntity
+import kotlinx.serialization.Serializable
+
 // 일별 기록
+@Serializable
 data class DailyStat(
     val date: String,          // "yyyy-MM-dd"
     val studyTimeByWork: Map<String, Int>? = emptyMap(),
@@ -13,4 +17,13 @@ data class DailyStat(
 
     val totalBreakTimeInMinutes: Int
         get() = breakTimeByWork?.values?.sum() ?: 0
+
+    fun toEntity() = DailyStatEntity(
+        date = date,
+        studyTimeByWork = studyTimeByWork ?: emptyMap(),
+        breakTimeByWork = breakTimeByWork ?: emptyMap(),
+        checklist = checklist, // 매핑 추가
+        retrospect = retrospect,
+        updatedAt = System.currentTimeMillis() // 저장 시점의 시간으로 갱신
+    )
 }

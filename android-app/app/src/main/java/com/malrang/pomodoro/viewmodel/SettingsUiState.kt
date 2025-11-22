@@ -8,7 +8,13 @@ import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.localRepo.PomodoroRepository
+import com.malrang.pomodoro.networkRepo.SupabaseProvider
+import com.malrang.pomodoro.networkRepo.SupabaseRepository
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,6 +47,9 @@ class SettingsViewModel(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
+    // [추가] Supabase Repository 직접 생성 (ViewModelFactory 수정 없이 사용하기 위함)
+    private val supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
+
     init {
         viewModelScope.launch {
             val presets = localRepo.loadWorkPresets()
@@ -66,6 +75,21 @@ class SettingsViewModel(
                     backgroundType = bgType,
                     selectedImagePath = selectedImgPath
                 )
+            }
+        }
+    }
+
+    // [추가] 현재 프리셋 목록을 서버와 동기화하는 헬퍼 함수
+    private fun syncPresetsToServer() {
+        val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id ?: return
+        // 현재 UI 상태의 프리셋 목록을 가져옴
+        val currentPresets = _uiState.value.workPresets
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                supabaseRepo.upsertWorkPresets(userId, currentPresets)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -130,7 +154,6 @@ class SettingsViewModel(
         }
     }
 
-    // [수정] 색상 업데이트 시 배경 타입을 변경하지 않음
     fun updateCustomColors(bgColor: Int, textColor: Int) {
         viewModelScope.launch {
             localRepo.saveCustomColors(bgColor, textColor)
@@ -209,6 +232,9 @@ class SettingsViewModel(
             }
             onReset(newActiveSettings)
             clearDraftSettings()
+
+            // [추가] 설정 변경 후 서버 동기화
+            syncPresetsToServer()
         }
     }
 
@@ -237,6 +263,16 @@ class SettingsViewModel(
             localRepo.insertNewWorkPresets(listOf(newPreset))
             val updatedPresets = _uiState.value.workPresets + newPreset
             _uiState.update { it.copy(workPresets = updatedPresets) }
+
+            // [추가] 프리셋 추가 후 서버 동기화
+            syncPresetsToServer()
+        }
+    }
+
+    fun refreshPresets() {
+        viewModelScope.launch {
+            val presets = localRepo.loadWorkPresets()
+            _uiState.update { it.copy(workPresets = presets) }
         }
     }
 
@@ -247,6 +283,18 @@ class SettingsViewModel(
             _uiState.update { it.copy(workPresets = updatedPresets) }
             if (_uiState.value.currentWorkId == id) {
                 selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "", onReset)
+            }
+
+            // [추가] 삭제 후 서버 동기화 (delete 요청)
+            val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
+            if (userId != null) {
+                launch(Dispatchers.IO) {
+                    try {
+                        supabaseRepo.deleteWorkPreset(userId, id)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         }
     }
@@ -261,6 +309,9 @@ class SettingsViewModel(
                 localRepo.updateWorkPresets(listOf(changedPreset))
             }
             _uiState.update { it.copy(workPresets = updatedPresets) }
+
+            // [추가] 이름 변경 후 서버 동기화
+            syncPresetsToServer()
         }
     }
 

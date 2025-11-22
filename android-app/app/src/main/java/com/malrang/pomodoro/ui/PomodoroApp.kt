@@ -61,6 +61,7 @@ fun PomodoroApp(
     permissionViewModel: PermissionViewModel,
     statsViewModel: StatsViewModel,
     authViewModel: AuthViewModel,
+    onSyncClick: () -> Unit = {} // [수정] 매개변수 추가 (기본값 포함)
 ) {
     val context = LocalContext.current
     val authState by authViewModel.authState.collectAsState()
@@ -102,10 +103,10 @@ fun PomodoroApp(
 
         val showBottomBar = currentRoute in navItems.map { it.screen.name }
 
-        // [수정] 네비게이션 바 배경은 항상 투명하게 설정 (배경 이미지가 비치도록)
+        // 네비게이션 바 배경은 항상 투명하게 설정 (배경 이미지가 비치도록)
         val navBarContainerColor = Color.Transparent
 
-        // [수정] Scaffold 배경: 메인 화면은 투명(MainScreen이 그리기 위함), 그 외는 테마 기본값
+        // Scaffold 배경: 메인 화면은 투명(MainScreen이 그리기 위함), 그 외는 테마 기본값
         val isMainScreen = currentRoute == Screen.Main.name
         val scaffoldContainerColor = if (isMainScreen) Color.Transparent else MaterialTheme.colorScheme.background
 
@@ -142,11 +143,10 @@ fun PomodoroApp(
                 }
             }
         ) { innerPadding ->
-            // [수정] NavHost에 전역 padding 제거
+            // NavHost에 전역 padding 제거
             NavHost(
                 navController = navController,
                 startDestination = startDestination
-                // modifier = Modifier.padding(innerPadding) // 제거됨
             ) {
                 composable(Screen.Main.name) {
                     // MainScreen에는 paddingValues를 전달하여 내부에서 처리 (배경은 무시, 콘텐츠는 적용)
@@ -215,7 +215,8 @@ fun PomodoroApp(
                     Box(modifier = Modifier.padding(innerPadding)) {
                         AccountSettingsScreen(
                             authViewModel = authViewModel,
-                            onNavigateTo = { navController.navigate(Screen.Main.name) }
+                            onNavigateTo = { navController.navigate(Screen.Main.name) },
+                            onSyncClick = onSyncClick
                         )
                     }
                 }

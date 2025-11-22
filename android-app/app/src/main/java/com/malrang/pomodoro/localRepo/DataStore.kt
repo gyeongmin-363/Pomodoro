@@ -12,7 +12,6 @@ import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.localRepo.room.PomodoroDatabase
-import com.malrang.pomodoro.localRepo.room.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map

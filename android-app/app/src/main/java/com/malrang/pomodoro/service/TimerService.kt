@@ -31,6 +31,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json // [추가] JSON 처리를 위한 import
 import java.time.LocalDate
 import kotlin.math.ceil
 
@@ -64,7 +65,7 @@ class TimerService : Service() {
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
     }
 
-    // 세션 전환 로직을 별도 함수로 분리하여 재사용성 및 일관성 확보
+    // 세션 전환 로직
     private fun advanceToNextSession() {
         val currentSettings = settings ?: return
 
@@ -86,20 +87,22 @@ class TimerService : Service() {
         when (intent.action) {
             "START" -> {
                 if (!isRunning) {
-                    settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        safeIntent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        safeIntent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
+                    // [수정] JSON 문자열로 받아서 객체로 변환
+                    val settingsJson = safeIntent.getStringExtra(EXTRA_SETTINGS)
+                    settings = settingsJson?.let {
+                        try {
+                            Json.decodeFromString<Settings>(it)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            null
+                        }
                     }
 
                     settings?.let { s ->
-                        // ViewModel이 전달한 상태를 우선적으로 사용
                         currentMode = safeIntent.getStringExtra(EXTRA_CURRENT_MODE)?.let { Mode.valueOf(it) } ?: Mode.STUDY
                         totalSessions = safeIntent.getIntExtra(EXTRA_TOTAL_SESSIONS, 0)
                         timeLeft = safeIntent.getIntExtra(EXTRA_TIME_LEFT, 0)
 
-                        // 타이머 시작 시 남은 시간이 0이면, 현재 모드에 맞는 시간으로 재설정
                         if (timeLeft <= 0) {
                             timeLeft = when (currentMode) {
                                 Mode.STUDY -> s.studyTime * 60
@@ -111,7 +114,6 @@ class TimerService : Service() {
                     }
                 }
             }
-            // RESUME: 설정 변경 없이 현재 상태 그대로 재개 (알림창 Action용)
             "RESUME" -> {
                 if (!isRunning && timeLeft > 0) {
                     startTimer()
@@ -128,9 +130,8 @@ class TimerService : Service() {
                 isRunning = false
                 if (wakeLock.isHeld) { wakeLock.release() }
 
-                advanceToNextSession() //  통합된 세션 전환 로직 호출
+                advanceToNextSession()
 
-                // 스킵 후에는 항상 '일시정지' 상태이므로, 변경된 상태를 즉시 저장하고 UI에 알립니다.
                 serviceScope.launch {
                     repo.saveTimerState(timeLeft, currentMode, totalSessions)
                 }
@@ -143,12 +144,17 @@ class TimerService : Service() {
                 if (wakeLock.isHeld) { wakeLock.release() }
                 serviceScope.launch { repo.clearTimerState() }
 
-                val newSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    safeIntent.getSerializableExtra(EXTRA_SETTINGS, Settings::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    safeIntent.getSerializableExtra(EXTRA_SETTINGS) as? Settings
+                // [수정] RESET 시에도 JSON 문자열로 받아서 갱신
+                val newSettingsJson = safeIntent.getStringExtra(EXTRA_SETTINGS)
+                val newSettings = newSettingsJson?.let {
+                    try {
+                        Json.decodeFromString<Settings>(it)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
+                    }
                 }
+
                 if (newSettings != null) { settings = newSettings }
 
                 currentMode = Mode.STUDY
@@ -186,27 +192,20 @@ class TimerService : Service() {
                 repo.saveActiveBlockMode(it.blockMode)
             }
 
-            // [수정] Drift 방지를 위한 종료 예정 시간 계산
-            // 현재 시간 + 남은 초 * 1000ms
+            // Drift 방지 로직 적용
             val endTime = System.currentTimeMillis() + (timeLeft * 1000L)
 
-            // isRunning을 루프 조건에 포함하여 안전하게 제어
             while (timeLeft > 0 && isRunning) {
-                // 정확도를 위해 0.5초마다 체크 (UI 부하는 아래 로직으로 방지)
                 delay(500)
 
-                // 종료 시간까지 남은 실제 밀리초 계산
                 val remainingMillis = endTime - System.currentTimeMillis()
 
-                // 남은 시간을 초 단위로 변환 (올림 처리하여 24.9초 -> 25초 표시)
-                // 0 이하가 되면 루프 종료
                 val newTimeLeft = if (remainingMillis > 0) {
                     ceil(remainingMillis / 1000.0).toInt()
                 } else {
                     0
                 }
 
-                // 초 단위 숫자가 변경되었을 때만 UI 업데이트 및 브로드캐스트
                 if (newTimeLeft != timeLeft) {
                     timeLeft = newTimeLeft
                     updateNotification()
@@ -216,7 +215,6 @@ class TimerService : Service() {
 
             if (wakeLock.isHeld) { wakeLock.release() }
 
-            // 정상 종료된 경우 (timeLeft == 0)에만 세션 완료 처리
             if (timeLeft <= 0) {
                 val finishedMode = currentMode
                 val currentSettings = settings ?: return@launch
@@ -226,9 +224,8 @@ class TimerService : Service() {
 
                 handleSessionCompletion(finishedMode)
 
-                advanceToNextSession() // 통합된 세션 전환 로직 호출
+                advanceToNextSession()
 
-                // 다음 동작(자동시작/일시정지) 전에 UI에 변경된 상태를 먼저 알립니다.
                 broadcastStatus()
                 updateNotification()
 
@@ -246,11 +243,10 @@ class TimerService : Service() {
         isRunning = false
         job?.cancel()
         if (wakeLock.isHeld) { wakeLock.release() }
-        // 일시정지 할 때마다 현재 상태를 저장합니다.
         serviceScope.launch {
             repo.saveTimerState(timeLeft, currentMode, totalSessions)
         }
-        // ✅ 일시정지 시 차단 해제
+        // 일시정지 시 차단 해제
         serviceScope.launch {
             repo.saveTimerState(timeLeft, currentMode, totalSessions)
             repo.saveActiveBlockMode(BlockMode.NONE)
@@ -262,6 +258,22 @@ class TimerService : Service() {
     private fun handleSessionCompletion(finishedMode: Mode) {
         serviceScope.launch {
             updateTodayStats(finishedMode)
+
+            // 서버 자동 동기화
+            val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
+            if (userId != null) {
+                try {
+                    val today = LocalDate.now().toString()
+                    val currentStatsMap = repo.loadDailyStats()
+                    val todayStat = currentStatsMap[today]
+
+                    if (todayStat != null) {
+                        supabaseRepo.upsertDailyStat(userId, todayStat)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
 
             // 데이터 업데이트 신호 보내기
             val intent = Intent(ACTION_DATA_UPDATED).apply {
@@ -324,7 +336,6 @@ class TimerService : Service() {
             PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action Intents 생성
         val pauseIntent = Intent(this, TimerService::class.java).apply { action = "PAUSE" }
         val pausePendingIntent = PendingIntent.getService(
             this, 1, pauseIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -363,14 +374,12 @@ class TimerService : Service() {
             .setContentIntent(pendingIntent)
             .setOngoing(isRunning)
             .setDeleteIntent(stopServicePendingIntent)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // 잠금 화면에서도 컨트롤 보이게 설정
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        // [건너뛰기 제거됨] 상태에 따른 알림 Action 버튼
+        // 건너뛰기 제거됨
         if (isRunning) {
-            // 실행 중일 때: [일시정지]만 표시
             builder.addAction(R.drawable.ic_pause, "일시정지", pausePendingIntent)
         } else {
-            // 일시정지 중이고 시간이 남았을 때: [계속]만 표시
             if (timeLeft > 0) {
                 builder.addAction(R.drawable.ic_play, "계속", resumePendingIntent)
             }

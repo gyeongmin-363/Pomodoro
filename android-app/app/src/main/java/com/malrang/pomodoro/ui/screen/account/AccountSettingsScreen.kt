@@ -11,13 +11,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,18 +47,17 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 @Composable
 fun AccountSettingsScreen(
     authViewModel: AuthViewModel,
-    onNavigateTo: (Screen) -> Unit
+    onNavigateTo: (Screen) -> Unit,
+    onSyncClick: () -> Unit // [추가] 동기화 클릭 콜백
 ) {
     val authState by authViewModel.authState.collectAsState()
     val context = LocalContext.current
 
-    // UI 구성
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
     ) {
-        // 상단 앱바 영역
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -68,10 +70,8 @@ fun AccountSettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
         }
 
-        // 컨텐츠 영역
         when (val state = authState) {
             is AuthViewModel.AuthState.Authenticated -> {
-                // ✅ 로그인 된 상태: 기존 계정 관리 화면 표시
                 AuthenticatedAccountContent(
                     userEmail = state.user?.email ?: "이메일 정보 없음",
                     onLogout = { authViewModel.signOut(context) },
@@ -80,11 +80,11 @@ fun AccountSettingsScreen(
                             edgeFunctionUrl = "https://inskujiwpvpknfhppmsa.supabase.co/functions/v1/bright-task",
                             activityContext = context
                         )
-                    }
+                    },
+                    onSyncClick = onSyncClick // [추가] 전달
                 )
             }
             else -> {
-                // ✅ 로그인 안 된 상태: 로그인 버튼 표시
                 UnauthenticatedAccountContent(
                     onLoginClick = { authViewModel.signInWithGoogle() },
                     errorMsg = (state as? AuthViewModel.AuthState.Error)?.message
@@ -98,7 +98,8 @@ fun AccountSettingsScreen(
 fun AuthenticatedAccountContent(
     userEmail: String,
     onLogout: () -> Unit,
-    onDeleteAccount: () -> Unit
+    onDeleteAccount: () -> Unit,
+    onSyncClick: () -> Unit // [추가]
 ) {
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
@@ -137,7 +138,19 @@ fun AuthenticatedAccountContent(
         Text(text = "로그인된 이메일", style = MaterialTheme.typography.titleMedium)
         Text(text = userEmail, style = MaterialTheme.typography.bodyLarge)
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // [추가] 수동 동기화 버튼
+        OutlinedButton(
+            onClick = onSyncClick,
+            modifier = Modifier.fillMaxWidth(0.6f)
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("데이터 동기화")
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(onClick = { showLogoutConfirmDialog = true }) {
             Text("로그아웃")

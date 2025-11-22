@@ -31,14 +31,6 @@ data class DailyStatEntity(
     )
 }
 
-fun DailyStat.toEntity() = DailyStatEntity(
-    date = date,
-    studyTimeByWork = studyTimeByWork ?: emptyMap(),
-    breakTimeByWork = breakTimeByWork ?: emptyMap(),
-    checklist = checklist, // 매핑 추가
-    retrospect = retrospect,
-    updatedAt = System.currentTimeMillis() // 저장 시점의 시간으로 갱신
-)
 
 // ... (WorkPresetEntity는 변경 없음) ...
 @Entity(tableName = "work_presets")
@@ -51,11 +43,3 @@ data class WorkPresetEntity(
 ) {
     fun toDomain() = WorkPreset(id, name, settings)
 }
-
-fun WorkPreset.toEntity() = WorkPresetEntity(
-    id = id,
-    name = name,
-    settings = settings,
-    updatedAt = System.currentTimeMillis(),
-    isDeleted = false
-)
