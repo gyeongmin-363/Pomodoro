@@ -34,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.malrang.pomodoro.R
@@ -44,7 +43,6 @@ import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import com.malrang.pomodoro.service.AccessibilityUtils
 import com.malrang.pomodoro.ui.ModernConfirmDialog
-import com.malrang.pomodoro.ui.screen.main.WorkPresetItem
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import android.provider.Settings as AndroidSettings
 
