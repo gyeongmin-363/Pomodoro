@@ -110,6 +110,12 @@ class TimerService : Service() {
                     }
                 }
             }
+            // [추가] RESUME: 설정 변경 없이 현재 상태 그대로 재개 (알림창 Action용)
+            "RESUME" -> {
+                if (!isRunning && timeLeft > 0) {
+                    startTimer()
+                }
+            }
             "PAUSE" -> {
                 pauseTimer()
             }
@@ -292,6 +298,22 @@ class TimerService : Service() {
             PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // [추가] Action Intents 생성
+        val pauseIntent = Intent(this, TimerService::class.java).apply { action = "PAUSE" }
+        val pausePendingIntent = PendingIntent.getService(
+            this, 1, pauseIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val resumeIntent = Intent(this, TimerService::class.java).apply { action = "RESUME" }
+        val resumePendingIntent = PendingIntent.getService(
+            this, 2, resumeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val skipIntent = Intent(this, TimerService::class.java).apply { action = "SKIP" }
+        val skipPendingIntent = PendingIntent.getService(
+            this, 3, skipIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
 
         val modeText = when (currentMode) {
             Mode.STUDY -> "운행 중"
@@ -314,14 +336,27 @@ class TimerService : Service() {
         val sessionText = if (currentMode == Mode.STUDY) " | 세션: ${totalSessions + 1}" else ""
         val contentText = "$statusText$sessionText"
 
-        return NotificationCompat.Builder(this, "pomodoro_timer")
+        val builder = NotificationCompat.Builder(this, "pomodoro_timer")
             .setContentTitle("Focus Route: $modeText")
             .setContentText(contentText)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(isRunning)
             .setDeleteIntent(stopServicePendingIntent)
-            .build()
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // 잠금 화면에서도 컨트롤 보이게 설정
+
+        // [추가] 상태에 따른 알림 Action 버튼 추가
+        if (isRunning) {
+            // 실행 중일 때: [일시정지] [건너뛰기]
+            builder.addAction(R.drawable.ic_pause, "일시정지", pausePendingIntent)
+        } else {
+            // 일시정지 중이고 시간이 남았을 때: [계속] [건너뛰기]
+            if (timeLeft > 0) {
+                builder.addAction(R.drawable.ic_play, "계속", resumePendingIntent)
+            }
+        }
+
+        return builder.build()
     }
 
 
