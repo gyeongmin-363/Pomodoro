@@ -10,12 +10,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// 통계 화면의 UI 상태를 나타내는 데이터 클래스
 data class StatsUiState(
-    val dailyStats:  Map<String, DailyStat> = emptyMap()
+    val dailyStats: Map<String, DailyStat> = emptyMap()
 )
 
-// 통계 관련 로직을 처리하는 ViewModel
 class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
@@ -31,23 +29,72 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
         }
     }
 
-    // [추가] 회고 저장 함수
-    fun saveRetrospect(date: String, retrospect: String) {
+    // [공통] DailyStat 업데이트 헬퍼 함수
+    private fun updateDailyStat(date: String, transform: (DailyStat) -> DailyStat) {
         viewModelScope.launch {
             val currentStat = _uiState.value.dailyStats[date] ?: DailyStat(date)
-            val updatedStat = currentStat.copy(retrospect = retrospect)
+            val updatedStat = transform(currentStat)
 
-            // Repository에 업데이트 요청
-            // 주의: Repository에 saveDailyStat(dailyStat: DailyStat) 메서드가 구현되어 있어야 합니다.
-            // 예: dao.insertDailyStats(listOf(updatedStat.toEntity()))
             repository.saveDailyStat(updatedStat)
 
-            // UI 상태 즉시 업데이트
             _uiState.update { state ->
                 val newStats = state.dailyStats.toMutableMap()
                 newStats[date] = updatedStat
                 state.copy(dailyStats = newStats)
             }
+        }
+    }
+
+    // 회고 저장
+    fun saveRetrospect(date: String, retrospect: String) {
+        updateDailyStat(date) { it.copy(retrospect = retrospect) }
+    }
+
+    // [추가] 체크리스트 아이템 추가
+    fun addChecklistItem(date: String, task: String) {
+        if (task.isBlank()) return
+        updateDailyStat(date) { current ->
+            val newChecklist = current.checklist.toMutableMap()
+            // 이미 존재하지 않을 때만 추가 (기본값 false)
+            if (!newChecklist.containsKey(task)) {
+                newChecklist[task] = false
+            }
+            current.copy(checklist = newChecklist)
+        }
+    }
+
+    // [추가] 체크리스트 아이템 삭제
+    fun deleteChecklistItem(date: String, task: String) {
+        updateDailyStat(date) { current ->
+            val newChecklist = current.checklist.toMutableMap()
+            newChecklist.remove(task)
+            current.copy(checklist = newChecklist)
+        }
+    }
+
+    // [추가] 체크리스트 아이템 토글
+    fun toggleChecklistItem(date: String, task: String) {
+        updateDailyStat(date) { current ->
+            val newChecklist = current.checklist.toMutableMap()
+            val currentState = newChecklist[task] ?: false
+            newChecklist[task] = !currentState
+            current.copy(checklist = newChecklist)
+        }
+    }
+
+    // [추가] 체크리스트 아이템 수정
+    fun modifyChecklistItem(date: String, oldTask: String, newTask: String) {
+        if (newTask.isBlank() || oldTask == newTask) return
+        updateDailyStat(date) { current ->
+            val newChecklist = current.checklist.toMutableMap()
+            if (newChecklist.containsKey(oldTask)) {
+                val status = newChecklist[oldTask] ?: false
+                newChecklist.remove(oldTask)
+                // 순서 유지를 위해 LinkedHashMap을 사용하므로 remove 후 put 하면 맨 뒤로 갈 수 있음.
+                // 순서가 중요하다면 리스트 구조로 변경을 고려해야 하지만, 현재 Map 구조에서는 새로 추가됨.
+                newChecklist[newTask] = status
+            }
+            current.copy(checklist = newChecklist)
         }
     }
 }

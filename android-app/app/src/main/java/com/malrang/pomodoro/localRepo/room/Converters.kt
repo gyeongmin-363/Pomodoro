@@ -20,6 +20,18 @@ class Converters {
         return gson.toJson(map)
     }
 
+    // [추가] Map<String, Boolean> 변환 (체크리스트용)
+    @TypeConverter
+    fun fromStringBooleanMap(value: String): Map<String, Boolean> {
+        val type = object : TypeToken<Map<String, Boolean>>() {}.type
+        return runCatching { gson.fromJson<Map<String, Boolean>>(value, type) }.getOrElse { emptyMap() }
+    }
+
+    @TypeConverter
+    fun fromMapStringBoolean(map: Map<String, Boolean>): String {
+        return gson.toJson(map)
+    }
+
     // Settings 객체 변환
     @TypeConverter
     fun fromSettingsJson(value: String): Settings {
