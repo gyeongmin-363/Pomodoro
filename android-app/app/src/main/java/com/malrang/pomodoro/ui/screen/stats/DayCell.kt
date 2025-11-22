@@ -2,12 +2,14 @@ package com.malrang.pomodoro.ui.screen.stats
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -27,52 +30,57 @@ fun DayCell(
     isToday: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit // ✅ 롱클릭 추가
+    onLongClick: () -> Unit
 ) {
-    val dayColor = when (date.dayOfWeek) {
-        DayOfWeek.SATURDAY -> Color(0xFF64B5F6)
-        DayOfWeek.SUNDAY -> Color(0xFFE57373)
-        else -> Color.White
+    // 날짜 텍스트 색상: 주말 구분
+    val dayTextColor = when {
+        isSelected -> MaterialTheme.colorScheme.onPrimary
+        else -> when (date.dayOfWeek) {
+            DayOfWeek.SATURDAY -> Color(0xFF42A5F5)
+            DayOfWeek.SUNDAY -> Color(0xFFEF5350)
+            else -> MaterialTheme.colorScheme.onSurface
+        }
     }
 
-    val backgroundColor = when {
-        studyTimeMinutes == 0 -> Color.Transparent
-        studyTimeMinutes < 30 -> Color(0xFF0E4429)
-        studyTimeMinutes < 60 -> Color(0xFF006D32)
-        studyTimeMinutes < 120 -> Color(0xFF26A641)
-        else -> Color(0xFF39D353)
+    // 히트맵 배경색 (GitHub 스타일 Green 유지하되 테마와 조화롭게)
+    // 단, 선택되었을 땐 Primary 색상으로 덮어씀
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        when {
+            studyTimeMinutes == 0 -> Color.Transparent
+            studyTimeMinutes < 30 -> Color(0xFF9BE9A8) // Light Green
+            studyTimeMinutes < 60 -> Color(0xFF40C463)
+            studyTimeMinutes < 120 -> Color(0xFF30A14E)
+            else -> Color(0xFF216E39) // Dark Green
+        }
+    }
+
+    // 오늘 날짜 테두리
+    val borderModifier = if (isToday && !isSelected) {
+        Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+    } else {
+        Modifier
     }
 
     Box(
         modifier = Modifier
-            .size(40.dp)
-            .padding(4.dp)
-            .clip(CircleShape)
+            .size(42.dp) // 터치 영역 확보
+            .padding(2.dp)
+            .clip(RoundedCornerShape(8.dp)) // 둥근 사각형 (Modern)
             .background(backgroundColor)
-            .combinedClickable( // ✅ 클릭 및 롱클릭 처리
+            .then(borderModifier)
+            .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.3f), CircleShape)
-            )
-        } else if (isToday) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.1f), CircleShape)
-            )
-        }
-
         Text(
             text = date.dayOfMonth.toString(),
-            color = dayColor,
-            fontWeight = FontWeight.Medium
+            color = if (studyTimeMinutes > 60 && !isSelected) Color.White else dayTextColor,
+            fontSize = 12.sp,
+            fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
 }

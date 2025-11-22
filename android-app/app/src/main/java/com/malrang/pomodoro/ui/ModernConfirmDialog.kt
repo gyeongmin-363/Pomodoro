@@ -1,13 +1,13 @@
-// /android-app/app/src/main/java/com/malrang/pomodoro/ui/ModernConfirmDialog.kt
-
 package com.malrang.pomodoro.ui
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
@@ -36,58 +36,65 @@ fun ModernConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        
-        // 모서리를 둥글게 처리하여 모던한 느낌을 줍니다.
-        shape = RoundedCornerShape(12.dp), 
-        
-        // 컨테이너 색상은 테마의 surface 색상을 사용합니다.
-        containerColor = MaterialTheme.colorScheme.surface, 
-        
+
+        // Material 3 표준 다이얼로그 모서리 반경 (28dp) 적용
+        shape = RoundedCornerShape(28.dp),
+
+        // SurfaceContainerHigh를 사용하여 입체감과 깊이를 부여
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+
         // 제목
         title = {
             Text(
                 text = title,
-                // 모던 타이포그래피 적용 (Type.kt에서 정의)
-                style = MaterialTheme.typography.headlineSmall, 
-                color = MaterialTheme.colorScheme.onSurface 
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold, // 제목 강조
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
-        
+
         // 본문
         text = {
             if (text != null) {
                 Text(
                     text = text,
-                    style = MaterialTheme.typography.bodyMedium, // 모던 타이포그래피 적용
-                    color = MaterialTheme.colorScheme.onSurfaceVariant // 본문 내용은 부드러운 색상 사용
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else if (content != null) {
-                // content 람다가 제공되면 해당 Composable을 렌더링합니다.
                 content()
             }
         },
-        
-        // 확인 버튼
+
+        // 확인 버튼 (Primary Color 사용으로 강조)
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                enabled = confirmButtonEnabled
+                enabled = confirmButtonEnabled,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
             ) {
                 Text(
                     text = confirmText,
-                    style = MaterialTheme.typography.labelLarge // 버튼 텍스트 스타일
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         },
-        
-        // 취소 버튼
+
+        // 취소 버튼 (중립적인 색상 사용)
         dismissButton = {
             TextButton(
-                onClick = onDismissRequest
+                onClick = onDismissRequest,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             ) {
                 Text(
                     text = dismissText,
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }

@@ -2,26 +2,17 @@ package com.malrang.pomodoro.ui.screen.whitelist
 
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-
-// 1. Material 3 Switch를 import합니다.
-import androidx.compose.material3.Switch
 import coil3.compose.rememberAsyncImagePainter
-
-// 2. 기존 PixelSwitch import를 삭제합니다.
-// import com.malrang.pomodoro.ui.screen.whitelist.PixelSwitch
 
 @Composable
 fun AppListItem(
@@ -31,36 +22,50 @@ fun AppListItem(
     onBlockToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        onClick = { onBlockToggle(!isBlocked) }, // 행 전체 클릭 가능
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp), // 여백 추가
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = rememberAsyncImagePainter(model = appIcon),
-                contentDescription = "$appName icon",
-                modifier = Modifier.size(40.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = appName,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1.0f)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
+    // 차단 상태에 따라 텍스트 색상 변경
+    val textColor = if (isBlocked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
 
-            // 3. PixelSwitch를 Material 3 Switch로 교체합니다.
-            Switch(
-                checked = isBlocked,
-                onCheckedChange = onBlockToggle
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onBlockToggle(!isBlocked) } // 행 전체 터치 가능
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 앱 아이콘
+        Image(
+            painter = rememberAsyncImagePainter(model = appIcon),
+            contentDescription = "$appName icon",
+            modifier = Modifier.size(42.dp)
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // 앱 이름
+        Text(
+            text = appName,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (isBlocked) FontWeight.Bold else FontWeight.Medium, // 차단 시 굵게
+            color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // 스위치 (Material 3 스타일)
+        Switch(
+            checked = isBlocked,
+            onCheckedChange = onBlockToggle,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onErrorContainer,
+                checkedTrackColor = MaterialTheme.colorScheme.errorContainer,
+                checkedBorderColor = MaterialTheme.colorScheme.errorContainer,
+                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                uncheckedBorderColor = MaterialTheme.colorScheme.outline
             )
-        }
+        )
     }
 }
