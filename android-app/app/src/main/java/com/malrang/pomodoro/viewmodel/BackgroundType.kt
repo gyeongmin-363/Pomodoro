@@ -91,6 +91,29 @@ class BackgroundViewModel(
         }
     }
 
+    // [추가됨] 이미지 삭제 함수
+    fun deleteBackgroundImage(context: Context, path: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val file = File(path)
+                if (file.exists()) {
+                    file.delete()
+                }
+
+                // 현재 사용 중인 배경 이미지를 삭제한 경우, 배경 타입을 색상으로 되돌림
+                if (_uiState.value.selectedImagePath == path) {
+                    localRepo.saveSelectedBgImagePath("")
+                    setBackgroundType(BackgroundType.COLOR)
+                }
+
+                // 목록 갱신
+                loadAvailableImages(context)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun selectBackgroundImage(path: String) {
         viewModelScope.launch {
             localRepo.saveSelectedBgImagePath(path)
