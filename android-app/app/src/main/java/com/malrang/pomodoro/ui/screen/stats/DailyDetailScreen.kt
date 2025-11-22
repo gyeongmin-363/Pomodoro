@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -19,10 +20,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.dataclass.ui.DailyStat
@@ -33,7 +36,7 @@ import java.time.LocalDate
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyDetailScreen(
-    dateString: String?, // "yyyy-MM-dd"
+    dateString: String?,
     statsViewModel: StatsViewModel,
     onNavigateBack: () -> Unit
 ) {
@@ -45,57 +48,59 @@ fun DailyDetailScreen(
 
     val uiState by statsViewModel.uiState.collectAsState()
     val dailyStat = uiState.dailyStats[date.toString()] ?: DailyStat(date.toString())
-
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: 상세기록, 1: 체크리스트, 2: 회고
-
+    var selectedTab by remember { mutableIntStateOf(0) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        containerColor = Color(0xFF1E1E1E),
+        containerColor = MaterialTheme.colorScheme.surface,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("${date.monthValue}월 ${date.dayOfMonth}일 상세 기록", color = Color.White) },
+                title = { Text("${date.monthValue}월 ${date.dayOfMonth}일 기록", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                }
             )
-        },
-        bottomBar = {
-            NavigationBar(containerColor = Color(0xFF2C2C2C)) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.List, contentDescription = "기록") },
-                    label = { Text("시간 기록") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Check, contentDescription = "체크리스트") },
-                    label = { Text("체크리스트") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Edit, contentDescription = "회고") },
-                    label = { Text("회고") }
-                )
-            }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            when (selectedTab) {
-                0 -> TimeRecordTab(dailyStat)
-                1 -> ChecklistTab(dailyStat, statsViewModel)
-                2 -> RetrospectTab(dailyStat) { newRetrospect ->
-                    statsViewModel.saveRetrospect(dailyStat.date, newRetrospect)
-                    scope.launch {
-                        snackbarHostState.showSnackbar("회고가 저장되었습니다.")
+        Column(modifier = Modifier.padding(innerPadding)) {
+            // 상단 탭 (BottomBar -> TabRow 변경)
+            PrimaryTabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("시간 기록") },
+                    icon = { Icon(Icons.Default.List, contentDescription = null) }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("체크리스트") },
+                    icon = { Icon(Icons.Default.Check, contentDescription = null) }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text("회고") },
+                    icon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                )
+            }
+
+            // 탭 콘텐츠
+            Box(modifier = Modifier.weight(1f)) {
+                when (selectedTab) {
+                    0 -> TimeRecordTab(dailyStat)
+                    1 -> ChecklistTab(dailyStat, statsViewModel)
+                    2 -> RetrospectTab(dailyStat) { newRetrospect ->
+                        statsViewModel.saveRetrospect(dailyStat.date, newRetrospect)
+                        scope.launch { snackbarHostState.showSnackbar("회고가 저장되었습니다.") }
                     }
                 }
             }
@@ -109,24 +114,42 @@ fun TimeRecordTab(dailyStat: DailyStat) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("📊 Work별 상세 기록", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Spacer(modifier = Modifier.height(16.dp))
-
         val allWorks = (dailyStat.studyTimeByWork?.keys ?: emptySet()) + (dailyStat.breakTimeByWork?.keys ?: emptySet())
 
         if (allWorks.isEmpty()) {
-            Text("기록된 활동이 없습니다.", color = Color.Gray)
+            EmptyStateMessage("기록된 활동이 없습니다.")
         } else {
             allWorks.forEach { work ->
                 val study = dailyStat.studyTimeByWork?.get(work) ?: 0
                 val breaks = dailyStat.breakTimeByWork?.get(work) ?: 0
+
                 if (study > 0 || breaks > 0) {
-                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                        Text("📌 $work", color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text("   📚 공부: ${study}분", color = Color.White)
-                        Text("   ☕ 휴식: ${breaks}분", color = Color.White)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = work,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("📚 공부 시간", style = MaterialTheme.typography.bodyMedium)
+                                Text("${study}분", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("☕ 휴식 시간", style = MaterialTheme.typography.bodyMedium)
+                                Text("${breaks}분", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
@@ -144,59 +167,48 @@ fun ChecklistTab(dailyStat: DailyStat, viewModel: StatsViewModel) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("✅ 체크리스트", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 입력 필드
-        Row(
+        // 입력 필드 개선
+        OutlinedTextField(
+            value = newTaskText,
+            onValueChange = { newTaskText = it },
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = newTaskText,
-                onValueChange = { newTaskText = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("할 일을 입력하세요", color = Color.Gray) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = Color(0xFFFBBF24),
-                    focusedBorderColor = Color(0xFFFBBF24),
-                    unfocusedBorderColor = Color.Gray
-                ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = {
-                    if (newTaskText.isNotBlank()) {
-                        viewModel.addChecklistItem(dailyStat.date, newTaskText)
-                        newTaskText = ""
-                        focusManager.clearFocus()
+            placeholder = { Text("할 일을 입력하세요") },
+            trailingIcon = {
+                IconButton(
+                    onClick = {
+                        if (newTaskText.isNotBlank()) {
+                            viewModel.addChecklistItem(dailyStat.date, newTaskText)
+                            newTaskText = ""
+                            focusManager.clearFocus()
+                        }
                     }
-                })
-            )
-            IconButton(
-                onClick = {
-                    if (newTaskText.isNotBlank()) {
-                        viewModel.addChecklistItem(dailyStat.date, newTaskText)
-                        newTaskText = ""
-                        focusManager.clearFocus()
-                    }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "추가", tint = MaterialTheme.colorScheme.primary)
                 }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "추가", tint = Color(0xFFFBBF24))
-            }
-        }
+            },
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                if (newTaskText.isNotBlank()) {
+                    viewModel.addChecklistItem(dailyStat.date, newTaskText)
+                    newTaskText = ""
+                    focusManager.clearFocus()
+                }
+            })
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 체크리스트 목록
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (dailyStat.checklist.isEmpty()) {
-                Text("등록된 체크리스트가 없습니다.", color = Color.Gray, modifier = Modifier.padding(top = 16.dp))
+                EmptyStateMessage("등록된 체크리스트가 없습니다.")
             } else {
                 dailyStat.checklist.forEach { (task, isDone) ->
                     ChecklistItemRow(
@@ -221,7 +233,6 @@ fun ChecklistItemRow(
     onDelete: () -> Unit,
     onModify: (String, String) -> Unit
 ) {
-    // [변경] SwipeToDismissBoxState 사용
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
             when (it) {
@@ -250,12 +261,9 @@ fun ChecklistItemRow(
                 )
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        onModify(task, editContextText)
-                        showEditDialog = false
-                    }
-                ) { Text("수정") }
+                TextButton(onClick = { onModify(task, editContextText); showEditDialog = false }) {
+                    Text("수정")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) { Text("취소") }
@@ -263,70 +271,69 @@ fun ChecklistItemRow(
         )
     }
 
-    // [변경] SwipeToDismissBox 사용
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
-            val color = Color.Red
-            val alignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd)
-                Alignment.CenterStart else Alignment.CenterEnd
-
+            val color = MaterialTheme.colorScheme.errorContainer
+            val alignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
                     .background(color)
                     .padding(horizontal = 20.dp),
                 contentAlignment = alignment
             ) {
-                Icon(Icons.Default.Delete, contentDescription = "삭제", tint = Color.White)
+                Icon(Icons.Default.Delete, contentDescription = "삭제", tint = MaterialTheme.colorScheme.onErrorContainer)
             }
         },
         content = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF1E1E1E))
-                    .combinedClickable(
-                        onClick = onToggle,
-                        onLongClick = { showMenu = true }
-                    )
-                    .padding(vertical = 12.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = if (isDone) Icons.Default.Check else Icons.Default.List,
-                    contentDescription = null,
-                    tint = if (isDone) Color.Green else Color.Gray
-                )
-                Text(
-                    text = task,
-                    color = if (isDone) Color.White else Color.Gray,
-                    modifier = Modifier.padding(start = 12.dp),
-                    fontSize = 16.sp,
-                    fontWeight = if (isDone) FontWeight.Normal else FontWeight.Bold
-                )
-
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
+                Row(
+                    modifier = Modifier
+                        .combinedClickable(
+                            onClick = onToggle,
+                            onLongClick = { showMenu = true }
+                        )
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("수정") },
-                        onClick = {
-                            showMenu = false
-                            editContextText = task
-                            showEditDialog = true
-                        },
-                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                    Icon(
+                        imageVector = if (isDone) Icons.Default.Check else Icons.Default.List,
+                        contentDescription = null,
+                        tint = if (isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    DropdownMenuItem(
-                        text = { Text("삭제") },
-                        onClick = {
-                            showMenu = false
-                            onDelete()
-                        },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = task,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (isDone) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isDone) FontWeight.Normal else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("수정") },
+                            onClick = { showMenu = false; editContextText = task; showEditDialog = true },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("삭제") },
+                            onClick = { showMenu = false; onDelete() },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        )
+                    }
                 }
             }
         }
@@ -344,26 +351,33 @@ fun RetrospectTab(dailyStat: DailyStat, onSave: (String) -> Unit) {
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("📝 오늘의 회고", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(300.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                cursorColor = Color(0xFFFBBF24),
-                focusedBorderColor = Color(0xFFFBBF24),
-                unfocusedBorderColor = Color.Gray,
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent
-            ),
-            placeholder = { Text("오늘 하루는 어땠나요?", color = Color.Gray) }
-        )
+                .weight(1f),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxSize(),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                placeholder = {
+                    Text(
+                        "오늘 하루는 어땠나요?\n아쉬웠던 점이나 잘한 점을 기록해보세요.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -372,10 +386,26 @@ fun RetrospectTab(dailyStat: DailyStat, onSave: (String) -> Unit) {
                 focusManager.clearFocus()
                 onSave(text)
             },
-            modifier = Modifier.align(Alignment.End),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFBBF24))
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            Text("저장", color = Color.Black, fontWeight = FontWeight.Bold)
+            Text("회고 저장하기")
         }
+    }
+}
+
+@Composable
+fun EmptyStateMessage(message: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
