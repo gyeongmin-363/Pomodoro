@@ -32,6 +32,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import kotlin.math.ceil
 
 class TimerService : Service() {
 
@@ -185,32 +186,57 @@ class TimerService : Service() {
                 repo.saveActiveBlockMode(it.blockMode)
             }
 
-            while (timeLeft > 0) {
-                delay(1000)
-                timeLeft--
-                updateNotification()
-                broadcastStatus()
+            // [수정] Drift 방지를 위한 종료 예정 시간 계산
+            // 현재 시간 + 남은 초 * 1000ms
+            val endTime = System.currentTimeMillis() + (timeLeft * 1000L)
+
+            // isRunning을 루프 조건에 포함하여 안전하게 제어
+            while (timeLeft > 0 && isRunning) {
+                // 정확도를 위해 0.5초마다 체크 (UI 부하는 아래 로직으로 방지)
+                delay(500)
+
+                // 종료 시간까지 남은 실제 밀리초 계산
+                val remainingMillis = endTime - System.currentTimeMillis()
+
+                // 남은 시간을 초 단위로 변환 (올림 처리하여 24.9초 -> 25초 표시)
+                // 0 이하가 되면 루프 종료
+                val newTimeLeft = if (remainingMillis > 0) {
+                    ceil(remainingMillis / 1000.0).toInt()
+                } else {
+                    0
+                }
+
+                // 초 단위 숫자가 변경되었을 때만 UI 업데이트 및 브로드캐스트
+                if (newTimeLeft != timeLeft) {
+                    timeLeft = newTimeLeft
+                    updateNotification()
+                    broadcastStatus()
+                }
             }
+
             if (wakeLock.isHeld) { wakeLock.release() }
 
-            val finishedMode = currentMode
-            val currentSettings = settings ?: return@launch
+            // 정상 종료된 경우 (timeLeft == 0)에만 세션 완료 처리
+            if (timeLeft <= 0) {
+                val finishedMode = currentMode
+                val currentSettings = settings ?: return@launch
 
-            if (currentSettings.soundEnabled) { soundPlayer.playSound() }
-            if (currentSettings.vibrationEnabled) { vibratorHelper.vibrate() }
+                if (currentSettings.soundEnabled) { soundPlayer.playSound() }
+                if (currentSettings.vibrationEnabled) { vibratorHelper.vibrate() }
 
-            handleSessionCompletion(finishedMode)
+                handleSessionCompletion(finishedMode)
 
-            advanceToNextSession() // 통합된 세션 전환 로직 호출
+                advanceToNextSession() // 통합된 세션 전환 로직 호출
 
-            // 다음 동작(자동시작/일시정지) 전에 UI에 변경된 상태를 먼저 알립니다.
-            broadcastStatus()
-            updateNotification()
+                // 다음 동작(자동시작/일시정지) 전에 UI에 변경된 상태를 먼저 알립니다.
+                broadcastStatus()
+                updateNotification()
 
-            if (currentSettings.autoStart) {
-                startTimer()
-            } else {
-                pauseTimer()
+                if (currentSettings.autoStart) {
+                    startTimer()
+                } else {
+                    pauseTimer()
+                }
             }
         }
         startForeground(NOTIFICATION_ID, createNotification())
@@ -298,7 +324,7 @@ class TimerService : Service() {
             PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // [변경] Action Intents 생성 (건너뛰기 제거됨)
+        // Action Intents 생성
         val pauseIntent = Intent(this, TimerService::class.java).apply { action = "PAUSE" }
         val pausePendingIntent = PendingIntent.getService(
             this, 1, pauseIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -339,7 +365,7 @@ class TimerService : Service() {
             .setDeleteIntent(stopServicePendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // 잠금 화면에서도 컨트롤 보이게 설정
 
-        // [변경] 건너뛰기 버튼 제거 로직 적용
+        // [건너뛰기 제거됨] 상태에 따른 알림 Action 버튼
         if (isRunning) {
             // 실행 중일 때: [일시정지]만 표시
             builder.addAction(R.drawable.ic_pause, "일시정지", pausePendingIntent)
