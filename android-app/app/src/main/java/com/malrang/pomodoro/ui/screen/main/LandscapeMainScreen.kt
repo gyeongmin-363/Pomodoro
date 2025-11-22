@@ -46,8 +46,8 @@ fun LandscapeMainScreen(
 
     val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
     val titleText = when (timerState.currentMode) {
-        Mode.STUDY -> "운행 중"
-        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중"
+        Mode.STUDY -> "집중 시간"
+        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "휴식 시간"
     }
 
     Box(

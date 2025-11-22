@@ -347,9 +347,9 @@ class TimerService : Service() {
         )
 
         val modeText = when (currentMode) {
-            Mode.STUDY -> "운행 중"
-            Mode.SHORT_BREAK -> "짧은 정차 중"
-            Mode.LONG_BREAK -> "긴 정차 중"
+            Mode.STUDY -> "집중 시간"
+            Mode.SHORT_BREAK -> "짧은 휴식"
+            Mode.LONG_BREAK -> "긴 휴식"
         }
 
         val statusText = if (isRunning) {

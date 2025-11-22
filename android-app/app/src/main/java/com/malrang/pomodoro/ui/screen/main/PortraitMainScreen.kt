@@ -42,8 +42,8 @@ fun PortraitMainScreen(
     val imagePath = settingsState.selectedImagePath
 
     val titleText = when (timerState.currentMode) {
-        Mode.STUDY -> "운행 중"
-        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "정차 중"
+        Mode.STUDY -> "집중 시간"
+        Mode.SHORT_BREAK, Mode.LONG_BREAK -> "휴식 시간"
     }
     val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
 
@@ -145,21 +145,21 @@ fun PortraitMainScreen(
                         IconButton(onClick = {
                             timerViewModel.startTimer(settingsState.settings)
                         }) {
-                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "운행 시작", tint = customTextColor)
+                            Icon(painterResource(id = R.drawable.ic_play), contentDescription = "시작", tint = customTextColor)
                         }
                     } else {
                         IconButton(onClick = { timerViewModel.pauseTimer() }) {
-                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시 정차", tint = customTextColor)
+                            Icon(painterResource(id = R.drawable.ic_pause), contentDescription = "일시 정지", tint = customTextColor)
                         }
                     }
 
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = { events.onShowResetConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "회차", tint = customTextColor)
+                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = customTextColor)
                     }
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = { events.onShowSkipConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "다음 구간으로", tint = customTextColor)
+                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "스킵", tint = customTextColor)
                     }
                 }
             }
