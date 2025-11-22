@@ -16,11 +16,6 @@ data class DailyStatDto(
     val retrospect: String?
 )
 
-
-@Keep
-@Serializable
-data class SettingsDto(val user_id: String, val settings: Settings)
-
 @Keep
 @Serializable
 data class WorkPresetDto(val id: String, val user_id: String, val name: String, val settings: Settings)

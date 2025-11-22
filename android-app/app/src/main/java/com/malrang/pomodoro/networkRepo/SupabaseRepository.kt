@@ -1,7 +1,6 @@
 package com.malrang.pomodoro.networkRepo
 
 import com.malrang.pomodoro.dataclass.ui.DailyStat
-import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.dataclass.ui.WorkPreset
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
@@ -17,8 +16,6 @@ class SupabaseRepository(
 
     suspend fun upsertDailyStat(userId: String, stat: DailyStat) {
         withContext(Dispatchers.IO) {
-            // DB 테이블 구조에 맞춰 DTO로 변환하거나 직접 매핑 (여기서는 예시로 직접 매핑 가정)
-            // 실제 구현 시 data class에 @Serializable이 붙어있어야 합니다.
             val dto = DailyStatDto(
                 user_id = userId,
                 date = stat.date,
@@ -29,7 +26,7 @@ class SupabaseRepository(
                 retrospect = stat.retrospect
             )
             postgrest["daily_stats"].upsert(dto) {
-                onConflict = "user_id, date" // PK가 user_id와 date 복합키라고 가정
+                onConflict = "user_id, date"
             }
         }
     }
@@ -52,24 +49,7 @@ class SupabaseRepository(
         }
     }
 
-    // --- Settings (설정) ---
-
-    suspend fun upsertSettings(userId: String, settings: Settings) {
-        withContext(Dispatchers.IO) {
-            val dto = SettingsDto(userId, settings)
-            postgrest["user_settings"].upsert(dto) {
-                onConflict = "user_id"
-            }
-        }
-    }
-
-    suspend fun getSettings(userId: String): Settings? {
-        return withContext(Dispatchers.IO) {
-            postgrest["user_settings"].select {
-                filter { eq("user_id", userId) }
-            }.decodeSingleOrNull<SettingsDto>()?.settings
-        }
-    }
+    // [삭제됨] Settings 관련 함수들 제거 (upsertSettings, getSettings)
 
     // --- Work Presets (프리셋) ---
 
