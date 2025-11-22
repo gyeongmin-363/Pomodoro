@@ -21,6 +21,7 @@ import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.BackgroundType
+import com.malrang.pomodoro.viewmodel.BackgroundViewModel // [추가]
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 import java.io.File
@@ -29,17 +30,20 @@ import java.io.File
 fun PortraitMainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
+    backgroundViewModel: BackgroundViewModel, // [추가] BackgroundViewModel 주입
     events: MainScreenEvents,
     onNavigateTo: (Screen) -> Unit,
     paddingValues: PaddingValues
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
+    val backgroundState by backgroundViewModel.uiState.collectAsState() // [추가] 상태 구독
 
-    val customBgColor = Color(settingsState.customBgColor)
-    val customTextColor = Color(settingsState.customTextColor)
-    val isImageMode = settingsState.backgroundType == BackgroundType.IMAGE
-    val imagePath = settingsState.selectedImagePath
+    // [수정] settingsState -> backgroundState로 변경
+    val customBgColor = Color(backgroundState.customBgColor)
+    val customTextColor = Color(backgroundState.customTextColor)
+    val isImageMode = backgroundState.backgroundType == BackgroundType.IMAGE
+    val imagePath = backgroundState.selectedImagePath
 
     val titleText = when (timerState.currentMode) {
         Mode.STUDY -> "집중 시간"
@@ -47,21 +51,18 @@ fun PortraitMainScreen(
     }
     val currentWorkName = settingsState.workPresets.find { it.id == settingsState.currentWorkId }?.name ?: "기본"
 
-    // 배경 렌더링
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(customBgColor) // [수정] 이미지가 로드되기 전이나 실패 시 색상 배경 표시 (Fallback)
+            .background(customBgColor)
     ) {
         if (isImageMode && imagePath != null) {
-            // [수정] 비동기 이미지 로딩 (Coil)
             Image(
                 painter = rememberAsyncImagePainter(model = File(imagePath)),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            // 텍스트 가독성을 위한 오버레이
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -69,7 +70,6 @@ fun PortraitMainScreen(
             )
         }
 
-        // 콘텐츠 영역
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -33,6 +33,10 @@ class AppViewModelFactory(private val app: Application) : ViewModelProvider.Fact
             modelClass.isAssignableFrom(StatsViewModel::class.java) -> {
                 StatsViewModel(pomodoroRepository)
             }
+            // [추가] BackgroundViewModel 생성 로직
+            modelClass.isAssignableFrom(BackgroundViewModel::class.java) -> {
+                BackgroundViewModel(pomodoroRepository)
+            }
             else -> {
                 throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
             }

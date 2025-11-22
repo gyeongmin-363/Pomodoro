@@ -37,6 +37,7 @@ import com.malrang.pomodoro.ui.screen.stats.DailyDetailScreen
 import com.malrang.pomodoro.ui.screen.stats.StatsScreen
 import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
+import com.malrang.pomodoro.viewmodel.BackgroundViewModel // [추가]
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
@@ -61,12 +62,13 @@ fun PomodoroApp(
     permissionViewModel: PermissionViewModel,
     statsViewModel: StatsViewModel,
     authViewModel: AuthViewModel,
-    onSyncClick: () -> Unit = {} // [수정] 매개변수 추가 (기본값 포함)
+    backgroundViewModel: BackgroundViewModel, // [추가]
+    onSyncClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val authState by authViewModel.authState.collectAsState()
     val permissionUiState by permissionViewModel.uiState.collectAsState()
-    val settingsState by settingsViewModel.uiState.collectAsState()
+    // settingsState는 필요 시 사용
 
     val allPermissionsGranted =
         permissionUiState.permissions.isNotEmpty() &&
@@ -103,10 +105,7 @@ fun PomodoroApp(
 
         val showBottomBar = currentRoute in navItems.map { it.screen.name }
 
-        // 네비게이션 바 배경은 항상 투명하게 설정 (배경 이미지가 비치도록)
         val navBarContainerColor = Color.Transparent
-
-        // Scaffold 배경: 메인 화면은 투명(MainScreen이 그리기 위함), 그 외는 테마 기본값
         val isMainScreen = currentRoute == Screen.Main.name
         val scaffoldContainerColor = if (isMainScreen) Color.Transparent else MaterialTheme.colorScheme.background
 
@@ -143,21 +142,19 @@ fun PomodoroApp(
                 }
             }
         ) { innerPadding ->
-            // NavHost에 전역 padding 제거
             NavHost(
                 navController = navController,
                 startDestination = startDestination
             ) {
                 composable(Screen.Main.name) {
-                    // MainScreen에는 paddingValues를 전달하여 내부에서 처리 (배경은 무시, 콘텐츠는 적용)
                     MainScreen(
                         timerViewModel = timerViewModel,
                         settingsViewModel = settingsViewModel,
+                        backgroundViewModel = backgroundViewModel, // [추가] MainScreen에 전달
                         onNavigateTo = { screen -> navController.navigate(screen.name) },
                         paddingValues = innerPadding
                     )
                 }
-                // 다른 화면들은 padding을 적용하여 네비게이션 바와 겹치지 않도록 함
                 composable(Screen.Stats.name) {
                     Box(modifier = Modifier.padding(innerPadding)) {
                         StatsScreen(
@@ -222,14 +219,14 @@ fun PomodoroApp(
                 }
                 composable(Screen.Background.name) {
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        BackgroundScreen(settingsViewModel = settingsViewModel)
+                        // [수정] SettingsViewModel -> BackgroundViewModel로 변경
+                        BackgroundScreen(backgroundViewModel = backgroundViewModel)
                     }
                 }
                 composable(
                     route = "${Screen.DailyDetail.name}/{dateString}"
                 ) { backStackEntry ->
                     val dateString = backStackEntry.arguments?.getString("dateString")
-                    // 상세 화면은 자체 Scaffold를 가지므로 padding을 무시하거나 적용 방식 결정 (여기선 꽉 채움)
                     DailyDetailScreen(
                         dateString = dateString,
                         statsViewModel = statsViewModel,

@@ -30,24 +30,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.viewmodel.BackgroundType
-import com.malrang.pomodoro.viewmodel.SettingsViewModel
+import com.malrang.pomodoro.viewmodel.BackgroundViewModel
 import java.io.File
 
 @Composable
 fun BackgroundScreen(
-    settingsViewModel: SettingsViewModel
+    backgroundViewModel: BackgroundViewModel // [변경] ViewModel 타입 변경
 ) {
-    val uiState by settingsViewModel.uiState.collectAsState()
+    val uiState by backgroundViewModel.uiState.collectAsState() // [변경] uiState 참조
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        settingsViewModel.loadAvailableImages(context)
+        backgroundViewModel.loadAvailableImages(context)
     }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        uri?.let { settingsViewModel.addBackgroundImage(context, it) }
+        uri?.let { backgroundViewModel.addBackgroundImage(context, it) }
     }
 
     Column(
@@ -65,12 +65,12 @@ fun BackgroundScreen(
         ) {
             Tab(
                 selected = uiState.backgroundType == BackgroundType.COLOR,
-                onClick = { settingsViewModel.setBackgroundType(BackgroundType.COLOR) },
+                onClick = { backgroundViewModel.setBackgroundType(BackgroundType.COLOR) },
                 text = { Text("색상") }
             )
             Tab(
                 selected = uiState.backgroundType == BackgroundType.IMAGE,
-                onClick = { settingsViewModel.setBackgroundType(BackgroundType.IMAGE) },
+                onClick = { backgroundViewModel.setBackgroundType(BackgroundType.IMAGE) },
                 text = { Text("이미지") }
             )
         }
@@ -83,7 +83,7 @@ fun BackgroundScreen(
                     label = "배경 색상",
                     colorInt = uiState.customBgColor,
                     onColorChanged = { newColor ->
-                        settingsViewModel.updateCustomColors(newColor, uiState.customTextColor)
+                        backgroundViewModel.updateCustomColors(newColor, uiState.customTextColor)
                     }
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -92,7 +92,7 @@ fun BackgroundScreen(
                     label = "텍스트 색상",
                     colorInt = uiState.customTextColor,
                     onColorChanged = { newColor ->
-                        settingsViewModel.updateCustomColors(uiState.customBgColor, newColor)
+                        backgroundViewModel.updateCustomColors(uiState.customBgColor, newColor)
                     }
                 )
             }
@@ -102,7 +102,7 @@ fun BackgroundScreen(
                     label = "텍스트 색상 (이미지 위)",
                     colorInt = uiState.customTextColor,
                     onColorChanged = { newColor ->
-                        settingsViewModel.updateCustomColors(uiState.customBgColor, newColor)
+                        backgroundViewModel.updateCustomColors(uiState.customBgColor, newColor)
                     }
                 )
 
@@ -131,7 +131,7 @@ fun BackgroundScreen(
                         ImageItem(
                             path = path,
                             isSelected = path == uiState.selectedImagePath,
-                            onClick = { settingsViewModel.selectBackgroundImage(path) }
+                            onClick = { backgroundViewModel.selectBackgroundImage(path) }
                         )
                     }
                 }
@@ -146,7 +146,6 @@ fun ImageItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    // [수정] 비동기 이미지 로더 사용 (Coil)
     val painter = rememberAsyncImagePainter(model = File(path))
 
     Box(

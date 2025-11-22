@@ -1,7 +1,5 @@
 package com.malrang.pomodoro.viewmodel
 
-import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.ui.BlockMode
@@ -14,17 +12,12 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
-import java.util.UUID
 
-enum class BackgroundType { COLOR, IMAGE }
 
 data class SettingsUiState(
     val settings: Settings = Settings(),
@@ -32,12 +25,8 @@ data class SettingsUiState(
     val currentWorkId: String? = null,
     val editingWorkPreset: WorkPreset? = null,
     val draftSettings: Settings? = null,
-    val blockedApps: Set<String> = emptySet(),
-    val customBgColor: Int = android.graphics.Color.BLACK,
-    val customTextColor: Int = android.graphics.Color.WHITE,
-    val backgroundType: BackgroundType = BackgroundType.COLOR,
-    val selectedImagePath: String? = null,
-    val availableImages: List<String> = emptyList()
+    val blockedApps: Set<String> = emptySet()
+    // [삭제] 배경 관련 상태 필드들은 BackgroundViewModel로 이동됨
 )
 
 class SettingsViewModel(
@@ -47,7 +36,6 @@ class SettingsViewModel(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    // [추가] Supabase Repository 직접 생성 (ViewModelFactory 수정 없이 사용하기 위함)
     private val supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
 
     init {
@@ -58,31 +46,21 @@ class SettingsViewModel(
             val currentSettings = currentWork?.settings ?: Settings()
             val blockedApps = localRepo.loadBlockedApps()
 
-            val savedBg = localRepo.loadCustomBgColor() ?: android.graphics.Color.BLACK
-            val savedText = localRepo.loadCustomTextColor() ?: android.graphics.Color.WHITE
-            val bgTypeString = localRepo.loadBackgroundType()
-            val bgType = try { BackgroundType.valueOf(bgTypeString) } catch(e: Exception) { BackgroundType.COLOR }
-            val selectedImgPath = localRepo.loadSelectedBgImagePath()
+            // [삭제] 배경 관련 로딩 로직 제거
 
             _uiState.update {
                 it.copy(
                     settings = currentSettings,
                     workPresets = presets,
                     currentWorkId = currentWorkId,
-                    blockedApps = blockedApps,
-                    customBgColor = savedBg,
-                    customTextColor = savedText,
-                    backgroundType = bgType,
-                    selectedImagePath = selectedImgPath
+                    blockedApps = blockedApps
                 )
             }
         }
     }
 
-    // [추가] 현재 프리셋 목록을 서버와 동기화하는 헬퍼 함수
     private fun syncPresetsToServer() {
         val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id ?: return
-        // 현재 UI 상태의 프리셋 목록을 가져옴
         val currentPresets = _uiState.value.workPresets
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -94,77 +72,7 @@ class SettingsViewModel(
         }
     }
 
-    fun loadAvailableImages(context: Context) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val dir = File(context.filesDir, "bg_images")
-            if (!dir.exists()) dir.mkdirs()
-
-            val files = dir.listFiles()?.sortedByDescending { it.lastModified() }?.map { it.absolutePath } ?: emptyList()
-            _uiState.update { it.copy(availableImages = files) }
-        }
-    }
-
-    fun addBackgroundImage(context: Context, uri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val dir = File(context.filesDir, "bg_images")
-                if (!dir.exists()) dir.mkdirs()
-
-                val newFileName = "bg_${UUID.randomUUID()}.jpg"
-                val newFile = File(dir, newFileName)
-
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(newFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-
-                val files = dir.listFiles()?.sortedBy { it.lastModified() }
-                if (files != null && files.size > 20) {
-                    val filesToDelete = files.take(files.size - 20)
-                    filesToDelete.forEach { it.delete() }
-                }
-
-                loadAvailableImages(context)
-                selectBackgroundImage(newFile.absolutePath)
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    fun selectBackgroundImage(path: String) {
-        viewModelScope.launch {
-            localRepo.saveSelectedBgImagePath(path)
-            localRepo.saveBackgroundType(BackgroundType.IMAGE.name)
-            _uiState.update {
-                it.copy(
-                    selectedImagePath = path,
-                    backgroundType = BackgroundType.IMAGE
-                )
-            }
-        }
-    }
-
-    fun setBackgroundType(type: BackgroundType) {
-        viewModelScope.launch {
-            localRepo.saveBackgroundType(type.name)
-            _uiState.update { it.copy(backgroundType = type) }
-        }
-    }
-
-    fun updateCustomColors(bgColor: Int, textColor: Int) {
-        viewModelScope.launch {
-            localRepo.saveCustomColors(bgColor, textColor)
-            _uiState.update {
-                it.copy(
-                    customBgColor = bgColor,
-                    customTextColor = textColor
-                )
-            }
-        }
-    }
+    // [삭제] 배경 이미지 관련 함수들 (loadAvailableImages, addBackgroundImage 등) 제거
 
     fun addToBlockList(packageName: String) {
         viewModelScope.launch {
@@ -233,7 +141,6 @@ class SettingsViewModel(
             onReset(newActiveSettings)
             clearDraftSettings()
 
-            // [추가] 설정 변경 후 서버 동기화
             syncPresetsToServer()
         }
     }
@@ -264,7 +171,6 @@ class SettingsViewModel(
             val updatedPresets = _uiState.value.workPresets + newPreset
             _uiState.update { it.copy(workPresets = updatedPresets) }
 
-            // [추가] 프리셋 추가 후 서버 동기화
             syncPresetsToServer()
         }
     }
@@ -285,7 +191,6 @@ class SettingsViewModel(
                 selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "", onReset)
             }
 
-            // [추가] 삭제 후 서버 동기화 (delete 요청)
             val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
             if (userId != null) {
                 launch(Dispatchers.IO) {
@@ -310,7 +215,6 @@ class SettingsViewModel(
             }
             _uiState.update { it.copy(workPresets = updatedPresets) }
 
-            // [추가] 이름 변경 후 서버 동기화
             syncPresetsToServer()
         }
     }

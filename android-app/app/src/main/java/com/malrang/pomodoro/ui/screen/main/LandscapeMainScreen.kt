@@ -21,6 +21,7 @@ import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.BackgroundType
+import com.malrang.pomodoro.viewmodel.BackgroundViewModel // [추가]
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 import java.io.File
@@ -29,17 +30,20 @@ import java.io.File
 fun LandscapeMainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
+    backgroundViewModel: BackgroundViewModel, // [추가] BackgroundViewModel 주입
     events: MainScreenEvents,
     onNavigateTo: (Screen) -> Unit,
     paddingValues: PaddingValues
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
+    val backgroundState by backgroundViewModel.uiState.collectAsState() // [추가] 상태 구독
 
-    val customBgColor = Color(settingsState.customBgColor)
-    val customTextColor = Color(settingsState.customTextColor)
-    val isImageMode = settingsState.backgroundType == BackgroundType.IMAGE
-    val imagePath = settingsState.selectedImagePath
+    // [수정] settingsState -> backgroundState로 변경
+    val customBgColor = Color(backgroundState.customBgColor)
+    val customTextColor = Color(backgroundState.customTextColor)
+    val isImageMode = backgroundState.backgroundType == BackgroundType.IMAGE
+    val imagePath = backgroundState.selectedImagePath
 
     val contentColor = customTextColor
     val highlightColor = MaterialTheme.colorScheme.primary
@@ -53,10 +57,9 @@ fun LandscapeMainScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(customBgColor) // [수정] Fallback 배경색
+            .background(customBgColor)
     ) {
         if (isImageMode && imagePath != null) {
-            // [수정] 비동기 이미지 로딩 (Coil)
             Image(
                 painter = rememberAsyncImagePainter(model = File(imagePath)),
                 contentDescription = null,

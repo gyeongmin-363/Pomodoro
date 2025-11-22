@@ -15,6 +15,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.ModernConfirmDialog
+import com.malrang.pomodoro.viewmodel.BackgroundViewModel // [추가]
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
@@ -27,8 +28,9 @@ data class MainScreenEvents(
 fun MainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
+    backgroundViewModel: BackgroundViewModel, // [추가] 파라미터 추가
     onNavigateTo: (Screen) -> Unit,
-    paddingValues: PaddingValues // [추가] 상위 Scaffold로부터 받은 패딩
+    paddingValues: PaddingValues
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
@@ -72,27 +74,26 @@ fun MainScreen(
             )
         }
 
-        // MainScreen 자체가 배경을 그리기 때문에 별도의 background Box는 제거하거나 투명 처리
-        // PortraitMainScreen/LandscapeMainScreen 내부에서 배경 처리
-
         val configuration = LocalConfiguration.current
         when (configuration.orientation) {
             Configuration.ORIENTATION_LANDSCAPE -> {
                 LandscapeMainScreen(
                     timerViewModel = timerViewModel,
                     settingsViewModel = settingsViewModel,
+                    backgroundViewModel = backgroundViewModel, // [추가] 전달
                     events = events,
                     onNavigateTo = onNavigateTo,
-                    paddingValues = paddingValues // [추가] 패딩 전달
+                    paddingValues = paddingValues
                 )
             }
             else -> {
                 PortraitMainScreen(
                     timerViewModel = timerViewModel,
                     settingsViewModel = settingsViewModel,
+                    backgroundViewModel = backgroundViewModel, // [추가] 전달
                     events = events,
                     onNavigateTo = onNavigateTo,
-                    paddingValues = paddingValues // [추가] 패딩 전달
+                    paddingValues = paddingValues
                 )
             }
         }
