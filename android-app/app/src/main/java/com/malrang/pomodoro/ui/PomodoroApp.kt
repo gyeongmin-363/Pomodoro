@@ -33,8 +33,8 @@ import com.malrang.pomodoro.ui.screen.background.BackgroundScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
 import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
 import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
-import com.malrang.pomodoro.ui.screen.stats.DailyDetailScreen
-import com.malrang.pomodoro.ui.screen.stats.StatsScreen
+import com.malrang.pomodoro.ui.screen.stats.daliyDetail.DailyDetailScreen
+import com.malrang.pomodoro.ui.screen.stats.month.StatsScreen
 import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.BackgroundViewModel // [추가]

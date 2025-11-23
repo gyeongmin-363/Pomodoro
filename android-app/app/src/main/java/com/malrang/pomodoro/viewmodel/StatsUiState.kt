@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// [수정] 필터 상태 추가
 data class StatsUiState(
-    val dailyStats: Map<String, DailyStat> = emptyMap()
+    val dailyStats: Map<String, DailyStat> = emptyMap(),
+    val selectedFilter: String = "전체",
+    val filterOptions: List<String> = listOf("전체")
 )
 
 class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
@@ -25,8 +28,27 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
     fun loadDailyStats() {
         viewModelScope.launch {
             val stats = repository.loadDailyStats()
-            _uiState.update { it.copy(dailyStats = stats) }
+
+            // [수정] DailyStat의 studyTimeByWork 키 값을 추출
+            val allWorks = stats.values
+                .flatMap { it.studyTimeByWork?.keys ?: emptySet() }
+                .distinct()
+                .sorted()
+
+            val options = listOf("전체") + allWorks
+
+            _uiState.update {
+                it.copy(
+                    dailyStats = stats,
+                    filterOptions = options
+                )
+            }
         }
+    }
+
+    // [추가] 필터 변경 함수
+    fun updateFilter(filter: String) {
+        _uiState.update { it.copy(selectedFilter = filter) }
     }
 
     // [공통] DailyStat 업데이트 헬퍼 함수
@@ -40,6 +62,7 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
             _uiState.update { state ->
                 val newStats = state.dailyStats.toMutableMap()
                 newStats[date] = updatedStat
+                // 데이터 변경 시 필터 옵션도 갱신이 필요할 수 있으나, 여기서는 생략하거나 필요시 로직 추가
                 state.copy(dailyStats = newStats)
             }
         }
@@ -50,12 +73,11 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
         updateDailyStat(date) { it.copy(retrospect = retrospect) }
     }
 
-    // [추가] 체크리스트 아이템 추가
+    // 체크리스트 아이템 추가
     fun addChecklistItem(date: String, task: String) {
         if (task.isBlank()) return
         updateDailyStat(date) { current ->
             val newChecklist = current.checklist.toMutableMap()
-            // 이미 존재하지 않을 때만 추가 (기본값 false)
             if (!newChecklist.containsKey(task)) {
                 newChecklist[task] = false
             }
@@ -63,7 +85,7 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
         }
     }
 
-    // [추가] 체크리스트 아이템 삭제
+    // 체크리스트 아이템 삭제
     fun deleteChecklistItem(date: String, task: String) {
         updateDailyStat(date) { current ->
             val newChecklist = current.checklist.toMutableMap()
@@ -72,7 +94,7 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
         }
     }
 
-    // [추가] 체크리스트 아이템 토글
+    // 체크리스트 아이템 토글
     fun toggleChecklistItem(date: String, task: String) {
         updateDailyStat(date) { current ->
             val newChecklist = current.checklist.toMutableMap()
@@ -82,7 +104,7 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
         }
     }
 
-    // [추가] 체크리스트 아이템 수정
+    // 체크리스트 아이템 수정
     fun modifyChecklistItem(date: String, oldTask: String, newTask: String) {
         if (newTask.isBlank() || oldTask == newTask) return
         updateDailyStat(date) { current ->
@@ -90,8 +112,6 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
             if (newChecklist.containsKey(oldTask)) {
                 val status = newChecklist[oldTask] ?: false
                 newChecklist.remove(oldTask)
-                // 순서 유지를 위해 LinkedHashMap을 사용하므로 remove 후 put 하면 맨 뒤로 갈 수 있음.
-                // 순서가 중요하다면 리스트 구조로 변경을 고려해야 하지만, 현재 Map 구조에서는 새로 추가됨.
                 newChecklist[newTask] = status
             }
             current.copy(checklist = newChecklist)

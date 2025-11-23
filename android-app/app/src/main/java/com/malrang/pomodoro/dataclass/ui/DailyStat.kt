@@ -18,11 +18,21 @@ data class DailyStat(
     val totalBreakTimeInMinutes: Int
         get() = breakTimeByWork?.values?.sum() ?: 0
 
+    // [추가] 필터링된 공부 시간을 반환하는 함수
+    // "전체"일 경우 총 시간을, 특정 카테고리일 경우 해당 카테고리의 시간을 반환합니다.
+    fun getStudyTime(filter: String): Int {
+        return if (filter == "전체") {
+            totalStudyTimeInMinutes
+        } else {
+            studyTimeByWork?.get(filter) ?: 0
+        }
+    }
+
     fun toEntity() = DailyStatEntity(
         date = date,
         studyTimeByWork = studyTimeByWork ?: emptyMap(),
         breakTimeByWork = breakTimeByWork ?: emptyMap(),
-        checklist = checklist, // 매핑 추가
+        checklist = checklist,
         retrospect = retrospect,
         updatedAt = System.currentTimeMillis() // 저장 시점의 시간으로 갱신
     )
