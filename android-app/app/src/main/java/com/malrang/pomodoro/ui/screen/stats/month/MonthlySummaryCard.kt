@@ -20,24 +20,24 @@ fun MonthlySummaryCard(monthlyTotalMinutes: Int) {
     val hours = monthlyTotalMinutes / 60
     val minutes = monthlyTotalMinutes % 60
 
-    // [디자인 변경] 한 줄 텍스트 (Span을 이용해 스타일 혼합)
+    // 아이콘 제거, 텍스트 중심 디자인
     Text(
         text = buildAnnotatedString {
-            // 1. 라벨: 작고 흐린 흰색
+            // 라벨: 작고 약간 투명한 흰색
             withStyle(
                 style = SpanStyle(
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
             ) {
-                append("이번 달 총 집중  ") // 간격 추가
+                append("이번 달 총 집중  ")
             }
 
-            // 2. 시간 데이터: 크고 강조된 색상 (파란 배경 위 포인트 컬러)
+            // 시간 값: 크고 강조된 색상 (노란색 계열)
             withStyle(
                 style = SpanStyle(
-                    color = Color(0xFFFFE082), // 파란 배경에 잘 어울리는 밝은 노란색/금색 계열
+                    color = Color(0xFFFFE082), // 파란 배경 위 포인트 컬러
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -50,7 +50,7 @@ fun MonthlySummaryCard(monthlyTotalMinutes: Int) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 20.dp), // 캘린더와의 간격 혹은 하단 여백
-        textAlign = TextAlign.Center // 가운데 정렬
+            .padding(bottom = 8.dp),
+        textAlign = TextAlign.Center
     )
 }
