@@ -1,6 +1,11 @@
 package com.malrang.pomodoro.ui.screen.stats.month
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,7 +32,6 @@ import com.malrang.pomodoro.viewmodel.StatsViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
     statsViewModel: StatsViewModel,
@@ -34,11 +39,15 @@ fun StatsScreen(
     onNavigateToDetail: (LocalDate) -> Unit
 ) {
     val state by statsViewModel.uiState.collectAsState()
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    val scrollState = rememberScrollState() // [변경] 전체 화면 스크롤 상태 관리
 
-    // [수정] 필터가 적용된 월간 총 시간 계산
-    val monthlyTotalMinutes = remember(selectedDate, state.dailyStats, state.selectedFilter) {
-        val targetMonth = YearMonth.from(selectedDate)
+    // 현재 보고 있는 달과 선택된 날짜
+    var currentMonthDate by remember { mutableStateOf(LocalDate.now()) }
+    var tappedDate by remember { mutableStateOf<LocalDate?>(null) }
+
+    // 월간 총 시간 계산
+    val monthlyTotalMinutes = remember(currentMonthDate, state.dailyStats, state.selectedFilter) {
+        val targetMonth = YearMonth.from(currentMonthDate)
         state.dailyStats.values.filter { stat ->
             try {
                 val statDate = LocalDate.parse(stat.date)
@@ -46,52 +55,116 @@ fun StatsScreen(
             } catch (e: Exception) {
                 false
             }
-        }.sumOf { it.getStudyTime(state.selectedFilter) } // 확장 함수 사용
+        }.sumOf { it.getStudyTime(state.selectedFilter) }
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("통계", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { onNavigateTo(Screen.Main) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        }
-    ) { innerPadding ->
+    // 화면 높이 가져오기 (하단 시트 최소 높이 설정을 위해)
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.primary)
+            .verticalScroll(scrollState) // [변경] 전체 화면에 스크롤 적용
+    ) {
+        // 1. 상단 영역 (헤더 + 캘린더)
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 24.dp)
+                .padding(top = 16.dp, bottom = 24.dp)
         ) {
-            // [추가] 필터 드롭다운
-            StatsFilterDropdown(
-                currentFilter = state.selectedFilter,
-                options = state.filterOptions,
-                onFilterSelected = { statsViewModel.updateFilter(it) }
-            )
+            // 네비게이션 및 필터
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { onNavigateTo(Screen.Main) }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "뒤로가기",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                StatsFilterDropdown(
+                    currentFilter = state.selectedFilter,
+                    options = state.filterOptions,
+                    onFilterSelected = { statsViewModel.updateFilter(it) }
+                )
+            }
 
-            // 월간 요약 카드
-            MonthlySummaryCard(monthlyTotalMinutes = monthlyTotalMinutes)
+            Spacer(Modifier.height(16.dp))
 
-            // 캘린더 섹션 (필터 전달)
+            // 캘린더
             MonthlyStatsCalendar(
                 dailyStats = state.dailyStats,
-                selectedDate = selectedDate,
-                selectedFilter = state.selectedFilter, // 필터 전달
-                onDateSelected = { newDate -> selectedDate = newDate },
+                currentMonthDate = currentMonthDate,
+                selectedDate = tappedDate,
+                selectedFilter = state.selectedFilter,
+                onMonthChanged = { newDate ->
+                    currentMonthDate = newDate
+                    tappedDate = null
+                },
+                onDateSelected = { date ->
+                    tappedDate = if (tappedDate == date) null else date
+                },
                 onDetailRequested = onNavigateToDetail
             )
+        }
 
-            Spacer(Modifier.height(32.dp))
+        // 2. 하단 영역 (흰색 시트 + 상세 정보)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                // [설정] 내용이 적어도 화면 하단까지 흰색이 꽉 차 보이도록 최소 높이 설정 (선택 사항)
+                .heightIn(min = screenHeight / 2),
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                // [제거] 내부 verticalScroll 제거 (부모가 스크롤하므로)
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // [제거] 핸들러바(Box) 삭제됨
+
+                // 1) 월간 요약
+                MonthlySummaryCard(monthlyTotalMinutes = monthlyTotalMinutes)
+
+                // 2) 일별 상세
+                AnimatedVisibility(
+                    visible = tappedDate != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    tappedDate?.let { date ->
+                        val stats = state.dailyStats[date.toString()]
+                        val filteredTime = stats?.getStudyTime(state.selectedFilter) ?: 0
+
+                        Column {
+                            Text(
+                                text = "선택한 날짜 상세",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+
+                            DailySummaryCard(
+                                date = date,
+                                stats = stats,
+                                displayedStudyTime = filteredTime,
+                                onDetailClick = { onNavigateToDetail(date) }
+                            )
+                        }
+                    }
+                }
+
+                // 하단 여백 (스크롤 끝부분 시야 확보)
+                Spacer(Modifier.height(48.dp))
+            }
         }
     }
 }
@@ -103,75 +176,54 @@ fun StatsFilterDropdown(
     onFilterSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    // [수정 1] 메뉴가 닫힌 시점을 기록하기 위한 변수 추가
     var dismissalTimestamp by remember { mutableLongStateOf(0L) }
 
-    // focusable=false일 때는 뒤로가기 버튼 처리를 수동으로 해야 합니다.
-    BackHandler(enabled = expanded) {
-        expanded = false
-    }
+    BackHandler(enabled = expanded) { expanded = false }
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
-        // 버튼 UI
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF212121))
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(alpha = 0.2f))
                 .clickable {
-                    // [수정 2] 방금 닫힌 게 아니라면 토글 수행
-                    // onDismissRequest가 실행된 직후(약 100~200ms 이내)에 클릭 이벤트가 들어오면 무시합니다.
                     if (System.currentTimeMillis() - dismissalTimestamp > 200) {
                         expanded = !expanded
                     }
                 }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "필터 : $currentFilter",
-                color = Color.White,
+                text = currentFilter,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = "필터 선택",
-                tint = Color.White,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(16.dp)
             )
         }
-
-        // 드롭다운 메뉴
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = {
                 expanded = false
-                // [수정 3] 닫히는 시점 기록
                 dismissalTimestamp = System.currentTimeMillis()
             },
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.surface)
                 .width(140.dp),
-            properties = PopupProperties(
-                focusable = false,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true
-            )
+            properties = PopupProperties(focusable = false, dismissOnBackPress = true, dismissOnClickOutside = true)
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = {
-                        Text(
-                            text = option,
-                            color = if(option == currentFilter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
+                        Text(option, color = if(option == currentFilter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                     },
-                    onClick = {
-                        onFilterSelected(option)
-                        expanded = false
-                    }
+                    onClick = { onFilterSelected(option); expanded = false }
                 )
             }
         }
