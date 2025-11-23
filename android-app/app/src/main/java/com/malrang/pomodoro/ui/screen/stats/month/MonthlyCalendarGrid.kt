@@ -1,4 +1,4 @@
-package com.malrang.pomodoro.ui.screen.stats
+package com.malrang.pomodoro.ui.screen.stats.month
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
