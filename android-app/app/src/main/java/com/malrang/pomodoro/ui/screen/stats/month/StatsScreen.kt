@@ -1,32 +1,46 @@
 package com.malrang.pomodoro.ui.screen.stats.month
 
-import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.PopupProperties
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
     statsViewModel: StatsViewModel,
@@ -34,11 +48,14 @@ fun StatsScreen(
     onNavigateToDetail: (LocalDate) -> Unit
 ) {
     val state by statsViewModel.uiState.collectAsState()
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    val scrollState = rememberScrollState()
 
-    // [수정] 필터가 적용된 월간 총 시간 계산
-    val monthlyTotalMinutes = remember(selectedDate, state.dailyStats, state.selectedFilter) {
-        val targetMonth = YearMonth.from(selectedDate)
+    var currentMonthDate by remember { mutableStateOf(LocalDate.now()) }
+    var tappedDate by remember { mutableStateOf<LocalDate?>(null) }
+
+    // 월간 총 시간 계산
+    val monthlyTotalMinutes = remember(currentMonthDate, state.dailyStats, state.selectedFilter) {
+        val targetMonth = YearMonth.from(currentMonthDate)
         state.dailyStats.values.filter { stat ->
             try {
                 val statDate = LocalDate.parse(stat.date)
@@ -46,133 +63,120 @@ fun StatsScreen(
             } catch (e: Exception) {
                 false
             }
-        }.sumOf { it.getStudyTime(state.selectedFilter) } // 확장 함수 사용
+        }.sumOf { it.getStudyTime(state.selectedFilter) }
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("통계", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { onNavigateTo(Screen.Main) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        }
-    ) { innerPadding ->
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.primary)
+            .verticalScroll(scrollState)
+    ) {
+        // 1. 상단 영역 (파란 배경)
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 24.dp)
+                .padding(top = 16.dp, bottom = 12.dp)
         ) {
-            // [추가] 필터 드롭다운
-            StatsFilterDropdown(
-                currentFilter = state.selectedFilter,
-                options = state.filterOptions,
-                onFilterSelected = { statsViewModel.updateFilter(it) }
-            )
+            // 네비게이션 + 필터
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { onNavigateTo(Screen.Main) }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "뒤로가기",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                StatsFilterDropdown(
+                    currentFilter = state.selectedFilter,
+                    options = state.filterOptions,
+                    onFilterSelected = { statsViewModel.updateFilter(it) }
+                )
+            }
 
-            // 월간 요약 카드
-            MonthlySummaryCard(monthlyTotalMinutes = monthlyTotalMinutes)
+            Spacer(Modifier.height(8.dp))
 
-            // 캘린더 섹션 (필터 전달)
+            // 캘린더
             MonthlyStatsCalendar(
                 dailyStats = state.dailyStats,
-                selectedDate = selectedDate,
-                selectedFilter = state.selectedFilter, // 필터 전달
-                onDateSelected = { newDate -> selectedDate = newDate },
-                onDetailRequested = onNavigateToDetail
+                currentMonthDate = currentMonthDate,
+                selectedDate = tappedDate,
+                selectedFilter = state.selectedFilter,
+                onMonthChanged = { newDate ->
+                    currentMonthDate = newDate
+                    tappedDate = null
+                },
+                onDateSelected = { date ->
+                    tappedDate = if (tappedDate == date) null else date
+                },
+                // [수정] 없는 함수 onDetailRequested 제거. 캘린더에서는 날짜 선택만 담당.
+                onDetailRequested = { /* 필요 시 구현, 현재는 하단 시트에서 상세 이동 */ }
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
+
+            // [위치 이동] 월간 요약 (아이콘 없는 텍스트 버전)
+            MonthlySummaryCard(monthlyTotalMinutes = monthlyTotalMinutes)
         }
-    }
-}
 
-@Composable
-fun StatsFilterDropdown(
-    currentFilter: String,
-    options: List<String>,
-    onFilterSelected: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    // [수정 1] 메뉴가 닫힌 시점을 기록하기 위한 변수 추가
-    var dismissalTimestamp by remember { mutableLongStateOf(0L) }
-
-    // focusable=false일 때는 뒤로가기 버튼 처리를 수동으로 해야 합니다.
-    BackHandler(enabled = expanded) {
-        expanded = false
-    }
-
-    Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
-        // 버튼 UI
-        Row(
+        // 2. 하단 영역 (흰색 시트)
+        Surface(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF212121))
-                .clickable {
-                    // [수정 2] 방금 닫힌 게 아니라면 토글 수행
-                    // onDismissRequest가 실행된 직후(약 100~200ms 이내)에 클릭 이벤트가 들어오면 무시합니다.
-                    if (System.currentTimeMillis() - dismissalTimestamp > 200) {
-                        expanded = !expanded
+                .fillMaxWidth()
+                .heightIn(min = screenHeight / 2),
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // 일별 상세 정보
+                AnimatedVisibility(
+                    visible = tappedDate != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    tappedDate?.let { date ->
+                        val stats = state.dailyStats[date.toString()]
+                        val filteredTime = stats?.getStudyTime(state.selectedFilter) ?: 0
+
+                        // [수정] 불필요한 텍스트 제거하고 카드만 표시
+                        // 클릭 시 StatsScreen이 받은 onNavigateToDetail 실행
+                        DailySummaryCard(
+                            date = date,
+                            stats = stats,
+                            displayedStudyTime = filteredTime,
+                            onDetailClick = { onNavigateToDetail(date) }
+                        )
                     }
                 }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "필터 : $currentFilter",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = "필터 선택",
-                tint = Color.White,
-                modifier = Modifier.size(16.dp)
-            )
-        }
 
-        // 드롭다운 메뉴
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = {
-                expanded = false
-                // [수정 3] 닫히는 시점 기록
-                dismissalTimestamp = System.currentTimeMillis()
-            },
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
-                .width(140.dp),
-            properties = PopupProperties(
-                focusable = false,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true
-            )
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = {
+                // 날짜 미선택 시 안내 (선택 사항)
+                if (tappedDate == null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = option,
-                            color = if(option == currentFilter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            text = "날짜를 눌러 상세 정보를 확인해보세요",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
-                    },
-                    onClick = {
-                        onFilterSelected(option)
-                        expanded = false
                     }
-                )
+                }
+
+                Spacer(Modifier.height(48.dp))
             }
         }
     }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,42 +32,43 @@ fun DayCell(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    // 날짜 텍스트 색상: 주말 구분
+    // [UI 수정] 배경이 Primary 컬러이므로 기본 텍스트는 흰색이어야 함
     val dayTextColor = when {
-        isSelected -> MaterialTheme.colorScheme.onPrimary
+        isSelected -> MaterialTheme.colorScheme.primary // 선택 시 배경이 흰색이 되므로 텍스트는 파란색
         else -> when (date.dayOfWeek) {
-            DayOfWeek.SATURDAY -> Color(0xFF42A5F5)
-            DayOfWeek.SUNDAY -> Color(0xFFEF5350)
-            else -> MaterialTheme.colorScheme.onSurface
+            DayOfWeek.SATURDAY -> Color(0xFF90CAF9) // 밝은 파랑
+            DayOfWeek.SUNDAY -> Color(0xFFEF9A9A) // 밝은 빨강
+            else -> Color.White // 기본 흰색
         }
     }
 
-    // 히트맵 배경색 (GitHub 스타일 Green 유지하되 테마와 조화롭게)
-    // 단, 선택되었을 땐 Primary 색상으로 덮어씀
+    // 히트맵 배경색
+    // 선택되었을 땐 흰색(강조)
     val backgroundColor = if (isSelected) {
-        MaterialTheme.colorScheme.primary
+        Color.White
     } else {
         when {
             studyTimeMinutes == 0 -> Color.Transparent
-            studyTimeMinutes < 30 -> Color(0xFF9BE9A8) // Light Green
-            studyTimeMinutes < 60 -> Color(0xFF40C463)
+            // [UI 수정] 파란 배경 위에서 초록색 히트맵이 잘 보이도록 색상 조정 또는 유지
+            studyTimeMinutes < 30 -> Color(0xFF9BE9A8).copy(alpha = 0.8f)
+            studyTimeMinutes < 60 -> Color(0xFF40C463).copy(alpha = 0.9f)
             studyTimeMinutes < 120 -> Color(0xFF30A14E)
-            else -> Color(0xFF216E39) // Dark Green
+            else -> Color(0xFF216E39)
         }
     }
 
-    // 오늘 날짜 테두리
+    // 오늘 날짜 테두리 (흰색으로 변경)
     val borderModifier = if (isToday && !isSelected) {
-        Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+        Modifier.border(1.5.dp, Color.White.copy(alpha = 0.7f), CircleShape) // 모양도 원형으로 변경 가능
     } else {
         Modifier
     }
 
     Box(
         modifier = Modifier
-            .size(42.dp) // 터치 영역 확보
-            .padding(2.dp)
-            .clip(RoundedCornerShape(8.dp)) // 둥근 사각형 (Modern)
+            .size(42.dp)
+            .padding(4.dp) // 간격 조금 더 줌
+            .clip(RoundedCornerShape(12.dp)) // 더 둥글게
             .background(backgroundColor)
             .then(borderModifier)
             .combinedClickable(
