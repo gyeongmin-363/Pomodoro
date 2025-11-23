@@ -79,7 +79,7 @@ private val LightColorScheme = lightColorScheme(
 fun PomodoroTheme(
     themeOption: ThemeOption = ThemeOption.SYSTEM,
     // Dynamic color는 Android 12 이상에서 사용 가능
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     // 사용자가 선택한 옵션에 따라 다크 모드 여부 결정
