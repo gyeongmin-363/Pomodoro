@@ -1,22 +1,9 @@
 package com.malrang.pomodoro.ui.screen.stats.month
 
-
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,9 +17,11 @@ import java.time.LocalDate
 fun DailySummaryCard(
     date: LocalDate,
     stats: DailyStat?,
+    displayedStudyTime: Int, // [추가] 필터링된 시간 (외부에서 주입)
     onDetailClick: () -> Unit
 ) {
-    val studyTime = stats?.totalStudyTimeInMinutes ?: 0
+    // [수정] 기존 내부 계산(totalStudyTimeInMinutes) 대신 인자로 받은 displayedStudyTime 사용
+    val studyTime = displayedStudyTime
     val checklistTotal = stats?.checklist?.size ?: 0
     val checklistDone = stats?.checklist?.values?.count { it } ?: 0
     val retrospect = stats?.retrospect ?: "작성된 회고가 없습니다."
@@ -40,7 +29,7 @@ fun DailySummaryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onDetailClick), // 카드 전체 클릭 가능
+            .clickable(onClick = onDetailClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -76,6 +65,7 @@ fun DailySummaryCard(
             ) {
                 Column {
                     Text("총 공부 시간", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // [수정] 분 단위 표시
                     Text("${studyTime}분", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 }
                 Column(horizontalAlignment = Alignment.End) {

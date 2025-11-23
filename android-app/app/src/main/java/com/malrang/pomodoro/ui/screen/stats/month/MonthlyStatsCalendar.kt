@@ -1,33 +1,17 @@
 package com.malrang.pomodoro.ui.screen.stats.month
 
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,11 +23,11 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-
 @Composable
 fun MonthlyStatsCalendar(
     dailyStats: Map<String, DailyStat>,
     selectedDate: LocalDate,
+    selectedFilter: String, // [추가] 필터 수신
     onDateSelected: (LocalDate) -> Unit,
     onDetailRequested: (LocalDate) -> Unit
 ) {
@@ -87,8 +71,8 @@ fun MonthlyStatsCalendar(
             Row(Modifier.fillMaxWidth()) {
                 daysOfWeek.forEach { day ->
                     val color = when (day) {
-                        "토" -> Color(0xFF42A5F5) // Material Blue 400
-                        "일" -> Color(0xFFEF5350) // Material Red 400
+                        "토" -> Color(0xFF42A5F5)
+                        "일" -> Color(0xFFEF5350)
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
                     Text(
@@ -110,7 +94,8 @@ fun MonthlyStatsCalendar(
                 onDateTap = { date -> tappedDate = date },
                 onDateLongTap = { date -> onDetailRequested(date) },
                 getStudyTime = { date ->
-                    dailyStats[date.toString()]?.totalStudyTimeInMinutes ?: 0
+                    // [수정] 필터링된 시간 반환
+                    dailyStats[date.toString()]?.getStudyTime(selectedFilter) ?: 0
                 }
             )
         }
@@ -118,7 +103,7 @@ fun MonthlyStatsCalendar(
 
     Spacer(Modifier.height(16.dp))
 
-    // 날짜 선택 시 하단 요약 정보 (애니메이션)
+    // 날짜 선택 시 하단 요약 정보
     AnimatedVisibility(
         visible = tappedDate != null,
         enter = fadeIn() + expandVertically(),
@@ -126,9 +111,13 @@ fun MonthlyStatsCalendar(
     ) {
         tappedDate?.let { date ->
             val stats = dailyStats[date.toString()]
+            // [수정] 필터링된 시간을 계산하여 전달
+            val filteredTime = stats?.getStudyTime(selectedFilter) ?: 0
+
             DailySummaryCard(
                 date = date,
                 stats = stats,
+                displayedStudyTime = filteredTime, // [추가] 계산된 시간 전달
                 onDetailClick = { onDetailRequested(date) }
             )
         }
