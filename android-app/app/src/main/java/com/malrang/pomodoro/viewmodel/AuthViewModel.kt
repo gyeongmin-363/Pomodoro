@@ -6,6 +6,7 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import io.github.jan.supabase.SupabaseClient
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.max
 
 class AuthViewModel(
     private val supabase: SupabaseClient,
@@ -33,11 +35,11 @@ class AuthViewModel(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
-    // [추가] 동기화 진행 상태 (UI 로딩 표시용)
+    // 동기화 진행 상태 (UI 로딩 표시용)
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
-    // 자동 동기화 설정 상태 (UI 바인딩용)
+    // 자동 동기화 설정 상태
     val isAutoSyncEnabled: StateFlow<Boolean> = repository.autoSyncEnabledFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
@@ -61,8 +63,6 @@ class AuthViewModel(
                 val currentUser = (authState.value as? AuthState.Authenticated)?.user
                 if (currentUser != null) {
                     Log.d("AuthViewModel", "앱 시작: 자동 동기화 수행")
-                    // 앱 시작 시에는 사용자가 인지하지 못하게 조용히(isSyncing 없이) 수행하거나,
-                    // 필요하다면 여기서도 _isSyncing = true 처리를 할 수 있습니다.
                     syncLocalDataToSupabase(currentUser.id)
                 }
             }
@@ -73,7 +73,6 @@ class AuthViewModel(
     fun toggleAutoSync(isEnabled: Boolean) {
         viewModelScope.launch {
             repository.saveAutoSyncEnabled(isEnabled)
-            // OFF -> ON 전환 시 즉시 동기화
             if (isEnabled) {
                 val currentUser = (authState.value as? AuthState.Authenticated)?.user
                 if (currentUser != null) {
@@ -93,11 +92,11 @@ class AuthViewModel(
         viewModelScope.launch {
             val currentUser = (authState.value as? AuthState.Authenticated)?.user
             if (currentUser != null) {
-                _isSyncing.value = true // 로딩 시작
+                _isSyncing.value = true
                 try {
                     syncLocalDataToSupabase(currentUser.id)
                 } finally {
-                    _isSyncing.value = false // 로딩 종료 (성공/실패 무관)
+                    _isSyncing.value = false
                 }
             } else {
                 _authState.value = AuthState.Error("로그인이 필요합니다.")
@@ -105,36 +104,44 @@ class AuthViewModel(
         }
     }
 
-    // [핵심 로직] 서버 <-> 로컬 동기화 (Merge & Upload)
+    // [핵심 로직] 서버 <-> 로컬 동기화 (Smart Merge)
     private suspend fun syncLocalDataToSupabase(userId: String) {
         try {
             // 1. 서버 데이터 다운로드
             val remoteStats = supabaseRepository.getDailyStats(userId)
             val remotePresets = supabaseRepository.getWorkPresets(userId)
 
-            // 2. 로컬 DB 병합 (서버 데이터를 로컬에 덮어쓰거나 추가)
+            // 2. 로컬 DB 병합 (충돌 해결 로직 적용)
             if (remoteStats.isNotEmpty()) {
                 val currentStats = repository.loadDailyStats().toMutableMap()
-                remoteStats.forEach { stat ->
-                    // 간단한 전략: 날짜가 같으면 서버 데이터로 덮어쓰기 (또는 더 정교한 병합 로직 가능)
-                    currentStats[stat.date] = stat
+
+                remoteStats.forEach { remoteStat ->
+                    val localStat = currentStats[remoteStat.date]
+                    if (localStat != null) {
+                        // 로컬 데이터가 있으면 병합 (Smart Merge)
+                        currentStats[remoteStat.date] = mergeDailyStats(localStat, remoteStat)
+                    } else {
+                        // 로컬 데이터가 없으면 서버 데이터 사용
+                        currentStats[remoteStat.date] = remoteStat
+                    }
                 }
                 repository.saveDailyStats(currentStats)
             }
 
+            // 프리셋 병합 (ID 충돌 해결은 리포지토리 내부 로직 위임)
             if (remotePresets.isNotEmpty()) {
-                // 프리셋 병합 및 동기화
-                // 리포지토리의 upsertWorkPresets(또는 insertNewWorkPresets)가
-                // ID 충돌 시 업데이트/무시 로직을 처리한다고 가정합니다.
                 repository.upsertWorkPresets(remotePresets)
             }
 
-            // 3. 병합된 최신 로컬 데이터를 다시 서버로 업로드 (Upsert)
+            // 3. 병합된 최신 로컬 데이터를 서버로 업로드 (Upsert)
+            // 이때 updatedAt을 현재 시간으로 갱신하여 업로드
             val finalStats = repository.loadDailyStats()
             val finalPresets = repository.loadWorkPresets()
+            val now = System.currentTimeMillis()
 
             finalStats.values.forEach { stat ->
-                supabaseRepository.upsertDailyStat(userId, stat)
+                // 동기화 시점의 시간으로 갱신 후 업로드
+                supabaseRepository.upsertDailyStat(userId, stat.copy(updatedAt = now))
             }
 
             if (finalPresets.isNotEmpty()) {
@@ -145,11 +152,59 @@ class AuthViewModel(
 
         } catch (e: Exception) {
             Log.e("AuthViewModel", "동기화 실패: ${e.message}")
-            // 에러 발생 시 필요하다면 _authState.value = AuthState.Error(...) 처리 가능
+            // 에러 상황을 UI에 알리려면 _authState.value = Error(...) 처리 가능
         }
     }
 
-    // --- 기존 로그인/로그아웃 로직 ---
+    /**
+     * [스마트 병합 로직]
+     * 1. 시간 데이터(Study/Break): Max 전략 사용 (오프라인 누적분 보호, 중복 합산 방지)
+     * 2. 내용 데이터(Checklist/Retrospect): updatedAt 비교 (최신 수정본 우선)
+     */
+    private fun mergeDailyStats(local: DailyStat, remote: DailyStat): DailyStat {
+        // [1] 시간 데이터: Max 전략
+        val localStudyKeys = local.studyTimeByWork?.keys.orEmpty()
+        val remoteStudyKeys = remote.studyTimeByWork?.keys.orEmpty()
+        val allStudyKeys = localStudyKeys + remoteStudyKeys
+
+        val mergedStudyTimeMap = allStudyKeys.associateWith { key ->
+            val localTime = local.studyTimeByWork?.get(key) ?: 0
+            val remoteTime = remote.studyTimeByWork?.get(key) ?: 0
+            max(localTime, remoteTime)
+        }
+
+        val localBreakKeys = local.breakTimeByWork?.keys.orEmpty()
+        val remoteBreakKeys = remote.breakTimeByWork?.keys.orEmpty()
+        val allBreakKeys = localBreakKeys + remoteBreakKeys
+
+        val mergedBreakTimeMap = allBreakKeys.associateWith { key ->
+            val localTime = local.breakTimeByWork?.get(key) ?: 0
+            val remoteTime = remote.breakTimeByWork?.get(key) ?: 0
+            max(localTime, remoteTime)
+        }
+
+        // [수정] totalStudyTimeInMinutes는 copy 대상이 아님 (studyTimeByWork가 바뀌면 자동 계산됨)
+
+        // [2] 내용 데이터: Last Write Wins (최신 업데이트 우선)
+        val isLocalNewer = local.updatedAt >= remote.updatedAt
+
+        val mergedChecklist = if (isLocalNewer) local.checklist else remote.checklist
+        val mergedRetrospect = if (isLocalNewer) local.retrospect else remote.retrospect
+
+        // 병합된 결과의 시간은 둘 중 더 최신 시간으로 설정
+        val newUpdatedAt = max(local.updatedAt, remote.updatedAt)
+
+        return local.copy(
+            // totalStudyTimeInMinutes 제거됨 (자동 계산)
+            studyTimeByWork = mergedStudyTimeMap,
+            breakTimeByWork = mergedBreakTimeMap,
+            checklist = mergedChecklist,
+            retrospect = mergedRetrospect,
+            updatedAt = newUpdatedAt
+        )
+    }
+
+    // --- 기존 로그인/로그아웃/탈퇴 로직 ---
 
     fun signInWithGoogle() {
         viewModelScope.launch {
@@ -159,7 +214,6 @@ class AuthViewModel(
                     scopes.add("email")
                     scopes.add("profile")
                 }
-                // 결과는 sessionStatus Flow에서 처리됨
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "알 수 없는 오류가 발생했습니다.")
             }
