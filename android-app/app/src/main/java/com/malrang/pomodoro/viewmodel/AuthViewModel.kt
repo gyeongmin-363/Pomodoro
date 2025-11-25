@@ -108,7 +108,7 @@ class AuthViewModel(
 
             if (remotePresets.isNotEmpty()) {
                 // 프리셋 병합 및 동기화 (서버에 있는 것 추가, 없는 것 유지 등 정책에 따름)
-                repository.insertNewWorkPresets(remotePresets)
+                repository.upsertNewWorkPresets(remotePresets)
             }
 
             // 3. 병합된 최신 로컬 데이터를 다시 서버로 업로드 (Upsert)

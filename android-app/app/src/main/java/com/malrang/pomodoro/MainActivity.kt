@@ -42,17 +42,23 @@ import com.malrang.pomodoro.viewmodel.TimerViewModel
 import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
-    // AppViewModelFactory를 사용하는 뷰모델들
+    // 1. 로컬 전용 뷰모델 (AppViewModelFactory 사용)
     private val timerViewModel: TimerViewModel by viewModels { AppViewModelFactory(application) }
-    private val settingsViewModel: SettingsViewModel by viewModels { AppViewModelFactory(application) }
     private val permissionViewModel: PermissionViewModel by viewModels { AppViewModelFactory(application) }
-    private val statsViewModel: StatsViewModel by viewModels { AppViewModelFactory(application) }
     private val backgroundViewModel: BackgroundViewModel by viewModels { AppViewModelFactory(application) }
 
-    // [수정] AuthVMFactory에 application 전달하여 생성
+    // 2. [수정] 네트워크/Supabase 관련 뷰모델 (AuthVMFactory 사용)
+    // Settings, Stats, Auth 모두 이 팩토리로 통합
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        AuthVMFactory(application, SupabaseProvider.client)
+    }
+    private val statsViewModel: StatsViewModel by viewModels {
+        AuthVMFactory(application, SupabaseProvider.client)
+    }
     private val authViewModel: AuthViewModel by viewModels {
         AuthVMFactory(application, SupabaseProvider.client)
     }
+
 
     // 서비스 데이터 업데이트 수신 (통계 화면 갱신용)
     private val dataUpdateReceiver = object : BroadcastReceiver() {

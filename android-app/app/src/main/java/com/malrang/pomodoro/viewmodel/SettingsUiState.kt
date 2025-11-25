@@ -9,15 +9,12 @@ import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
 
 data class SettingsUiState(
     val settings: Settings = Settings(),
@@ -26,17 +23,15 @@ data class SettingsUiState(
     val editingWorkPreset: WorkPreset? = null,
     val draftSettings: Settings? = null,
     val blockedApps: Set<String> = emptySet()
-    // [삭제] 배경 관련 상태 필드들은 BackgroundViewModel로 이동됨
 )
 
 class SettingsViewModel(
-    private val localRepo: PomodoroRepository
+    private val localRepo: PomodoroRepository,
+    private val supabaseRepo: SupabaseRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
-
-    private val supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
 
     init {
         viewModelScope.launch {
@@ -45,8 +40,6 @@ class SettingsViewModel(
             val currentWork = presets.find { it.id == currentWorkId }
             val currentSettings = currentWork?.settings ?: Settings()
             val blockedApps = localRepo.loadBlockedApps()
-
-            // [삭제] 배경 관련 로딩 로직 제거
 
             _uiState.update {
                 it.copy(
@@ -59,11 +52,17 @@ class SettingsViewModel(
         }
     }
 
+    // [수정됨] 자동 동기화 설정 확인 로직 추가
     private fun syncPresetsToServer() {
         val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id ?: return
         val currentPresets = _uiState.value.workPresets
 
         viewModelScope.launch(Dispatchers.IO) {
+            // 자동 동기화가 꺼져있다면 서버 전송 중단
+            if (!localRepo.isAutoSyncEnabled()) {
+                return@launch
+            }
+
             try {
                 supabaseRepo.upsertWorkPresets(userId, currentPresets)
             } catch (e: Exception) {
@@ -71,8 +70,6 @@ class SettingsViewModel(
             }
         }
     }
-
-    // [삭제] 배경 이미지 관련 함수들 (loadAvailableImages, addBackgroundImage 등) 제거
 
     fun addToBlockList(packageName: String) {
         viewModelScope.launch {
@@ -141,7 +138,7 @@ class SettingsViewModel(
             onReset(newActiveSettings)
             clearDraftSettings()
 
-            syncPresetsToServer()
+            syncPresetsToServer() // 내부에서 isAutoSyncEnabled 체크
         }
     }
 
@@ -167,11 +164,11 @@ class SettingsViewModel(
     fun addWorkPreset() {
         viewModelScope.launch {
             val newPreset = WorkPreset(name = "새 Work", settings = Settings())
-            localRepo.insertNewWorkPresets(listOf(newPreset))
+            localRepo.upsertNewWorkPresets(listOf(newPreset))
             val updatedPresets = _uiState.value.workPresets + newPreset
             _uiState.update { it.copy(workPresets = updatedPresets) }
 
-            syncPresetsToServer()
+            syncPresetsToServer() // 내부에서 isAutoSyncEnabled 체크
         }
     }
 
@@ -182,8 +179,10 @@ class SettingsViewModel(
         }
     }
 
+    // [수정됨] 삭제 시에도 자동 동기화 설정 확인
     fun deleteWorkPreset(id: String, onReset: (Settings) -> Unit) {
         viewModelScope.launch {
+            // 1. 로컬 데이터 삭제 (무조건 실행)
             localRepo.deleteWorkPreset(id)
             val updatedPresets = _uiState.value.workPresets.filterNot { it.id == id }
             _uiState.update { it.copy(workPresets = updatedPresets) }
@@ -191,8 +190,11 @@ class SettingsViewModel(
                 selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "", onReset)
             }
 
+            // 2. 서버 데이터 삭제 (자동 동기화 켜진 경우에만 실행)
             val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
-            if (userId != null) {
+
+            // 여기서 isAutoSyncEnabled 체크
+            if (userId != null && localRepo.isAutoSyncEnabled()) {
                 launch(Dispatchers.IO) {
                     try {
                         supabaseRepo.deleteWorkPreset(userId, id)
@@ -215,7 +217,7 @@ class SettingsViewModel(
             }
             _uiState.update { it.copy(workPresets = updatedPresets) }
 
-            syncPresetsToServer()
+            syncPresetsToServer() // 내부에서 isAutoSyncEnabled 체크
         }
     }
 
