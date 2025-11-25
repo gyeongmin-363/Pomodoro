@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -31,6 +32,10 @@ class AuthViewModel(
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
+
+    // [추가] 동기화 진행 상태 (UI 로딩 표시용)
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
     // 자동 동기화 설정 상태 (UI 바인딩용)
     val isAutoSyncEnabled: StateFlow<Boolean> = repository.autoSyncEnabledFlow
@@ -56,6 +61,8 @@ class AuthViewModel(
                 val currentUser = (authState.value as? AuthState.Authenticated)?.user
                 if (currentUser != null) {
                     Log.d("AuthViewModel", "앱 시작: 자동 동기화 수행")
+                    // 앱 시작 시에는 사용자가 인지하지 못하게 조용히(isSyncing 없이) 수행하거나,
+                    // 필요하다면 여기서도 _isSyncing = true 처리를 할 수 있습니다.
                     syncLocalDataToSupabase(currentUser.id)
                 }
             }
@@ -70,7 +77,12 @@ class AuthViewModel(
             if (isEnabled) {
                 val currentUser = (authState.value as? AuthState.Authenticated)?.user
                 if (currentUser != null) {
-                    syncLocalDataToSupabase(currentUser.id)
+                    _isSyncing.value = true
+                    try {
+                        syncLocalDataToSupabase(currentUser.id)
+                    } finally {
+                        _isSyncing.value = false
+                    }
                 }
             }
         }
@@ -81,8 +93,12 @@ class AuthViewModel(
         viewModelScope.launch {
             val currentUser = (authState.value as? AuthState.Authenticated)?.user
             if (currentUser != null) {
-                // TODO: 필요하다면 UI에 로딩 상태(Loading)를 전달할 수 있습니다.
-                syncLocalDataToSupabase(currentUser.id)
+                _isSyncing.value = true // 로딩 시작
+                try {
+                    syncLocalDataToSupabase(currentUser.id)
+                } finally {
+                    _isSyncing.value = false // 로딩 종료 (성공/실패 무관)
+                }
             } else {
                 _authState.value = AuthState.Error("로그인이 필요합니다.")
             }
@@ -107,8 +123,10 @@ class AuthViewModel(
             }
 
             if (remotePresets.isNotEmpty()) {
-                // 프리셋 병합 및 동기화 (서버에 있는 것 추가, 없는 것 유지 등 정책에 따름)
-                repository.upsertNewWorkPresets(remotePresets)
+                // 프리셋 병합 및 동기화
+                // 리포지토리의 upsertWorkPresets(또는 insertNewWorkPresets)가
+                // ID 충돌 시 업데이트/무시 로직을 처리한다고 가정합니다.
+                repository.upsertWorkPresets(remotePresets)
             }
 
             // 3. 병합된 최신 로컬 데이터를 다시 서버로 업로드 (Upsert)
@@ -127,7 +145,7 @@ class AuthViewModel(
 
         } catch (e: Exception) {
             Log.e("AuthViewModel", "동기화 실패: ${e.message}")
-            // 조용한 실패(Silent Fail) 처리 혹은 에러 상태 전파
+            // 에러 발생 시 필요하다면 _authState.value = AuthState.Error(...) 처리 가능
         }
     }
 

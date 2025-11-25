@@ -65,12 +65,12 @@ class PomodoroRepository(private val context: Context) {
         val presets = dao.getActiveWorkPresets().map { it.toDomain() }
         return presets.ifEmpty {
             val defaultPresets = createDefaultPresets()
-            upsertNewWorkPresets(defaultPresets)
+            upsertWorkPresets(defaultPresets)
             defaultPresets
         }
     }
 
-    suspend fun upsertNewWorkPresets(presets: List<WorkPreset>) {
+    suspend fun upsertWorkPresets(presets: List<WorkPreset>) {
         dao.upsertWorkPresets(presets.map { it.toEntity() })
     }
 

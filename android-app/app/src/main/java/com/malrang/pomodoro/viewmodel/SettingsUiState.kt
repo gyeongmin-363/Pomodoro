@@ -164,7 +164,7 @@ class SettingsViewModel(
     fun addWorkPreset() {
         viewModelScope.launch {
             val newPreset = WorkPreset(name = "새 Work", settings = Settings())
-            localRepo.upsertNewWorkPresets(listOf(newPreset))
+            localRepo.upsertWorkPresets(listOf(newPreset))
             val updatedPresets = _uiState.value.workPresets + newPreset
             _uiState.update { it.copy(workPresets = updatedPresets) }
 

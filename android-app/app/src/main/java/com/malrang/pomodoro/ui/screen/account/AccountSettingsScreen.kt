@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -34,11 +35,12 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 fun AccountSettingsScreen(
     authViewModel: AuthViewModel,
     onNavigateTo: (Screen) -> Unit,
-    // onSyncClick는 이제 내부에서 ViewModel을 호출하므로 선택사항이지만, 기존 구조 유지를 위해 남겨둠
     onSyncClick: () -> Unit
 ) {
     val authState by authViewModel.authState.collectAsState()
     val isAutoSyncEnabled by authViewModel.isAutoSyncEnabled.collectAsState()
+    // [추가] 동기화 상태 구독
+    val isSyncing by authViewModel.isSyncing.collectAsState()
     val context = LocalContext.current
 
     Scaffold(
@@ -66,7 +68,8 @@ fun AccountSettingsScreen(
                 is AuthViewModel.AuthState.Authenticated -> {
                     AuthenticatedAccountContent(
                         userEmail = state.user?.email ?: "이메일 정보 없음",
-                        isAutoSyncEnabled = isAutoSyncEnabled, // 상태 전달
+                        isAutoSyncEnabled = isAutoSyncEnabled,
+                        isSyncing = isSyncing, // [추가] 상태 전달
                         onLogout = { authViewModel.signOut(context) },
                         onDeleteAccount = {
                             authViewModel.deleteUser(
@@ -74,8 +77,8 @@ fun AccountSettingsScreen(
                                 activityContext = context
                             )
                         },
-                        onSyncClick = { authViewModel.requestManualSync() }, // 뷰모델 호출로 변경
-                        onAutoSyncToggle = { authViewModel.toggleAutoSync(it) } // 토글 핸들러
+                        onSyncClick = { authViewModel.requestManualSync() },
+                        onAutoSyncToggle = { authViewModel.toggleAutoSync(it) }
                     )
                 }
                 else -> {
@@ -93,6 +96,7 @@ fun AccountSettingsScreen(
 fun AuthenticatedAccountContent(
     userEmail: String,
     isAutoSyncEnabled: Boolean,
+    isSyncing: Boolean, // [추가] 파라미터
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
     onSyncClick: () -> Unit,
@@ -101,27 +105,21 @@ fun AuthenticatedAccountContent(
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
+    // ... (다이얼로그 로직 기존 유지) ...
     if (showLogoutConfirmDialog) {
         ModernConfirmDialog(
             title = "로그아웃",
             content = { Text("정말로 로그아웃 하시겠습니까?") },
-            onConfirm = {
-                onLogout()
-                showLogoutConfirmDialog = false
-            },
+            onConfirm = { onLogout(); showLogoutConfirmDialog = false },
             onDismissRequest = { showLogoutConfirmDialog = false },
             confirmText = "로그아웃"
         )
     }
-
     if (showDeleteConfirmDialog) {
         ModernConfirmDialog(
             title = "회원 탈퇴",
             content = { Text("정말로 계정을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.") },
-            onConfirm = {
-                onDeleteAccount()
-                showDeleteConfirmDialog = false
-            },
+            onConfirm = { onDeleteAccount(); showDeleteConfirmDialog = false },
             onDismissRequest = { showDeleteConfirmDialog = false },
             confirmText = "탈퇴 확인"
         )
@@ -136,13 +134,9 @@ fun AuthenticatedAccountContent(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Spacer(Modifier.height(8.dp))
-
-        // 1. 프로필 카드
         ProfileCard(email = userEmail)
-
         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-        // 2. 데이터 동기화 섹션
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "데이터 관리",
@@ -151,7 +145,7 @@ fun AuthenticatedAccountContent(
                 modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
             )
 
-            // [추가] 자동 동기화 스위치 카드
+            // 자동 동기화 카드 (기존 유지)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -190,7 +184,11 @@ fun AuthenticatedAccountContent(
                     }
                     Switch(
                         checked = isAutoSyncEnabled,
-                        onCheckedChange = onAutoSyncToggle,
+                        onCheckedChange = {
+                            // 동기화 중이 아닐 때만 토글 가능하게 하려면:
+                            if (!isSyncing) onAutoSyncToggle(it)
+                        },
+                        enabled = !isSyncing, // 동기화 중엔 스위치 비활성화
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                             checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -199,33 +197,49 @@ fun AuthenticatedAccountContent(
                 }
             }
 
-            // 수동 동기화 카드 (기존 UI 유지, 설명 텍스트 약간 수정)
+            // [수정] 수동 동기화 카드 (로딩 표시 추가)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .clickable(onClick = onSyncClick),
+                    .clickable(
+                        enabled = !isSyncing, // 동기화 중에는 클릭 방지
+                        onClick = onSyncClick
+                    ),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    // 아이콘 또는 로딩 인디케이터 교체
+                    Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                        if (isSyncing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                strokeWidth = 2.dp,
+                                strokeCap = StrokeCap.Round
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
-                            text = "지금 동기화",
+                            text = if (isSyncing) "동기화 중..." else "지금 동기화",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Text(
-                            text = "서버와 데이터를 즉시 동기화합니다.",
+                            text = if (isSyncing) "서버와 데이터를 주고받고 있습니다." else "서버와 데이터를 즉시 동기화합니다.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                         )
@@ -234,7 +248,7 @@ fun AuthenticatedAccountContent(
             }
         }
 
-        // 3. 계정 관리 버튼들
+        // 3. 계정 관리 버튼들 (기존 유지)
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "계정 작업",
@@ -242,25 +256,21 @@ fun AuthenticatedAccountContent(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
             )
-
             OutlinedButton(
                 onClick = { showLogoutConfirmDialog = true },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !isSyncing, // 동기화 중 로그아웃 방지
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("로그아웃")
             }
-
             Spacer(Modifier.height(8.dp))
-
             TextButton(
                 onClick = { showDeleteConfirmDialog = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSyncing
             ) {
-                Text(
-                    text = "회원 탈퇴",
-                    color = MaterialTheme.colorScheme.error
-                )
+                Text(text = "회원 탈퇴", color = MaterialTheme.colorScheme.error)
             }
         }
     }
