@@ -4,20 +4,26 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.localRepo.PomodoroRepository
+import com.malrang.pomodoro.networkRepo.SupabaseProvider
+import com.malrang.pomodoro.networkRepo.SupabaseRepository
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// [수정] 필터 상태 추가
 data class StatsUiState(
     val dailyStats: Map<String, DailyStat> = emptyMap(),
     val selectedFilter: String = "전체",
     val filterOptions: List<String> = listOf("전체")
 )
 
-class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
+// [수정] SupabaseRepository 주입 추가
+class StatsViewModel(
+    private val repository: PomodoroRepository,
+    private val supabaseRepository: SupabaseRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
 
@@ -29,7 +35,6 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
         viewModelScope.launch {
             val stats = repository.loadDailyStats()
 
-            // [수정] DailyStat의 studyTimeByWork 키 값을 추출
             val allWorks = stats.values
                 .flatMap { it.studyTimeByWork?.keys ?: emptySet() }
                 .distinct()
@@ -46,23 +51,35 @@ class StatsViewModel(private val repository: PomodoroRepository) : ViewModel() {
         }
     }
 
-    // [추가] 필터 변경 함수
     fun updateFilter(filter: String) {
         _uiState.update { it.copy(selectedFilter = filter) }
     }
 
-    // [공통] DailyStat 업데이트 헬퍼 함수
+    // [수정] 데이터 저장 시 자동 동기화 로직 추가
     private fun updateDailyStat(date: String, transform: (DailyStat) -> DailyStat) {
         viewModelScope.launch {
             val currentStat = _uiState.value.dailyStats[date] ?: DailyStat(date)
             val updatedStat = transform(currentStat)
 
+            // 1. 로컬 저장 (항상 수행)
             repository.saveDailyStat(updatedStat)
 
+            // 2. 서버 저장 (자동 동기화 ON & 로그인 상태일 때만)
+            val isAutoSync = repository.isAutoSyncEnabled()
+            val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
+
+            if (isAutoSync && userId != null) {
+                try {
+                    supabaseRepository.upsertDailyStat(userId, updatedStat)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // UI 상태 업데이트
             _uiState.update { state ->
                 val newStats = state.dailyStats.toMutableMap()
                 newStats[date] = updatedStat
-                // 데이터 변경 시 필터 옵션도 갱신이 필요할 수 있으나, 여기서는 생략하거나 필요시 로직 추가
                 state.copy(dailyStats = newStats)
             }
         }

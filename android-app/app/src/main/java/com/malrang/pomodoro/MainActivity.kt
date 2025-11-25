@@ -10,7 +10,6 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,10 +25,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.lifecycleScope
-import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
-import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import com.malrang.pomodoro.service.AppUsageMonitoringService
 import com.malrang.pomodoro.service.TimerService
 import com.malrang.pomodoro.service.WarningOverlayService
@@ -38,30 +34,27 @@ import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.AppViewModelFactory
 import com.malrang.pomodoro.viewmodel.AuthVMFactory
 import com.malrang.pomodoro.viewmodel.AuthViewModel
-import com.malrang.pomodoro.viewmodel.BackgroundViewModel // [추가]
+import com.malrang.pomodoro.viewmodel.BackgroundViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
-import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
-import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.storage.storage
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    // 분리된 ViewModel들을 AppViewModelFactory를 사용해 초기화합니다.
+    // AppViewModelFactory를 사용하는 뷰모델들
     private val timerViewModel: TimerViewModel by viewModels { AppViewModelFactory(application) }
     private val settingsViewModel: SettingsViewModel by viewModels { AppViewModelFactory(application) }
     private val permissionViewModel: PermissionViewModel by viewModels { AppViewModelFactory(application) }
     private val statsViewModel: StatsViewModel by viewModels { AppViewModelFactory(application) }
-    private val authViewModel: AuthViewModel by viewModels { AuthVMFactory(SupabaseProvider.client) }
-    // [추가] BackgroundViewModel 초기화
     private val backgroundViewModel: BackgroundViewModel by viewModels { AppViewModelFactory(application) }
 
-    private lateinit var supabaseRepo: SupabaseRepository
-    private lateinit var localRepo: PomodoroRepository
+    // [수정] AuthVMFactory에 application 전달하여 생성
+    private val authViewModel: AuthViewModel by viewModels {
+        AuthVMFactory(application, SupabaseProvider.client)
+    }
 
+    // 서비스 데이터 업데이트 수신 (통계 화면 갱신용)
     private val dataUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == TimerService.ACTION_DATA_UPDATED) {
@@ -70,6 +63,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // 타이머 상태 업데이트 수신
     private val updateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == TimerService.ACTION_STATUS_UPDATE) {
@@ -77,6 +71,7 @@ class MainActivity : ComponentActivity() {
                 val isRunning = intent.getBooleanExtra(TimerService.EXTRA_IS_RUNNING, false)
                 val currentModeName = intent.getStringExtra(TimerService.EXTRA_CURRENT_MODE)
                 val totalSessions = intent.getIntExtra(TimerService.EXTRA_TOTAL_SESSIONS, 0)
+
                 val currentMode = currentModeName?.let {
                     try {
                         com.malrang.pomodoro.dataclass.ui.Mode.valueOf(it)
@@ -94,9 +89,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SupabaseProvider.client.handleDeeplinks(intent)
 
-        supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
-        localRepo = PomodoroRepository(applicationContext)
-
+        // 브로드캐스트 리시버 등록
         val intentFilter = IntentFilter(TimerService.ACTION_DATA_UPDATED)
         registerReceiver(dataUpdateReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
 
@@ -107,15 +100,15 @@ class MainActivity : ComponentActivity() {
             PomodoroTheme {
                 Scaffold { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        // [수정] backgroundViewModel 전달
                         PomodoroApp(
                             timerViewModel = timerViewModel,
                             settingsViewModel = settingsViewModel,
                             permissionViewModel = permissionViewModel,
                             statsViewModel = statsViewModel,
                             authViewModel = authViewModel,
-                            backgroundViewModel = backgroundViewModel, // 전달
-                            onSyncClick = { performSync() }
+                            backgroundViewModel = backgroundViewModel,
+                            // [수정] ViewModel의 수동 동기화 함수 호출
+                            onSyncClick = { authViewModel.requestManualSync() }
                         )
                     }
                 }
@@ -127,61 +120,14 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         val filter = IntentFilter(TimerService.ACTION_STATUS_UPDATE)
         ContextCompat.registerReceiver(this, updateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        performSync(silent = true)
-    }
 
-    private fun performSync(silent: Boolean = false) {
-        val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id ?: return
-
-        lifecycleScope.launch {
-            try {
-                if (!silent) Toast.makeText(this@MainActivity, "동기화 중...", Toast.LENGTH_SHORT).show()
-
-                val remoteStats = supabaseRepo.getDailyStats(userId)
-                val remotePresets = supabaseRepo.getWorkPresets(userId)
-
-                if (remoteStats.isNotEmpty()) {
-                    val currentStats = localRepo.loadDailyStats().toMutableMap()
-                    remoteStats.forEach { stat ->
-                        currentStats[stat.date] = stat
-                    }
-                    localRepo.saveDailyStats(currentStats)
-                }
-
-                if (remotePresets.isNotEmpty()) {
-                    val mergedPresets = remotePresets.toMutableList()
-                    localRepo.insertNewWorkPresets(mergedPresets)
-
-                    val localPresets = localRepo.loadWorkPresets()
-                    val remoteIds = remotePresets.map { it.id }.toSet()
-                    val toDelete = localPresets.filter { it.id !in remoteIds }
-
-                    toDelete.forEach {
-                        localRepo.deleteWorkPreset(it.id)
-                    }
-                    settingsViewModel.refreshPresets()
-                }
-
-                val currentPresets = localRepo.loadWorkPresets()
-                supabaseRepo.upsertWorkPresets(userId, currentPresets)
-
-                val localStats = localRepo.loadDailyStats()
-                localStats.values.forEach { stat ->
-                    supabaseRepo.upsertDailyStat(userId, stat)
-                }
-
-                statsViewModel.loadDailyStats()
-                if (!silent) Toast.makeText(this@MainActivity, "동기화 완료!", Toast.LENGTH_SHORT).show()
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                if (!silent) Toast.makeText(this@MainActivity, "동기화 실패: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
+        // [추가] 앱 시작 시 자동 동기화 체크 및 수행
+        authViewModel.checkAndSyncOnStart()
     }
 
     override fun onStop() {
         super.onStop()
+        // 앱이 백그라운드로 갈 때 모니터링 서비스 시작 조건 확인
         val timerState = timerViewModel.uiState.value
         val settingsState = settingsViewModel.uiState.value
         if (timerState.isRunning && timerState.currentMode == com.malrang.pomodoro.dataclass.ui.Mode.STUDY) {
@@ -194,6 +140,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         unregisterReceiver(dataUpdateReceiver)
 
+        // 서비스 종료 처리 (권한 없을 경우 등)
         if (TimerService.isServiceActive()) {
             var hasNotificationPermission = true
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

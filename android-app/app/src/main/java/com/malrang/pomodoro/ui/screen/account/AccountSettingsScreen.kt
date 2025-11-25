@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,18 +29,16 @@ import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.ModernConfirmDialog
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 
-/**
- * 계정 설정 화면 컴포저블 함수입니다.
- * 로그인 상태에 따라 로그인 버튼 또는 계정 관리(로그아웃/탈퇴) 화면을 표시합니다.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountSettingsScreen(
     authViewModel: AuthViewModel,
     onNavigateTo: (Screen) -> Unit,
+    // onSyncClick는 이제 내부에서 ViewModel을 호출하므로 선택사항이지만, 기존 구조 유지를 위해 남겨둠
     onSyncClick: () -> Unit
 ) {
     val authState by authViewModel.authState.collectAsState()
+    val isAutoSyncEnabled by authViewModel.isAutoSyncEnabled.collectAsState()
     val context = LocalContext.current
 
     Scaffold(
@@ -67,6 +66,7 @@ fun AccountSettingsScreen(
                 is AuthViewModel.AuthState.Authenticated -> {
                     AuthenticatedAccountContent(
                         userEmail = state.user?.email ?: "이메일 정보 없음",
+                        isAutoSyncEnabled = isAutoSyncEnabled, // 상태 전달
                         onLogout = { authViewModel.signOut(context) },
                         onDeleteAccount = {
                             authViewModel.deleteUser(
@@ -74,7 +74,8 @@ fun AccountSettingsScreen(
                                 activityContext = context
                             )
                         },
-                        onSyncClick = onSyncClick
+                        onSyncClick = { authViewModel.requestManualSync() }, // 뷰모델 호출로 변경
+                        onAutoSyncToggle = { authViewModel.toggleAutoSync(it) } // 토글 핸들러
                     )
                 }
                 else -> {
@@ -91,14 +92,15 @@ fun AccountSettingsScreen(
 @Composable
 fun AuthenticatedAccountContent(
     userEmail: String,
+    isAutoSyncEnabled: Boolean,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
-    onSyncClick: () -> Unit
+    onSyncClick: () -> Unit,
+    onAutoSyncToggle: (Boolean) -> Unit
 ) {
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    // 다이얼로그 로직 유지
     if (showLogoutConfirmDialog) {
         ModernConfirmDialog(
             title = "로그아웃",
@@ -135,7 +137,7 @@ fun AuthenticatedAccountContent(
     ) {
         Spacer(Modifier.height(8.dp))
 
-        // 1. 프로필 카드 (아바타 + 이메일)
+        // 1. 프로필 카드
         ProfileCard(email = userEmail)
 
         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -149,7 +151,55 @@ fun AuthenticatedAccountContent(
                 modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
             )
 
-            // 동기화 카드 (기존 버튼 대체)
+            // [추가] 자동 동기화 스위치 카드
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Face,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = "자동 동기화",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isAutoSyncEnabled) "데이터를 자동으로 서버에 저장합니다." else "데이터를 기기에만 저장합니다.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = isAutoSyncEnabled,
+                        onCheckedChange = onAutoSyncToggle,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
+
+            // 수동 동기화 카드 (기존 UI 유지, 설명 텍스트 약간 수정)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -169,13 +219,13 @@ fun AuthenticatedAccountContent(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
-                            text = "데이터 동기화",
+                            text = "지금 동기화",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Text(
-                            text = "서버와 데이터를 수동으로 동기화합니다.",
+                            text = "서버와 데이터를 즉시 동기화합니다.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                         )
@@ -252,15 +302,15 @@ fun UnauthenticatedAccountContent(
                 )
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // 구글 로그인 버튼 (기존 리소스 활용)
+                // 구글 로그인 버튼
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
                         .clickable(onClick = onLoginClick),
-                    shape = RoundedCornerShape(25.dp), // 둥근 알약 모양
+                    shape = RoundedCornerShape(25.dp),
                     shadowElevation = 4.dp,
-                    color = Color.White // 구글 버튼은 보통 흰색 배경
+                    color = Color.White
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -270,7 +320,7 @@ fun UnauthenticatedAccountContent(
                         Image(
                             painter = painterResource(id = R.drawable.android_neutral_rd_ctn),
                             contentDescription = "Google Logo",
-                            modifier = Modifier.fillMaxSize() // 이미지가 버튼 전체를 채우도록 설정된 리소스인 경우
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
                 }
@@ -294,7 +344,7 @@ fun UnauthenticatedAccountContent(
     }
 }
 
-// 이메일 앞글자를 따서 아바타처럼 보여주는 컴포저블 (아이콘 사용 대체)
+// 이메일 앞글자를 따서 아바타처럼 보여주는 컴포저블
 @Composable
 fun ProfileCard(email: String) {
     val initial = email.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
@@ -310,7 +360,6 @@ fun ProfileCard(email: String) {
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 아바타 서클
             Box(
                 modifier = Modifier
                     .size(80.dp)
