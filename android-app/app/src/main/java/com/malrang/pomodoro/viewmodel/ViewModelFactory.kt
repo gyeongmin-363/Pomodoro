@@ -4,55 +4,67 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.malrang.pomodoro.localRepo.PomodoroRepository
+import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import com.malrang.pomodoro.service.TimerServiceProvider
 import io.github.jan.supabase.SupabaseClient
-import kotlin.jvm.java
 
 /**
- * 앱의 주요 뷰모델들을 생성하는 팩토리입니다.
- * 공통 의존성을 공유하여 메모리 효율성을 높입니다.
+ * 로컬 데이터와 타이머 서비스만 필요한 뷰모델을 생성하는 팩토리
+ * [수정] PomodoroRepository를 생성자로 주입받음
  */
-class AppViewModelFactory(private val app: Application) : ViewModelProvider.Factory {
+class AppViewModelFactory(
+    private val app: Application,
+    private val pomodoroRepository: PomodoroRepository // 외부 주입
+) : ViewModelProvider.Factory {
 
-    // 여러 뷰모델에서 공유되는 의존성은 lazy를 통해 한 번만 생성되도록 합니다.
-    private val pomodoroRepository by lazy { PomodoroRepository(app) }
     private val timerServiceProvider by lazy { TimerServiceProvider(app) }
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         @Suppress("UNCHECKED_CAST")
-        val viewModel = when {
+        return when {
             modelClass.isAssignableFrom(TimerViewModel::class.java) -> {
                 TimerViewModel(pomodoroRepository, timerServiceProvider)
-            }
-            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
-                SettingsViewModel(pomodoroRepository)
             }
             modelClass.isAssignableFrom(PermissionViewModel::class.java) -> {
                 PermissionViewModel(pomodoroRepository)
             }
-            modelClass.isAssignableFrom(StatsViewModel::class.java) -> {
-                StatsViewModel(pomodoroRepository)
-            }
-            // [추가] BackgroundViewModel 생성 로직
             modelClass.isAssignableFrom(BackgroundViewModel::class.java) -> {
                 BackgroundViewModel(pomodoroRepository)
             }
             else -> {
                 throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
             }
-        }
-        return viewModel as T
+        } as T
     }
 }
 
+/**
+ * SupabaseRepository(네트워크)가 필요한 모든 뷰모델을 생성하는 팩토리
+ * Auth, Settings, Stats ViewModel을 담당합니다.
+ * [수정] Repository들을 생성자로 주입받음
+ */
 class AuthVMFactory(
-    private val supabase: SupabaseClient
+    private val app: Application,
+    private val supabase: SupabaseClient,
+    private val pomodoroRepository: PomodoroRepository, // 외부 주입
+    private val supabaseRepository: SupabaseRepository  // 외부 주입
 ) : ViewModelProvider.Factory {
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return AuthViewModel(supabase) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class: $modelClass")
+        @Suppress("UNCHECKED_CAST")
+        return when {
+            modelClass.isAssignableFrom(AuthViewModel::class.java) -> {
+                AuthViewModel(supabase, pomodoroRepository, supabaseRepository)
+            }
+            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
+                SettingsViewModel(pomodoroRepository, supabaseRepository)
+            }
+            modelClass.isAssignableFrom(StatsViewModel::class.java) -> {
+                StatsViewModel(pomodoroRepository, supabaseRepository)
+            }
+            else -> {
+                throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+            }
+        } as T
     }
 }

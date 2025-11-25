@@ -1,6 +1,7 @@
 package com.malrang.pomodoro.localRepo
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey // 추가
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -27,11 +28,14 @@ object DSKeys {
     val SAVED_TOTAL_SESSIONS = intPreferencesKey("saved_total_sessions")
     val ACTIVE_BLOCK_MODE = stringPreferencesKey("active_block_mode")
 
-    // [추가] 커스텀 배경 관련 키
+    // 커스텀 배경 관련 키
     val CUSTOM_BG_COLOR = intPreferencesKey("custom_bg_color")
     val CUSTOM_TEXT_COLOR = intPreferencesKey("custom_text_color")
-    val BACKGROUND_TYPE = stringPreferencesKey("background_type") // "COLOR" or "IMAGE"
+    val BACKGROUND_TYPE = stringPreferencesKey("background_type")
     val SELECTED_BG_IMAGE_PATH = stringPreferencesKey("selected_bg_image_path")
+
+    // [추가] 자동 동기화 설정 키
+    val AUTO_SYNC_ENABLED = booleanPreferencesKey("auto_sync_enabled")
 }
 
 data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSessions: Int)
@@ -52,7 +56,6 @@ class PomodoroRepository(private val context: Context) {
         dao.insertDailyStats(stats.values.map { it.toEntity() })
     }
 
-    // [추가] 단일 DailyStat 저장 (회고 저장 등 개별 업데이트용)
     suspend fun saveDailyStat(dailyStat: DailyStat) {
         dao.insertDailyStats(listOf(dailyStat.toEntity()))
     }
@@ -62,13 +65,13 @@ class PomodoroRepository(private val context: Context) {
         val presets = dao.getActiveWorkPresets().map { it.toDomain() }
         return presets.ifEmpty {
             val defaultPresets = createDefaultPresets()
-            insertNewWorkPresets(defaultPresets)
+            upsertWorkPresets(defaultPresets)
             defaultPresets
         }
     }
 
-    suspend fun insertNewWorkPresets(presets: List<WorkPreset>) {
-        dao.insertWorkPresets(presets.map { it.toEntity() })
+    suspend fun upsertWorkPresets(presets: List<WorkPreset>) {
+        dao.upsertWorkPresets(presets.map { it.toEntity() })
     }
 
     suspend fun updateWorkPresets(presets: List<WorkPreset>) {
@@ -82,6 +85,21 @@ class PomodoroRepository(private val context: Context) {
     }
 
     // --- DataStore ---
+
+    // [추가] 자동 동기화 설정 Flow
+    val autoSyncEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[DSKeys.AUTO_SYNC_ENABLED] ?: true // 기본값은 true (자동 동기화 켜짐)
+    }
+
+    // [추가] 자동 동기화 설정 저장
+    suspend fun saveAutoSyncEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[DSKeys.AUTO_SYNC_ENABLED] = enabled }
+    }
+
+    // [추가] 동기화 로직에서 값 조회를 위한 helper (suspend)
+    suspend fun isAutoSyncEnabled(): Boolean {
+        return context.dataStore.data.first()[DSKeys.AUTO_SYNC_ENABLED] ?: true
+    }
 
     suspend fun loadCurrentWorkId(): String? {
         return context.dataStore.data.first()[DSKeys.CURRENT_WORK_ID]
@@ -104,7 +122,7 @@ class PomodoroRepository(private val context: Context) {
         context.dataStore.edit { it[DSKeys.NOTIFICATION_PERMISSION_DENIAL_COUNT] = count }
     }
 
-    // [추가] 커스텀 배경 관련 메서드
+    // 커스텀 배경 관련 메서드
     suspend fun loadCustomBgColor(): Int? = context.dataStore.data.first()[DSKeys.CUSTOM_BG_COLOR]
     suspend fun loadCustomTextColor(): Int? = context.dataStore.data.first()[DSKeys.CUSTOM_TEXT_COLOR]
     suspend fun loadBackgroundType(): String = context.dataStore.data.first()[DSKeys.BACKGROUND_TYPE] ?: "COLOR"

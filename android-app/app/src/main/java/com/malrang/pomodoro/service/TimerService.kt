@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.malrang.pomodoro.MainActivity
+import com.malrang.pomodoro.PomodoroApplication
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
@@ -23,15 +24,13 @@ import com.malrang.pomodoro.localRepo.VibratorHelper
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json // [추가] JSON 처리를 위한 import
+import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import kotlin.math.ceil
 
@@ -58,8 +57,11 @@ class TimerService : Service() {
         createNotificationChannel()
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
-        repo = PomodoroRepository(this)
-        supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
+
+        // [수정] Application 클래스에서 싱글톤 Repository 가져오기
+        val app = applicationContext as PomodoroApplication
+        repo = app.pomodoroRepository
+        supabaseRepo = app.supabaseRepository
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
@@ -87,7 +89,6 @@ class TimerService : Service() {
         when (intent.action) {
             "START" -> {
                 if (!isRunning) {
-                    // [수정] JSON 문자열로 받아서 객체로 변환
                     val settingsJson = safeIntent.getStringExtra(EXTRA_SETTINGS)
                     settings = settingsJson?.let {
                         try {
@@ -144,7 +145,6 @@ class TimerService : Service() {
                 if (wakeLock.isHeld) { wakeLock.release() }
                 serviceScope.launch { repo.clearTimerState() }
 
-                // [수정] RESET 시에도 JSON 문자열로 받아서 갱신
                 val newSettingsJson = safeIntent.getStringExtra(EXTRA_SETTINGS)
                 val newSettings = newSettingsJson?.let {
                     try {
@@ -192,14 +192,12 @@ class TimerService : Service() {
                 repo.saveActiveBlockMode(it.blockMode)
             }
 
-            // Drift 방지 로직 적용
             val endTime = System.currentTimeMillis() + (timeLeft * 1000L)
 
             while (timeLeft > 0 && isRunning) {
                 delay(500)
 
                 val remainingMillis = endTime - System.currentTimeMillis()
-
                 val newTimeLeft = if (remainingMillis > 0) {
                     ceil(remainingMillis / 1000.0).toInt()
                 } else {
@@ -245,10 +243,6 @@ class TimerService : Service() {
         if (wakeLock.isHeld) { wakeLock.release() }
         serviceScope.launch {
             repo.saveTimerState(timeLeft, currentMode, totalSessions)
-        }
-        // 일시정지 시 차단 해제
-        serviceScope.launch {
-            repo.saveTimerState(timeLeft, currentMode, totalSessions)
             repo.saveActiveBlockMode(BlockMode.NONE)
         }
         updateNotification()
@@ -257,11 +251,14 @@ class TimerService : Service() {
 
     private fun handleSessionCompletion(finishedMode: Mode) {
         serviceScope.launch {
+            // 1. 로컬 DB 업데이트
             updateTodayStats(finishedMode)
 
-            // 서버 자동 동기화
+            // 2. 서버 자동 동기화
             val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
-            if (userId != null) {
+            val isAutoSync = repo.isAutoSyncEnabled()
+
+            if (userId != null && isAutoSync) {
                 try {
                     val today = LocalDate.now().toString()
                     val currentStatsMap = repo.loadDailyStats()
@@ -275,7 +272,6 @@ class TimerService : Service() {
                 }
             }
 
-            // 데이터 업데이트 신호 보내기
             val intent = Intent(ACTION_DATA_UPDATED).apply {
                 setPackage("com.malrang.pomodoro")
             }
@@ -376,7 +372,6 @@ class TimerService : Service() {
             .setDeleteIntent(stopServicePendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        // 건너뛰기 제거됨
         if (isRunning) {
             builder.addAction(R.drawable.ic_pause, "일시정지", pausePendingIntent)
         } else {
@@ -387,7 +382,6 @@ class TimerService : Service() {
 
         return builder.build()
     }
-
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -412,8 +406,6 @@ class TimerService : Service() {
         const val EXTRA_CURRENT_MODE = "com.malrang.pomodoro.EXTRA_CURRENT_MODE"
         const val EXTRA_TOTAL_SESSIONS = "com.malrang.pomodoro.EXTRA_TOTAL_SESSIONS"
         const val EXTRA_SETTINGS = "com.malrang.pomodoro.EXTRA_SETTINGS"
-
-        //데이터 업데이트 후 신호
         const val ACTION_DATA_UPDATED = "com.malrang.pomodoro.ACTION_DATA_UPDATED"
 
         private var isServiceActive = false

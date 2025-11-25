@@ -25,9 +25,8 @@ interface PomodoroDao {
     @Query("SELECT * FROM work_presets")
     suspend fun getAllWorkPresetsIncludeDeleted(): List<WorkPresetEntity>
 
-    // [변경] REPLACE 대신 IGNORE 사용: 이미 존재하는 ID는 덮어쓰지 않음 (isDeleted 상태 보존)
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertWorkPresets(presets: List<WorkPresetEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertWorkPresets(presets: List<WorkPresetEntity>)
 
     // [추가] 기존 프리셋 업데이트용 메서드
     @Update
