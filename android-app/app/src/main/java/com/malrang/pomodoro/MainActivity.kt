@@ -42,21 +42,46 @@ import com.malrang.pomodoro.viewmodel.TimerViewModel
 import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
-    // 1. 로컬 전용 뷰모델 (AppViewModelFactory 사용)
-    private val timerViewModel: TimerViewModel by viewModels { AppViewModelFactory(application) }
-    private val permissionViewModel: PermissionViewModel by viewModels { AppViewModelFactory(application) }
-    private val backgroundViewModel: BackgroundViewModel by viewModels { AppViewModelFactory(application) }
 
-    // 2. [수정] 네트워크/Supabase 관련 뷰모델 (AuthVMFactory 사용)
-    // Settings, Stats, Auth 모두 이 팩토리로 통합
+    // [수정] Application 싱글톤 접근 헬퍼
+    private val pomodoroApp: PomodoroApplication
+        get() = application as PomodoroApplication
+
+    // 1. 로컬 전용 뷰모델 (싱글톤 repo 주입)
+    private val timerViewModel: TimerViewModel by viewModels {
+        AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
+    }
+    private val permissionViewModel: PermissionViewModel by viewModels {
+        AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
+    }
+    private val backgroundViewModel: BackgroundViewModel by viewModels {
+        AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
+    }
+
+    // 2. 네트워크/Supabase 관련 뷰모델 (싱글톤 repo 주입)
     private val settingsViewModel: SettingsViewModel by viewModels {
-        AuthVMFactory(application, SupabaseProvider.client)
+        AuthVMFactory(
+            application,
+            SupabaseProvider.client,
+            pomodoroApp.pomodoroRepository,
+            pomodoroApp.supabaseRepository
+        )
     }
     private val statsViewModel: StatsViewModel by viewModels {
-        AuthVMFactory(application, SupabaseProvider.client)
+        AuthVMFactory(
+            application,
+            SupabaseProvider.client,
+            pomodoroApp.pomodoroRepository,
+            pomodoroApp.supabaseRepository
+        )
     }
     private val authViewModel: AuthViewModel by viewModels {
-        AuthVMFactory(application, SupabaseProvider.client)
+        AuthVMFactory(
+            application,
+            SupabaseProvider.client,
+            pomodoroApp.pomodoroRepository,
+            pomodoroApp.supabaseRepository
+        )
     }
 
 
@@ -113,7 +138,6 @@ class MainActivity : ComponentActivity() {
                             statsViewModel = statsViewModel,
                             authViewModel = authViewModel,
                             backgroundViewModel = backgroundViewModel,
-                            // [수정] ViewModel의 수동 동기화 함수 호출
                             onSyncClick = { authViewModel.requestManualSync() }
                         )
                     }
@@ -126,14 +150,11 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         val filter = IntentFilter(TimerService.ACTION_STATUS_UPDATE)
         ContextCompat.registerReceiver(this, updateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-
-        // [추가] 앱 시작 시 자동 동기화 체크 및 수행
         authViewModel.checkAndSyncOnStart()
     }
 
     override fun onStop() {
         super.onStop()
-        // 앱이 백그라운드로 갈 때 모니터링 서비스 시작 조건 확인
         val timerState = timerViewModel.uiState.value
         val settingsState = settingsViewModel.uiState.value
         if (timerState.isRunning && timerState.currentMode == com.malrang.pomodoro.dataclass.ui.Mode.STUDY) {
@@ -146,7 +167,6 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         unregisterReceiver(dataUpdateReceiver)
 
-        // 서비스 종료 처리 (권한 없을 경우 등)
         if (TimerService.isServiceActive()) {
             var hasNotificationPermission = true
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

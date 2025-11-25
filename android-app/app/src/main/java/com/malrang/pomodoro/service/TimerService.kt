@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.malrang.pomodoro.MainActivity
+import com.malrang.pomodoro.PomodoroApplication
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
@@ -23,8 +24,6 @@ import com.malrang.pomodoro.localRepo.VibratorHelper
 import com.malrang.pomodoro.networkRepo.SupabaseProvider
 import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -58,8 +57,11 @@ class TimerService : Service() {
         createNotificationChannel()
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
-        repo = PomodoroRepository(this)
-        supabaseRepo = SupabaseRepository(SupabaseProvider.client.postgrest, SupabaseProvider.client.storage)
+
+        // [수정] Application 클래스에서 싱글톤 Repository 가져오기
+        val app = applicationContext as PomodoroApplication
+        repo = app.pomodoroRepository
+        supabaseRepo = app.supabaseRepository
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
@@ -249,12 +251,12 @@ class TimerService : Service() {
 
     private fun handleSessionCompletion(finishedMode: Mode) {
         serviceScope.launch {
-            // 1. 로컬 DB 업데이트 (필수)
+            // 1. 로컬 DB 업데이트
             updateTodayStats(finishedMode)
 
-            // 2. [수정] 서버 자동 동기화 (조건부)
+            // 2. 서버 자동 동기화
             val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
-            val isAutoSync = repo.isAutoSyncEnabled() // 설정 확인
+            val isAutoSync = repo.isAutoSyncEnabled()
 
             if (userId != null && isAutoSync) {
                 try {

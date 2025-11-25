@@ -7,15 +7,16 @@ import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import com.malrang.pomodoro.service.TimerServiceProvider
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.storage.storage
 
 /**
  * 로컬 데이터와 타이머 서비스만 필요한 뷰모델을 생성하는 팩토리
+ * [수정] PomodoroRepository를 생성자로 주입받음
  */
-class AppViewModelFactory(private val app: Application) : ViewModelProvider.Factory {
+class AppViewModelFactory(
+    private val app: Application,
+    private val pomodoroRepository: PomodoroRepository // 외부 주입
+) : ViewModelProvider.Factory {
 
-    private val pomodoroRepository by lazy { PomodoroRepository(app) }
     private val timerServiceProvider by lazy { TimerServiceProvider(app) }
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -38,19 +39,16 @@ class AppViewModelFactory(private val app: Application) : ViewModelProvider.Fact
 }
 
 /**
- * [수정됨] SupabaseRepository(네트워크)가 필요한 모든 뷰모델을 생성하는 팩토리
+ * SupabaseRepository(네트워크)가 필요한 모든 뷰모델을 생성하는 팩토리
  * Auth, Settings, Stats ViewModel을 담당합니다.
+ * [수정] Repository들을 생성자로 주입받음
  */
 class AuthVMFactory(
     private val app: Application,
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val pomodoroRepository: PomodoroRepository, // 외부 주입
+    private val supabaseRepository: SupabaseRepository  // 외부 주입
 ) : ViewModelProvider.Factory {
-
-    // 팩토리 내에서 리포지토리 싱글톤처럼 관리
-    private val pomodoroRepository by lazy { PomodoroRepository(app) }
-    private val supabaseRepository by lazy {
-        SupabaseRepository(supabase.postgrest, supabase.storage)
-    }
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         @Suppress("UNCHECKED_CAST")
@@ -59,11 +57,9 @@ class AuthVMFactory(
                 AuthViewModel(supabase, pomodoroRepository, supabaseRepository)
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
-                // SettingsViewModel에 SupabaseRepository 주입
                 SettingsViewModel(pomodoroRepository, supabaseRepository)
             }
             modelClass.isAssignableFrom(StatsViewModel::class.java) -> {
-                // StatsViewModel에 SupabaseRepository 주입
                 StatsViewModel(pomodoroRepository, supabaseRepository)
             }
             else -> {
