@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class Settings(
-    val studyTime: Int = 30,
+    val studyTime: Int = 25,
     val shortBreakTime: Int = 5,
     val longBreakTime: Int = 15, // 새로운 속성: 긴 휴식 시간
     val longBreakInterval: Int = 4, // 새로운 속성: 긴 휴식까지의 공부 세션 횟수
