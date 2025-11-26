@@ -20,6 +20,6 @@ class PomodoroApplication : Application() {
 
         // 2. 리포지토리 싱글톤 생성
         pomodoroRepository = PomodoroRepository(this)
-        supabaseRepository = SupabaseRepository(supabase.postgrest, supabase.storage)
+        supabaseRepository = SupabaseRepository(supabase.storage)
     }
 }

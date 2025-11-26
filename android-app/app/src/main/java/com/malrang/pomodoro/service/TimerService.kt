@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
@@ -21,9 +20,6 @@ import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
 import com.malrang.pomodoro.localRepo.SoundPlayer
 import com.malrang.pomodoro.localRepo.VibratorHelper
-import com.malrang.pomodoro.networkRepo.SupabaseProvider
-import com.malrang.pomodoro.networkRepo.SupabaseRepository
-import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,9 +43,7 @@ class TimerService : Service() {
     private lateinit var soundPlayer: SoundPlayer
     private lateinit var vibratorHelper: VibratorHelper
     private lateinit var repo: PomodoroRepository
-    private lateinit var supabaseRepo: SupabaseRepository
     private lateinit var wakeLock: PowerManager.WakeLock
-
 
     override fun onCreate() {
         super.onCreate()
@@ -58,10 +52,10 @@ class TimerService : Service() {
         soundPlayer = SoundPlayer(this)
         vibratorHelper = VibratorHelper(this)
 
-        // [수정] Application 클래스에서 싱글톤 Repository 가져오기
+        // Application 클래스에서 싱글톤 Repository 가져오기
         val app = applicationContext as PomodoroApplication
         repo = app.pomodoroRepository
-        supabaseRepo = app.supabaseRepository
+        // [삭제] supabaseRepo 초기화 제거
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Pomodoro::TimerWakeLock")
@@ -81,7 +75,6 @@ class TimerService : Service() {
             timeLeft = currentSettings.studyTime * 60
         }
     }
-
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val safeIntent = intent ?: return START_NOT_STICKY
@@ -254,23 +247,7 @@ class TimerService : Service() {
             // 1. 로컬 DB 업데이트
             updateTodayStats(finishedMode)
 
-            // 2. 서버 자동 동기화
-            val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
-            val isAutoSync = repo.isAutoSyncEnabled()
-
-            if (userId != null && isAutoSync) {
-                try {
-                    val today = LocalDate.now().toString()
-                    val currentStatsMap = repo.loadDailyStats()
-                    val todayStat = currentStatsMap[today]
-
-                    if (todayStat != null) {
-                        supabaseRepo.upsertDailyStat(userId, todayStat)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+            // [삭제] 서버 자동 동기화 로직 제거됨
 
             val intent = Intent(ACTION_DATA_UPDATED).apply {
                 setPackage("com.malrang.pomodoro")
@@ -295,14 +272,20 @@ class TimerService : Service() {
                 val newStudyTimeMap = (todayStat.studyTimeByWork ?: emptyMap()).toMutableMap()
                 val currentWorkTime = newStudyTimeMap.getOrDefault(currentWorkName, 0)
                 newStudyTimeMap[currentWorkName] = currentWorkTime + currentSettings.studyTime
-                todayStat.copy(studyTimeByWork = newStudyTimeMap)
+                todayStat.copy(
+                    studyTimeByWork = newStudyTimeMap,
+                    updatedAt = System.currentTimeMillis() // [추가] 변경 시점 갱신 (백업용)
+                )
             }
             Mode.SHORT_BREAK, Mode.LONG_BREAK -> {
                 val breakTime = if(finishedMode == Mode.SHORT_BREAK) currentSettings.shortBreakTime else currentSettings.longBreakTime
                 val newBreakTimeMap = (todayStat.breakTimeByWork ?: emptyMap()).toMutableMap()
                 val currentWorkTime = newBreakTimeMap.getOrDefault(currentWorkName, 0)
                 newBreakTimeMap[currentWorkName] = currentWorkTime + breakTime
-                todayStat.copy(breakTimeByWork = newBreakTimeMap)
+                todayStat.copy(
+                    breakTimeByWork = newBreakTimeMap,
+                    updatedAt = System.currentTimeMillis() // [추가] 변경 시점 갱신 (백업용)
+                )
             }
         }
         currentStatsMap[today] = updatedStat

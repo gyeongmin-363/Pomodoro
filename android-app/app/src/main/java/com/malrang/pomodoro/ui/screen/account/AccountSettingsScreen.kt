@@ -11,20 +11,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.ModernConfirmDialog
@@ -34,17 +31,31 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 @Composable
 fun AccountSettingsScreen(
     authViewModel: AuthViewModel,
-    onNavigateTo: (Screen) -> Unit,
-    onSyncClick: () -> Unit
+    onNavigateTo: (Screen) -> Unit
 ) {
     val authState by authViewModel.authState.collectAsState()
-    val isAutoSyncEnabled by authViewModel.isAutoSyncEnabled.collectAsState()
-    // [추가] 동기화 상태 구독
-    val isSyncing by authViewModel.isSyncing.collectAsState()
+    val backupState by authViewModel.backupState.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // 백업/복원 상태 모니터링 및 피드백
+    LaunchedEffect(backupState) {
+        when (val state = backupState) {
+            is AuthViewModel.BackupState.Success -> {
+                snackbarHostState.showSnackbar(state.message)
+                authViewModel.clearBackupState()
+            }
+            is AuthViewModel.BackupState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+                authViewModel.clearBackupState()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("계정 설정", fontWeight = FontWeight.Bold) },
@@ -68,8 +79,7 @@ fun AccountSettingsScreen(
                 is AuthViewModel.AuthState.Authenticated -> {
                     AuthenticatedAccountContent(
                         userEmail = state.user?.email ?: "이메일 정보 없음",
-                        isAutoSyncEnabled = isAutoSyncEnabled,
-                        isSyncing = isSyncing, // [추가] 상태 전달
+                        backupState = backupState,
                         onLogout = { authViewModel.signOut(context) },
                         onDeleteAccount = {
                             authViewModel.deleteUser(
@@ -77,8 +87,8 @@ fun AccountSettingsScreen(
                                 activityContext = context
                             )
                         },
-                        onSyncClick = { authViewModel.requestManualSync() },
-                        onAutoSyncToggle = { authViewModel.toggleAutoSync(it) }
+                        onBackupClick = { authViewModel.backupData() },
+                        onRestoreClick = { authViewModel.restoreData() }
                     )
                 }
                 else -> {
@@ -95,17 +105,19 @@ fun AccountSettingsScreen(
 @Composable
 fun AuthenticatedAccountContent(
     userEmail: String,
-    isAutoSyncEnabled: Boolean,
-    isSyncing: Boolean, // [추가] 파라미터
+    backupState: AuthViewModel.BackupState,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
-    onSyncClick: () -> Unit,
-    onAutoSyncToggle: (Boolean) -> Unit
+    onBackupClick: () -> Unit,
+    onRestoreClick: () -> Unit
 ) {
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
+    var showBackupConfirmDialog by remember { mutableStateOf(false) }
 
-    // ... (다이얼로그 로직 기존 유지) ...
+    val isLoading = backupState is AuthViewModel.BackupState.Loading
+
     if (showLogoutConfirmDialog) {
         ModernConfirmDialog(
             title = "로그아웃",
@@ -124,6 +136,31 @@ fun AuthenticatedAccountContent(
             confirmText = "탈퇴 확인"
         )
     }
+    // 백업 확인 다이얼로그
+    if (showBackupConfirmDialog) {
+        ModernConfirmDialog(
+            title = "데이터 백업",
+            content = { Text("현재 기기의 데이터를 서버에 저장합니다.\n기존에 저장된 서버 데이터는 덮어씌워집니다.") },
+            onConfirm = { onBackupClick(); showBackupConfirmDialog = false },
+            onDismissRequest = { showBackupConfirmDialog = false },
+            confirmText = "백업하기"
+        )
+    }
+    // 복원 확인 다이얼로그 (중요!)
+    if (showRestoreConfirmDialog) {
+        ModernConfirmDialog(
+            title = "데이터 복원",
+            content = {
+                Text(
+                    "서버에서 데이터를 불러옵니다.\n\n⚠️ 주의: 현재 기기의 모든 데이터가 삭제되고 서버 데이터로 대체됩니다.",
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            onConfirm = { onRestoreClick(); showRestoreConfirmDialog = false },
+            onDismissRequest = { showRestoreConfirmDialog = false },
+            confirmText = "복원하기"
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -137,118 +174,41 @@ fun AuthenticatedAccountContent(
         ProfileCard(email = userEmail)
         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
+        // [백업 및 복원 섹션]
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "데이터 관리",
+                text = "클라우드 백업",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
             )
 
-            // 자동 동기화 카드 (기존 유지)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Face,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                text = "자동 동기화",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (isAutoSyncEnabled) "데이터를 자동으로 서버에 저장합니다." else "데이터를 기기에만 저장합니다.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = isAutoSyncEnabled,
-                        onCheckedChange = {
-                            // 동기화 중이 아닐 때만 토글 가능하게 하려면:
-                            if (!isSyncing) onAutoSyncToggle(it)
-                        },
-                        enabled = !isSyncing, // 동기화 중엔 스위치 비활성화
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-            }
+            // 백업 버튼
+            ActionButtonCard(
+                title = "데이터 백업",
+                description = "현재 데이터를 서버에 저장합니다.",
+                icon = Icons.Default.Face,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                isLoading = isLoading,
+                onClick = { showBackupConfirmDialog = true }
+            )
 
-            // [수정] 수동 동기화 카드 (로딩 표시 추가)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable(
-                        enabled = !isSyncing, // 동기화 중에는 클릭 방지
-                        onClick = onSyncClick
-                    ),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 아이콘 또는 로딩 인디케이터 교체
-                    Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
-                        if (isSyncing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                strokeWidth = 2.dp,
-                                strokeCap = StrokeCap.Round
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
+            Spacer(modifier = Modifier.height(12.dp))
 
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = if (isSyncing) "동기화 중..." else "지금 동기화",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Text(
-                            text = if (isSyncing) "서버와 데이터를 주고받고 있습니다." else "서버와 데이터를 즉시 동기화합니다.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-            }
+            // 복원 버튼
+            ActionButtonCard(
+                title = "데이터 복원",
+                description = "서버에서 데이터를 불러옵니다.",
+                icon = Icons.Default.Face,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                isLoading = isLoading,
+                onClick = { showRestoreConfirmDialog = true }
+            )
         }
 
-        // 3. 계정 관리 버튼들 (기존 유지)
+        // 계정 작업 섹션
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "계정 작업",
@@ -259,7 +219,7 @@ fun AuthenticatedAccountContent(
             OutlinedButton(
                 onClick = { showLogoutConfirmDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isSyncing, // 동기화 중 로그아웃 방지
+                enabled = !isLoading,
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("로그아웃")
@@ -268,9 +228,62 @@ fun AuthenticatedAccountContent(
             TextButton(
                 onClick = { showDeleteConfirmDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isSyncing
+                enabled = !isLoading
             ) {
                 Text(text = "회원 탈퇴", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+// 재사용 가능한 액션 버튼 카드
+@Composable
+fun ActionButtonCard(
+    title: String,
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    containerColor: Color,
+    contentColor: Color,
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(enabled = !isLoading, onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.8f)
+                )
+            }
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = contentColor,
+                    strokeWidth = 2.dp
+                )
             }
         }
     }
@@ -354,7 +367,6 @@ fun UnauthenticatedAccountContent(
     }
 }
 
-// 이메일 앞글자를 따서 아바타처럼 보여주는 컴포저블
 @Composable
 fun ProfileCard(email: String) {
     val initial = email.firstOrNull()?.uppercaseChar()?.toString() ?: "?"

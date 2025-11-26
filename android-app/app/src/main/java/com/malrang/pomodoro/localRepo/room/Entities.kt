@@ -32,14 +32,12 @@ data class DailyStatEntity(
 }
 
 
-// ... (WorkPresetEntity는 변경 없음) ...
 @Entity(tableName = "work_presets")
 data class WorkPresetEntity(
     @PrimaryKey val id: String,
     val name: String,
     val settings: Settings,
     val updatedAt: Long = System.currentTimeMillis(),
-    val isDeleted: Boolean = false
 ) {
     fun toDomain() = WorkPreset(id, name, settings)
 }

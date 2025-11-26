@@ -1,12 +1,12 @@
 package com.malrang.pomodoro.localRepo
 
 import android.content.Context
-import androidx.datastore.preferences.core.booleanPreferencesKey // 추가
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.room.withTransaction // [추가] 트랜잭션 처리를 위해 필요
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
@@ -33,9 +33,6 @@ object DSKeys {
     val CUSTOM_TEXT_COLOR = intPreferencesKey("custom_text_color")
     val BACKGROUND_TYPE = stringPreferencesKey("background_type")
     val SELECTED_BG_IMAGE_PATH = stringPreferencesKey("selected_bg_image_path")
-
-    // [추가] 자동 동기화 설정 키
-    val AUTO_SYNC_ENABLED = booleanPreferencesKey("auto_sync_enabled")
 }
 
 data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSessions: Int)
@@ -45,11 +42,18 @@ class PomodoroRepository(private val context: Context) {
     private val database = PomodoroDatabase.getDatabase(context)
     private val dao = database.pomodoroDao()
 
-    // --- DailyStat ---
+    // --- DailyStat (통계) ---
+
+    // UI 표시용 (Map으로 변환)
     suspend fun loadDailyStats(): Map<String, DailyStat> {
         return dao.getAllDailyStats()
             .map { it.toDomain() }
             .associateBy { it.date }
+    }
+
+    // [백업용] 모든 통계 리스트 조회
+    suspend fun getAllDailyStats(): List<DailyStat> {
+        return dao.getAllDailyStats().map { it.toDomain() }
     }
 
     suspend fun saveDailyStats(stats: Map<String, DailyStat>) {
@@ -60,9 +64,11 @@ class PomodoroRepository(private val context: Context) {
         dao.insertDailyStats(listOf(dailyStat.toEntity()))
     }
 
-    // --- WorkPreset ---
+    // --- WorkPreset (프리셋) ---
+
+    // UI 표시용 (없으면 기본값 생성)
     suspend fun loadWorkPresets(): List<WorkPreset> {
-        val presets = dao.getActiveWorkPresets().map { it.toDomain() }
+        val presets = dao.getAllWorkPresets().map { it.toDomain() }
         return presets.ifEmpty {
             val defaultPresets = createDefaultPresets()
             upsertWorkPresets(defaultPresets)
@@ -70,8 +76,13 @@ class PomodoroRepository(private val context: Context) {
         }
     }
 
+    // [백업용] 모든 프리셋 리스트 조회 (기본값 생성 로직 없음)
+    suspend fun getAllWorkPresets(): List<WorkPreset> {
+        return dao.getAllWorkPresets().map { it.toDomain() }
+    }
+
     suspend fun upsertWorkPresets(presets: List<WorkPreset>) {
-        dao.upsertWorkPresets(presets.map { it.toEntity() })
+        dao.insertWorkPresets(presets.map { it.toEntity() })
     }
 
     suspend fun updateWorkPresets(presets: List<WorkPreset>) {
@@ -81,25 +92,40 @@ class PomodoroRepository(private val context: Context) {
     }
 
     suspend fun deleteWorkPreset(id: String) {
-        dao.softDeleteWorkPreset(id)
+        // Soft Delete 제거 -> Hard Delete(영구 삭제)로 변경
+        dao.deleteWorkPresetById(id)
     }
 
-    // --- DataStore ---
+    // --- [통합 복원] ---
+    suspend fun restoreAllData(
+        stats: List<DailyStat>,
+        presets: List<WorkPreset>,
+        settings: Settings
+    ) {
+        // [수정] 유효성 검사 (통계 또는 프리셋이 있어야 함)
+        require(stats.isNotEmpty() || presets.isNotEmpty()) {
+            "복원할 데이터가 비어있습니다. 백업 파일에 통계나 프리셋 데이터가 포함되어 있지 않습니다."
+        }
 
-    // [추가] 자동 동기화 설정 Flow
-    val autoSyncEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[DSKeys.AUTO_SYNC_ENABLED] ?: true // 기본값은 true (자동 동기화 켜짐)
+        database.withTransaction {
+            // 1. 기존 데이터 클리어
+            dao.deleteAllDailyStats()
+            dao.deleteAllWorkPresets()
+
+            // 2. 백업 데이터 삽입
+            if (stats.isNotEmpty()) {
+                dao.insertDailyStats(stats.map { it.toEntity() })
+            }
+            if (presets.isNotEmpty()) {
+                dao.insertWorkPresets(presets.map { it.toEntity() })
+            }
+
+            // *참고: settings는 현재 WorkPreset에 포함되어 복원되므로
+            // 별도 테이블 삽입 로직은 없으나, 추후 전역 설정 관리가 필요할 경우 여기서 처리합니다.
+        }
     }
 
-    // [추가] 자동 동기화 설정 저장
-    suspend fun saveAutoSyncEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[DSKeys.AUTO_SYNC_ENABLED] = enabled }
-    }
-
-    // [추가] 동기화 로직에서 값 조회를 위한 helper (suspend)
-    suspend fun isAutoSyncEnabled(): Boolean {
-        return context.dataStore.data.first()[DSKeys.AUTO_SYNC_ENABLED] ?: true
-    }
+    // --- DataStore (설정값) ---
 
     suspend fun loadCurrentWorkId(): String? {
         return context.dataStore.data.first()[DSKeys.CURRENT_WORK_ID]

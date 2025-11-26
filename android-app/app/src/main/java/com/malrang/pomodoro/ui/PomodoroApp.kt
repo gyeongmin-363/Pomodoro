@@ -37,7 +37,7 @@ import com.malrang.pomodoro.ui.screen.stats.daliyDetail.DailyDetailScreen
 import com.malrang.pomodoro.ui.screen.stats.month.StatsScreen
 import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
-import com.malrang.pomodoro.viewmodel.BackgroundViewModel // [추가]
+import com.malrang.pomodoro.viewmodel.BackgroundViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
@@ -62,13 +62,11 @@ fun PomodoroApp(
     permissionViewModel: PermissionViewModel,
     statsViewModel: StatsViewModel,
     authViewModel: AuthViewModel,
-    backgroundViewModel: BackgroundViewModel, // [추가]
-    onSyncClick: () -> Unit = {}
+    backgroundViewModel: BackgroundViewModel
 ) {
     val context = LocalContext.current
     val authState by authViewModel.authState.collectAsState()
     val permissionUiState by permissionViewModel.uiState.collectAsState()
-    // settingsState는 필요 시 사용
 
     val allPermissionsGranted =
         permissionUiState.permissions.isNotEmpty() &&
@@ -150,7 +148,7 @@ fun PomodoroApp(
                     MainScreen(
                         timerViewModel = timerViewModel,
                         settingsViewModel = settingsViewModel,
-                        backgroundViewModel = backgroundViewModel, // [추가] MainScreen에 전달
+                        backgroundViewModel = backgroundViewModel,
                         onNavigateTo = { screen -> navController.navigate(screen.name) },
                         paddingValues = innerPadding
                     )
@@ -212,14 +210,12 @@ fun PomodoroApp(
                     Box(modifier = Modifier.padding(innerPadding)) {
                         AccountSettingsScreen(
                             authViewModel = authViewModel,
-                            onNavigateTo = { navController.navigate(Screen.Main.name) },
-                            onSyncClick = onSyncClick
+                            onNavigateTo = { navController.navigate(Screen.Main.name) }
                         )
                     }
                 }
                 composable(Screen.Background.name) {
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        // [수정] SettingsViewModel -> BackgroundViewModel로 변경
                         BackgroundScreen(backgroundViewModel = backgroundViewModel)
                     }
                 }

@@ -6,7 +6,9 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.malrang.pomodoro.dataclass.ui.Settings
 import com.malrang.pomodoro.localRepo.PomodoroRepository
+import com.malrang.pomodoro.networkRepo.BackupData
 import com.malrang.pomodoro.networkRepo.SupabaseRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -15,14 +17,14 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class AuthViewModel(
     private val supabase: SupabaseClient,
@@ -30,18 +32,23 @@ class AuthViewModel(
     private val supabaseRepository: SupabaseRepository
 ) : ViewModel() {
 
+    // --- 인증 상태 ---
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
-    // [추가] 동기화 진행 상태 (UI 로딩 표시용)
-    private val _isSyncing = MutableStateFlow(false)
-    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+    // --- 백업/복원 상태 (UI 표시용) ---
+    private val _backupState = MutableStateFlow<BackupState>(BackupState.Idle)
+    val backupState: StateFlow<BackupState> = _backupState.asStateFlow()
 
-    // 자동 동기화 설정 상태 (UI 바인딩용)
-    val isAutoSyncEnabled: StateFlow<Boolean> = repository.autoSyncEnabledFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    // JSON 설정 (유연한 파싱을 위해)
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        prettyPrint = true
+    }
 
     init {
+        // Supabase 인증 세션 상태 모니터링
         supabase.auth.sessionStatus
             .onEach { status ->
                 _authState.value = when (status) {
@@ -54,102 +61,101 @@ class AuthViewModel(
             .launchIn(viewModelScope)
     }
 
-    // [기능] 앱 시작 시 자동 동기화 체크
-    fun checkAndSyncOnStart() {
+    // =========================================================================
+    // [백업] 데이터 업로드 (Backup)
+    // =========================================================================
+    fun backupData() {
         viewModelScope.launch {
-            if (repository.isAutoSyncEnabled()) {
-                val currentUser = (authState.value as? AuthState.Authenticated)?.user
-                if (currentUser != null) {
-                    Log.d("AuthViewModel", "앱 시작: 자동 동기화 수행")
-                    // 앱 시작 시에는 사용자가 인지하지 못하게 조용히(isSyncing 없이) 수행하거나,
-                    // 필요하다면 여기서도 _isSyncing = true 처리를 할 수 있습니다.
-                    syncLocalDataToSupabase(currentUser.id)
-                }
+            val user = (authState.value as? AuthState.Authenticated)?.user
+            if (user == null) {
+                _backupState.value = BackupState.Error("로그인이 필요합니다.")
+                return@launch
+            }
+
+            try {
+                _backupState.value = BackupState.Loading
+
+                // 1. 로컬 데이터 모두 가져오기
+                // (Repository가 DAO의 getAllDailyStats, getAllWorkPresets 등을 호출한다고 가정)
+                // 만약 Repository에 해당 메서드가 없다면, loadDailyStats().values.toList() 등으로 대체 가능
+                val stats = repository.getAllDailyStats()
+                val presets = repository.getAllWorkPresets()
+
+                // 현재 활성화된 설정(Settings) 가져오기 (없으면 기본값)
+                val currentWorkId = repository.loadCurrentWorkId()
+                val currentSettings = presets.find { it.id == currentWorkId }?.settings ?: Settings()
+
+                // 2. BackupData 객체 생성 (보따리 싸기)
+                val backupData = BackupData(
+                    settings = currentSettings,
+                    workPresets = presets,
+                    dailyStats = stats
+                )
+
+                // 3. JSON 변환 및 업로드
+                val jsonString = json.encodeToString(backupData)
+                supabaseRepository.uploadBackup(user.id, jsonString)
+
+                _backupState.value = BackupState.Success("데이터 백업이 완료되었습니다.")
+                Log.d("AuthViewModel", "백업 성공: ${user.id}")
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _backupState.value = BackupState.Error("백업 실패: ${e.message}")
             }
         }
     }
 
-    // [기능] 자동 동기화 스위치 토글
-    fun toggleAutoSync(isEnabled: Boolean) {
+    // =========================================================================
+    // [복원] 데이터 다운로드 및 덮어쓰기 (Restore)
+    // =========================================================================
+    fun restoreData() {
         viewModelScope.launch {
-            repository.saveAutoSyncEnabled(isEnabled)
-            // OFF -> ON 전환 시 즉시 동기화
-            if (isEnabled) {
-                val currentUser = (authState.value as? AuthState.Authenticated)?.user
-                if (currentUser != null) {
-                    _isSyncing.value = true
-                    try {
-                        syncLocalDataToSupabase(currentUser.id)
-                    } finally {
-                        _isSyncing.value = false
-                    }
-                }
+            val user = (authState.value as? AuthState.Authenticated)?.user
+            if (user == null) {
+                _backupState.value = BackupState.Error("로그인이 필요합니다.")
+                return@launch
+            }
+
+            try {
+                _backupState.value = BackupState.Loading
+
+                // 1. 서버에서 백업 파일 다운로드
+                val jsonString = supabaseRepository.downloadBackup(user.id)
+
+                // 2. JSON 파싱
+                val backupData = json.decodeFromString<BackupData>(jsonString)
+
+                // 3. 로컬 DB 복원 (유효성 검사 및 설정 복원 포함)
+                // [수정] backupData.settings 파라미터 추가
+                repository.restoreAllData(
+                    stats = backupData.dailyStats,
+                    presets = backupData.workPresets,
+                    settings = backupData.settings
+                )
+
+                _backupState.value = BackupState.Success("데이터 복원이 완료되었습니다.")
+                Log.d("AuthViewModel", "복원 성공: ${user.id}")
+
+            } catch (e: IllegalArgumentException) {
+                e.printStackTrace()
+                _backupState.value = BackupState.Error(e.message ?: "데이터 복원 중 오류가 발생했습니다.")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _backupState.value = BackupState.Error("복원 실패: 저장된 백업이 없거나 오류가 발생했습니다.")
             }
         }
     }
 
-    // [기능] 수동 동기화 요청 (UI 버튼)
-    fun requestManualSync() {
-        viewModelScope.launch {
-            val currentUser = (authState.value as? AuthState.Authenticated)?.user
-            if (currentUser != null) {
-                _isSyncing.value = true // 로딩 시작
-                try {
-                    syncLocalDataToSupabase(currentUser.id)
-                } finally {
-                    _isSyncing.value = false // 로딩 종료 (성공/실패 무관)
-                }
-            } else {
-                _authState.value = AuthState.Error("로그인이 필요합니다.")
-            }
-        }
+    // 상태 초기화 (다이얼로그 닫을 때 등)
+    fun clearBackupState() {
+        _backupState.value = BackupState.Idle
     }
 
-    // [핵심 로직] 서버 <-> 로컬 동기화 (Merge & Upload)
-    private suspend fun syncLocalDataToSupabase(userId: String) {
-        try {
-            // 1. 서버 데이터 다운로드
-            val remoteStats = supabaseRepository.getDailyStats(userId)
-            val remotePresets = supabaseRepository.getWorkPresets(userId)
 
-            // 2. 로컬 DB 병합 (서버 데이터를 로컬에 덮어쓰거나 추가)
-            if (remoteStats.isNotEmpty()) {
-                val currentStats = repository.loadDailyStats().toMutableMap()
-                remoteStats.forEach { stat ->
-                    // 간단한 전략: 날짜가 같으면 서버 데이터로 덮어쓰기 (또는 더 정교한 병합 로직 가능)
-                    currentStats[stat.date] = stat
-                }
-                repository.saveDailyStats(currentStats)
-            }
-
-            if (remotePresets.isNotEmpty()) {
-                // 프리셋 병합 및 동기화
-                // 리포지토리의 upsertWorkPresets(또는 insertNewWorkPresets)가
-                // ID 충돌 시 업데이트/무시 로직을 처리한다고 가정합니다.
-                repository.upsertWorkPresets(remotePresets)
-            }
-
-            // 3. 병합된 최신 로컬 데이터를 다시 서버로 업로드 (Upsert)
-            val finalStats = repository.loadDailyStats()
-            val finalPresets = repository.loadWorkPresets()
-
-            finalStats.values.forEach { stat ->
-                supabaseRepository.upsertDailyStat(userId, stat)
-            }
-
-            if (finalPresets.isNotEmpty()) {
-                supabaseRepository.upsertWorkPresets(userId, finalPresets)
-            }
-
-            Log.d("AuthViewModel", "동기화 성공 완료")
-
-        } catch (e: Exception) {
-            Log.e("AuthViewModel", "동기화 실패: ${e.message}")
-            // 에러 발생 시 필요하다면 _authState.value = AuthState.Error(...) 처리 가능
-        }
-    }
-
-    // --- 기존 로그인/로그아웃 로직 ---
+    // =========================================================================
+    // 인증 관련 기능 (로그인, 로그아웃, 탈퇴) - 기존 유지
+    // =========================================================================
 
     fun signInWithGoogle() {
         viewModelScope.launch {
@@ -159,7 +165,6 @@ class AuthViewModel(
                     scopes.add("email")
                     scopes.add("profile")
                 }
-                // 결과는 sessionStatus Flow에서 처리됨
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "알 수 없는 오류가 발생했습니다.")
             }
@@ -206,6 +211,7 @@ class AuthViewModel(
                     }
                 }
 
+                // 1. Edge Function 호출을 위한 JWT 준비
                 val jwt = session?.accessToken ?: session?.let {
                     try {
                         val field = it::class.java.getDeclaredField("accessToken")
@@ -219,6 +225,7 @@ class AuthViewModel(
                     return@launch
                 }
 
+                // 2. Edge Function으로 계정 및 백업 데이터 삭제 요청
                 withContext(Dispatchers.IO) {
                     val url = java.net.URL(edgeFunctionUrl)
                     val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
@@ -246,6 +253,10 @@ class AuthViewModel(
         }
     }
 
+    // =========================================================================
+    // UI States
+    // =========================================================================
+
     sealed interface AuthState {
         object Idle : AuthState
         object Loading : AuthState
@@ -253,5 +264,12 @@ class AuthViewModel(
         data class Authenticated(val user: UserInfo?) : AuthState
         object NotAuthenticated : AuthState
         data class Error(val message: String) : AuthState
+    }
+
+    sealed interface BackupState {
+        object Idle : BackupState
+        object Loading : BackupState
+        data class Success(val message: String) : BackupState
+        data class Error(val message: String) : BackupState
     }
 }
