@@ -97,8 +97,12 @@ class PomodoroRepository(private val context: Context) {
     }
 
     // --- [통합 복원] ---
-    // [수정됨] DAO의 Default Method 대신 Repository에서 withTransaction 사용
     suspend fun restoreAllData(stats: List<DailyStat>, presets: List<WorkPreset>) {
+        // [수정] 빈 데이터 복원 방지 (데이터 손실 방지)
+        require(stats.isNotEmpty() || presets.isNotEmpty()) {
+            "복원할 데이터가 비어있습니다. 백업 파일에 통계나 프리셋 데이터가 포함되어 있지 않습니다."
+        }
+
         database.withTransaction {
             // 1. 기존 데이터 클리어
             dao.deleteAllDailyStats()
