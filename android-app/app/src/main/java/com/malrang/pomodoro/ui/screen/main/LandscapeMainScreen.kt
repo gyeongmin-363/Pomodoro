@@ -2,16 +2,21 @@ package com.malrang.pomodoro.ui.screen.main
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
@@ -66,7 +71,7 @@ fun LandscapeMainScreen(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp, vertical = 16.dp)
+                .padding(horizontal = 48.dp, vertical = 24.dp)
                 .padding(bottom = paddingValues.calculateBottomPadding()),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -77,31 +82,45 @@ fun LandscapeMainScreen(
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Center
             ) {
-                Surface(
-                    color = customTextColor.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(50),
+                // Work Name Badge
+                Box(
+                    modifier = Modifier
+                        .offset(x = 4.dp, y = 4.dp)
+                        .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                 ) {
-                    Text(
-                        text = currentWorkName,
-                        fontSize = 14.sp,
-                        color = customTextColor,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .offset(x = (-4).dp, y = (-4).dp)
+                            .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(8.dp))
+                            .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = currentWorkName,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondary
+                        )
+                    }
                 }
-                Spacer(Modifier.height(16.dp))
+
+                Spacer(Modifier.height(24.dp))
+
                 Text(
                     text = "완료 세션: ${timerState.totalSessions}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = customTextColor
                 )
+
                 Spacer(Modifier.height(16.dp))
+
                 CycleIndicator(
                     modifier = Modifier.fillMaxWidth(0.8f),
                     currentMode = timerState.currentMode,
                     totalSessions = timerState.totalSessions,
                     longBreakInterval = settingsState.settings.longBreakInterval,
-                    borderColor = customTextColor.copy(alpha = 0.5f),
+                    borderColor = customTextColor,
                     itemsPerRow = 6
                 )
             }
@@ -114,15 +133,15 @@ fun LandscapeMainScreen(
             ) {
                 Text(
                     text = titleText,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
                     color = customTextColor.copy(alpha = 0.9f)
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
                     text = "%02d:%02d".format(timerState.timeLeft / 60, timerState.timeLeft % 60),
-                    fontSize = 80.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 90.sp,
+                    fontWeight = FontWeight.Black,
                     color = customTextColor,
                     letterSpacing = 2.sp
                 )
@@ -134,36 +153,80 @@ fun LandscapeMainScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Center
             ) {
-                // 재생/일시정지
-                FilledIconButton(
+                // Play Button
+                NeoIconButton(
                     onClick = {
                         if (!timerState.isRunning) timerViewModel.startTimer(settingsState.settings)
                         else timerViewModel.pauseTimer()
                     },
-                    modifier = Modifier.size(64.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                ) {
-                    Icon(
-                        painterResource(id = if (!timerState.isRunning) R.drawable.ic_play else R.drawable.ic_pause),
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                    iconRes = if (!timerState.isRunning) R.drawable.ic_play else R.drawable.ic_pause,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    size = 80.dp,
+                    iconSize = 36.dp,
+                    shadowOffset = 5.dp
+                )
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(32.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    IconButton(onClick = { events.onShowResetConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_reset), contentDescription = "리셋", tint = customTextColor)
-                    }
-                    IconButton(onClick = { events.onShowSkipConfirmChange(true) }) {
-                        Icon(painterResource(id = R.drawable.ic_skip), contentDescription = "스킵", tint = customTextColor)
-                    }
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    NeoIconButton(
+                        onClick = { events.onShowResetConfirmChange(true) },
+                        iconRes = R.drawable.ic_reset,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        size = 56.dp,
+                        iconSize = 24.dp
+                    )
+                    NeoIconButton(
+                        onClick = { events.onShowSkipConfirmChange(true) },
+                        iconRes = R.drawable.ic_skip,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        size = 56.dp,
+                        iconSize = 24.dp
+                    )
                 }
             }
+        }
+    }
+}
+
+// Landscape용 동일한 NeoIconButton 컴포저블 (파일 내 복사)
+@Composable
+private fun NeoIconButton(
+    onClick: () -> Unit,
+    iconRes: Int,
+    containerColor: Color,
+    contentColor: Color,
+    size: Dp,
+    iconSize: Dp,
+    shadowOffset: Dp = 4.dp
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(x = shadowOffset, y = shadowOffset)
+                .background(MaterialTheme.colorScheme.outline, CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(containerColor, CircleShape)
+                .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(iconSize)
+            )
         }
     }
 }

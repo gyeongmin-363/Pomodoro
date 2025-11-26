@@ -2,6 +2,8 @@ package com.malrang.pomodoro.ui.screen.main
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +19,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
@@ -58,7 +61,7 @@ fun PortraitMainScreen(
             .fillMaxSize()
             .background(customBgColor)
     ) {
-        // 배경 이미지
+        // 배경 이미지 처리
         if (isImageMode && imagePath != null) {
             Image(
                 painter = rememberAsyncImagePainter(model = File(imagePath)),
@@ -66,11 +69,11 @@ fun PortraitMainScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            // 배경 딤 처리
+            // 딤 처리
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f)) // 가독성을 위해 조금 더 어둡게
+                    .background(Color.Black.copy(alpha = 0.4f))
             )
         }
 
@@ -81,20 +84,27 @@ fun PortraitMainScreen(
                 .padding(bottom = paddingValues.calculateBottomPadding()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. 상단 정보 (Work 이름)
-            Spacer(Modifier.height(20.dp))
-            Surface(
-                color = customTextColor.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(50),
-                modifier = Modifier.padding(vertical = 8.dp)
+            // 1. 상단 정보 (Work 이름) - 배지 스타일
+            Spacer(Modifier.height(32.dp))
+            Box(
+                modifier = Modifier
+                    .offset(x = 4.dp, y = 4.dp)
+                    .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
             ) {
-                Text(
-                    text = currentWorkName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = customTextColor,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .offset(x = (-4).dp, y = (-4).dp)
+                        .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(12.dp)) // Pink Badge
+                        .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = currentWorkName,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                }
             }
 
             Spacer(Modifier.weight(1f))
@@ -106,21 +116,21 @@ fun PortraitMainScreen(
             ) {
                 Text(
                     text = titleText,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Normal,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     color = customTextColor.copy(alpha = 0.9f)
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(24.dp))
 
-                // 타이머 텍스트 (매우 크게)
+                // 타이머 텍스트
                 Text(
                     text = "%02d:%02d".format(timerState.timeLeft / 60, timerState.timeLeft % 60),
-                    fontSize = 80.sp, // 크기 확대
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 90.sp,
+                    fontWeight = FontWeight.Black, // 가장 굵게
                     color = customTextColor,
                     style = MaterialTheme.typography.displayLarge,
-                    letterSpacing = 4.sp // 자간 넓힘
+                    letterSpacing = 4.sp
                 )
             }
 
@@ -131,87 +141,123 @@ fun PortraitMainScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom
             ) {
-                // 구간 정보
-                Text(
-                    buildAnnotatedString {
-                        withStyle(style = SpanStyle(color = customTextColor.copy(alpha = 0.7f))) { append("완료한 세션  ") }
-                        withStyle(
-                            style = SpanStyle(
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary // 강조색 사용
-                            )
-                        ) { append("${timerState.totalSessions}") }
-                    },
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                // 구간 정보 (카드 스타일)
+                Box(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        buildAnnotatedString {
+                            withStyle(style = SpanStyle(color = customTextColor, fontWeight = FontWeight.Medium)) { append("완료한 세션  ") }
+                            withStyle(
+                                style = SpanStyle(
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            ) { append("${timerState.totalSessions}") }
+                        }
+                    )
+                }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(20.dp))
 
                 CycleIndicator(
                     modifier = Modifier.fillMaxWidth(),
                     currentMode = timerState.currentMode,
                     totalSessions = timerState.totalSessions,
                     longBreakInterval = settingsState.settings.longBreakInterval,
-                    borderColor = customTextColor.copy(alpha = 0.5f),
+                    borderColor = customTextColor,
                     itemsPerRow = 8
                 )
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(50.dp))
 
-                // 컨트롤 버튼 (Play 버튼 강조)
+                // 컨트롤 버튼
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // 리셋 버튼 (보조)
-                    IconButton(
+                    // 리셋 버튼
+                    NeoIconButton(
                         onClick = { events.onShowResetConfirmChange(true) },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            painterResource(id = R.drawable.ic_reset),
-                            contentDescription = "리셋",
-                            tint = customTextColor.copy(alpha = 0.8f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                        iconRes = R.drawable.ic_reset,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        size = 56.dp,
+                        iconSize = 24.dp
+                    )
 
-                    // 재생/일시정지 버튼 (메인 - 큼직하게)
-                    FilledIconButton(
+                    // 재생/일시정지 버튼 (크고 화려하게)
+                    NeoIconButton(
                         onClick = {
                             if (!timerState.isRunning) timerViewModel.startTimer(settingsState.settings)
                             else timerViewModel.pauseTimer()
                         },
-                        modifier = Modifier.size(72.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    ) {
-                        Icon(
-                            painterResource(id = if (!timerState.isRunning) R.drawable.ic_play else R.drawable.ic_pause),
-                            contentDescription = if (!timerState.isRunning) "시작" else "일시정지",
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
+                        iconRes = if (!timerState.isRunning) R.drawable.ic_play else R.drawable.ic_pause,
+                        containerColor = MaterialTheme.colorScheme.primary, // Blue Pop
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        size = 88.dp,
+                        iconSize = 40.dp,
+                        shadowOffset = 6.dp
+                    )
 
-                    // 스킵 버튼 (보조)
-                    IconButton(
+                    // 스킵 버튼
+                    NeoIconButton(
                         onClick = { events.onShowSkipConfirmChange(true) },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            painterResource(id = R.drawable.ic_skip),
-                            contentDescription = "스킵",
-                            tint = customTextColor.copy(alpha = 0.8f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                        iconRes = R.drawable.ic_skip,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        size = 56.dp,
+                        iconSize = 24.dp
+                    )
                 }
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(48.dp))
             }
+        }
+    }
+}
+
+// Neo-Brutalism 스타일 아이콘 버튼
+@Composable
+private fun NeoIconButton(
+    onClick: () -> Unit,
+    iconRes: Int,
+    containerColor: Color,
+    contentColor: Color,
+    size: Dp,
+    iconSize: Dp,
+    shadowOffset: Dp = 4.dp
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clickable(onClick = onClick)
+    ) {
+        // Shadow
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(x = shadowOffset, y = shadowOffset)
+                .background(MaterialTheme.colorScheme.outline, CircleShape)
+        )
+        // Button Face
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(containerColor, CircleShape)
+                .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(iconSize)
+            )
         }
     }
 }
