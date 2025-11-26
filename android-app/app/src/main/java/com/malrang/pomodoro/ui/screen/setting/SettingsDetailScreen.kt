@@ -2,7 +2,9 @@ package com.malrang.pomodoro.ui.screen.setting
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,7 +70,6 @@ fun SettingsDetailScreen(
     onNavigateTo: (Screen) -> Unit,
     onSave: () -> Unit
 ) {
-    // (기존 SettingsDetailScreen 코드와 동일)
     val uiState by settingsViewModel.uiState.collectAsState()
     val settings = uiState.draftSettings
     val title = uiState.editingWorkPreset?.name ?: "설정"
@@ -81,20 +85,29 @@ fun SettingsDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("$title 상세 설정", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "$title 상세 설정",
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.background(MaterialTheme.colorScheme.secondary).padding(4.dp)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { settingsViewModel.stopEditingWorkPreset() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background, // 배경색과 통일
+                    titleContentColor = MaterialTheme.colorScheme.onSecondary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
         bottomBar = {
             Surface(
-                shadowElevation = 8.dp,
+                shadowElevation = 0.dp, // 플랫하게
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline), // 상단 테두리 느낌
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
@@ -103,23 +116,37 @@ fun SettingsDetailScreen(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // 취소 버튼 (Outlined 스타일 + Bold)
                     OutlinedButton(
                         onClick = { settingsViewModel.stopEditingWorkPreset() },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                     ) {
                         Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("취소")
+                        Text("취소", fontWeight = FontWeight.Bold)
                     }
+
+                    // 저장 버튼 (Solid 스타일 + Hard Shadow 느낌을 위해 border 추가)
                     Button(
                         onClick = { showSaveDialog = true },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 4.dp, // 기본 그림자 대신
+                            pressedElevation = 0.dp
+                        )
                     ) {
                         Icon(painterResource(R.drawable.ic_save), contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("저장")
+                        Text("저장", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -128,7 +155,7 @@ fun SettingsDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(MaterialTheme.colorScheme.background) // NeoBackground
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
@@ -172,13 +199,13 @@ fun SettingsDetailScreen(
                     checked = settings.soundEnabled,
                     onCheckedChange = { settingsViewModel.toggleSound(it) }
                 )
-                HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(0.5f))
+                HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 2.dp, color = MaterialTheme.colorScheme.outline)
                 SwitchItem(
                     label = "진동 사용",
                     checked = settings.vibrationEnabled,
                     onCheckedChange = { settingsViewModel.toggleVibration(it) }
                 )
-                HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(0.5f))
+                HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 2.dp, color = MaterialTheme.colorScheme.outline)
                 SwitchItem(
                     label = "자동 시작",
                     description = "휴식/공부 종료 후 다음 타이머 자동 시작",
@@ -201,8 +228,10 @@ fun SettingsDetailScreen(
                     ) {
                         blockOptions.forEach { (mode, text) ->
                             val isSelected = settings.blockMode == mode
-                            val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh
+                            // 선택된 카드는 Primary + Border, 아니면 Surface + Border
+                            val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
                             val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                            val borderWidth = if (isSelected) 3.dp else 2.dp
 
                             Card(
                                 modifier = Modifier
@@ -218,7 +247,8 @@ fun SettingsDetailScreen(
                                         }
                                     },
                                 colors = CardDefaults.cardColors(containerColor = containerColor),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(borderWidth, MaterialTheme.colorScheme.outline)
                             ) {
                                 Box(
                                     modifier = Modifier.fillMaxSize(),
@@ -235,17 +265,28 @@ fun SettingsDetailScreen(
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = when (settings.blockMode) {
-                            BlockMode.NONE -> "앱 사용을 제한하지 않습니다."
-                            BlockMode.PARTIAL -> "화이트리스트에 있는 앱만 허용합니다."
-                            BlockMode.FULL -> "기본 전화/문자를 제외한 모든 앱을 차단합니다."
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
+
+                    // 설명 텍스트도 박스 안에 넣어서 강조
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = when (settings.blockMode) {
+                                BlockMode.NONE -> "앱 사용을 제한하지 않습니다."
+                                BlockMode.PARTIAL -> "화이트리스트에 있는 앱만 허용합니다."
+                                BlockMode.FULL -> "기본 전화/문자를 제외한 모든 앱을 차단합니다."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 

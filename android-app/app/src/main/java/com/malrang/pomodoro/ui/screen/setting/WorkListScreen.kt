@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen.setting
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -57,16 +58,13 @@ fun WorkListScreen(
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
 
-    // 배터리 최적화 관련 로직은 "일반" 탭 제거로 인해 UI에서 제외되었으나,
-    // 기능적 필요에 따라 백그라운드 체크용으로 남겨두거나 삭제할 수 있습니다.
-    // 화면 간결화를 위해 UI 표시 부분은 제거되었습니다.
-
     var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
     var newPresetName by remember { mutableStateOf("") }
     var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
     var presetIdToSelect by remember { mutableStateOf<String?>(null) }
 
     // --- Dialogs (Confirmations) ---
+    // (Dialog 내용은 로직이므로 스타일 변화 없음, 다이얼로그 내부 스타일은 ModernConfirmDialog에 의존)
     if (presetIdToSelect != null) {
         ModernConfirmDialog(
             onDismissRequest = { presetIdToSelect = null },
@@ -129,19 +127,28 @@ fun WorkListScreen(
                         append("' Work를 삭제하시겠습니까?")
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         )
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.background, // Neo Background
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("설정", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "설정",
+                        fontWeight = FontWeight.Black, // Extra Bold
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
@@ -154,8 +161,6 @@ fun WorkListScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // "일반" 섹션 및 "현재 사용 중" 섹션 제거됨
-
             // 저장된 Work 목록 (메인 리스트)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
@@ -165,17 +170,16 @@ fun WorkListScreen(
                 ) {
                     Text(
                         "내 프리셋",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(start = 4.dp)
                     )
 
-                    // 우측 상단 액션 버튼 그룹 (- 앱 차단, + 추가)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // 앱 차단 바로가기 버튼 (붉은색 텍스트)
                         TextButton(
                             onClick = { onNavigateTo(Screen.Whitelist) },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
@@ -184,63 +188,50 @@ fun WorkListScreen(
                             Text(
                                 "- 앱 차단",
                                 style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
 
-                        // 프리셋 추가 버튼
+                        // 추가 버튼도 스타일링
                         TextButton(
                             onClick = { settingsViewModel.addWorkPreset() },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                             modifier = Modifier.height(32.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onBackground)
                             Spacer(Modifier.width(2.dp))
-                            Text("추가", style = MaterialTheme.typography.labelLarge)
+                            Text("추가", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                         }
                     }
                 }
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        uiState.workPresets.forEachIndexed { index, preset ->
-                            val isSelected = preset.id == uiState.currentWorkId
+                // 리스트 컨테이너 (여기서는 투명하게 처리하고 아이템들이 각각 카드가 됨)
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    uiState.workPresets.forEachIndexed { index, preset ->
+                        val isSelected = preset.id == uiState.currentWorkId
+                        val isDeleteEnabled = uiState.workPresets.size > 1
 
-                            // [수정] 프리셋이 1개 이하일 경우 삭제 불가능하게 설정
-                            val isDeleteEnabled = uiState.workPresets.size > 1
-
-                            WorkPresetItem(
-                                preset = preset,
-                                isSelected = isSelected,
-                                isDeleteEnabled = isDeleteEnabled, // [수정] 파라미터 전달
-                                onSelect = {
-                                    // 선택되지 않은 아이템을 클릭했을 때만 선택 다이얼로그 트리거
-                                    if (!isSelected) {
-                                        presetIdToSelect = preset.id
-                                    }
-                                },
-                                onRename = {
-                                    newPresetName = preset.name
-                                    presetToRename = preset
-                                },
-                                onEditSettings = {
-                                    // 설정 버튼(톱니바퀴)을 눌러야만 상세 설정 진입
-                                    settingsViewModel.startEditingWorkPreset(preset.id)
-                                },
-                                onDelete = { presetToDelete = preset }
-                            )
-
-                            if (index < uiState.workPresets.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
-                                )
-                            }
-                        }
+                        WorkPresetItem(
+                            preset = preset,
+                            isSelected = isSelected,
+                            isDeleteEnabled = isDeleteEnabled,
+                            onSelect = {
+                                if (!isSelected) {
+                                    presetIdToSelect = preset.id
+                                }
+                            },
+                            onRename = {
+                                newPresetName = preset.name
+                                presetToRename = preset
+                            },
+                            onEditSettings = {
+                                settingsViewModel.startEditingWorkPreset(preset.id)
+                            },
+                            onDelete = { presetToDelete = preset }
+                        )
+                        // Neo 스타일에서는 Divider 대신 아이템 간 간격(Spacer)을 주로 사용하거나 생략
+                        // WorkPresetItem 내부에 paddingBottom이 있으므로 Divider 제거
                     }
                 }
             }

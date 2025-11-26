@@ -10,18 +10,13 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-// import androidx.compose.ui.graphics.Color.Companion.Black // 삭제
-// import androidx.compose.ui.graphics.Color.Companion.DarkGray // 삭제
-// import androidx.compose.ui.graphics.Color.Companion.Gray // 삭제
-// import androidx.compose.ui.graphics.Color.Companion.LightGray // 삭제
-// import androidx.compose.ui.graphics.Color.Companion.White // 삭제
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.malrang.pomodoro.dataclass.ui.ThemeOption
 
-// 다크 모드 색상 정의 (Color.kt에서 정의한 모던 팔레트 변수 사용)
+// 다크 모드 색상 정의 (Color.kt의 변수 사용)
 private val DarkColorScheme = darkColorScheme(
     primary = primaryDark,
     onPrimary = onPrimaryDark,
@@ -39,16 +34,16 @@ private val DarkColorScheme = darkColorScheme(
     onError = onErrorDark,
     errorContainer = errorContainerDark,
     onErrorContainer = onErrorContainerDark,
-    background = backgroundDark, // Color.kt에서 KtxBackgroundDark로 이미 정의됨
+    background = backgroundDark,
     onBackground = onBackgroundDark,
-    surface = surfaceDark, // Color.kt에서 KtxBackgroundDark로 이미 정의됨
+    surface = surfaceDark,
     onSurface = onSurfaceDark,
     surfaceVariant = surfaceVariantDark,
     onSurfaceVariant = onSurfaceVariantDark,
     outline = outlineDark
 )
 
-// 라이트 모드 색상 정의 (Color.kt에서 정의한 모던 팔레트 변수 사용)
+// 라이트 모드 색상 정의 (Color.kt의 변수 사용)
 private val LightColorScheme = lightColorScheme(
     primary = primaryLight,
     onPrimary = onPrimaryLight,
@@ -66,9 +61,9 @@ private val LightColorScheme = lightColorScheme(
     onError = onErrorLight,
     errorContainer = errorContainerLight,
     onErrorContainer = onErrorContainerLight,
-    background = backgroundLight, // Color.kt에서 KtxBackgroundLight로 이미 정의됨
+    background = backgroundLight,
     onBackground = onBackgroundLight,
-    surface = surfaceLight, // Color.kt에서 KtxBackgroundLight로 이미 정의됨
+    surface = surfaceLight,
     onSurface = onSurfaceLight,
     surfaceVariant = surfaceVariantLight,
     onSurfaceVariant = onSurfaceVariantLight,
@@ -78,11 +73,10 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun PomodoroTheme(
     themeOption: ThemeOption = ThemeOption.SYSTEM,
-    // Dynamic color는 Android 12 이상에서 사용 가능
+    // Neo-Brutalism 디자인을 유지하기 위해 dynamicColor 기본값은 false로 두는 것을 권장합니다.
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    // 사용자가 선택한 옵션에 따라 다크 모드 여부 결정
     val darkTheme = when (themeOption) {
         ThemeOption.LIGHT -> false
         ThemeOption.DARK -> true
@@ -102,16 +96,20 @@ fun PomodoroTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // 상태 표시줄 색상을 테마의 배경색과 일치시킵니다.
+            // 상태 표시줄 배경색 설정
             window.statusBarColor = colorScheme.background.toArgb()
-            // 상태 표시줄 아이콘 색상을 테마에 맞게 조정합니다 (true: 밝은 배경용 어두운 아이콘, false: 어두운 배경용 밝은 아이콘).
+
+            // 상태 표시줄 아이콘 색상 설정
+            // Neo-Brutalism Light 모드 배경(연노랑)은 밝으므로 아이콘은 어두워야 함(!darkTheme)
+            // Dark 모드 배경(검정)은 어두우므로 아이콘은 밝아야 함(darkTheme 아닐 때 true)
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography, // Type.kt 수정 후 주석 해제
+        // Typography는 기존에 정의된 것을 사용 (Type.kt가 있다면 주석 해제)
+         typography = Typography,
         content = content
     )
 }
