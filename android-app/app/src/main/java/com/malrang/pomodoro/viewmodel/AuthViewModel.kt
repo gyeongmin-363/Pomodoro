@@ -81,13 +81,8 @@ class AuthViewModel(
                 val stats = repository.getAllDailyStats()
                 val presets = repository.getAllWorkPresets()
 
-                // 현재 활성화된 설정(Settings) 가져오기 (없으면 기본값)
-                val currentWorkId = repository.loadCurrentWorkId()
-                val currentSettings = presets.find { it.id == currentWorkId }?.settings ?: Settings()
-
                 // 2. BackupData 객체 생성 (보따리 싸기)
                 val backupData = BackupData(
-                    settings = currentSettings,
                     workPresets = presets,
                     dailyStats = stats
                 )
@@ -131,7 +126,6 @@ class AuthViewModel(
                 repository.restoreAllData(
                     stats = backupData.dailyStats,
                     presets = backupData.workPresets,
-                    settings = backupData.settings
                 )
 
                 _backupState.value = BackupState.Success("데이터 복원이 완료되었습니다.")

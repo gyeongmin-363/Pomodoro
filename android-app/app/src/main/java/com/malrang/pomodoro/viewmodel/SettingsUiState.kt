@@ -31,17 +31,16 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
+            // [수정] 앱 시작 시 활성 프리셋을 가져옵니다. (없으면 내부적으로 생성 및 첫번째 선택)
+            val activePreset = localRepo.getActiveWorkPreset()
             val presets = localRepo.loadWorkPresets()
-            val currentWorkId = localRepo.loadCurrentWorkId() ?: presets.firstOrNull()?.id
-            val currentWork = presets.find { it.id == currentWorkId }
-            val currentSettings = currentWork?.settings ?: Settings()
             val blockedApps = localRepo.loadBlockedApps()
 
             _uiState.update {
                 it.copy(
-                    settings = currentSettings,
+                    settings = activePreset.settings,
                     workPresets = presets,
-                    currentWorkId = currentWorkId,
+                    currentWorkId = activePreset.id,
                     blockedApps = blockedApps
                 )
             }
@@ -158,16 +157,26 @@ class SettingsViewModel(
         }
     }
 
-    // [수정] 서버 삭제 로직 제거
+    // [수정] 서버 삭제 로직 제거 및 getActiveWorkPreset 활용
     fun deleteWorkPreset(id: String, onReset: (Settings) -> Unit) {
         viewModelScope.launch {
-            // 로컬 데이터 삭제만 수행
+            // 로컬 데이터 삭제
             localRepo.deleteWorkPreset(id)
-            val updatedPresets = _uiState.value.workPresets.filterNot { it.id == id }
-            _uiState.update { it.copy(workPresets = updatedPresets) }
-            if (_uiState.value.currentWorkId == id) {
-                selectWorkPreset(updatedPresets.firstOrNull()?.id ?: "", onReset)
+
+            // 삭제 후 안전하게 활성 프리셋 재조회 (삭제된 것이 현재 선택된 것이었다면 자동으로 변경됨)
+            val activePreset = localRepo.getActiveWorkPreset()
+            val updatedPresets = localRepo.loadWorkPresets()
+
+            _uiState.update {
+                it.copy(
+                    workPresets = updatedPresets,
+                    currentWorkId = activePreset.id,
+                    settings = activePreset.settings
+                )
             }
+
+            // 현재 설정값으로 리셋
+            onReset(activePreset.settings)
 
             // [삭제] 서버 데이터 삭제 로직 제거됨
         }

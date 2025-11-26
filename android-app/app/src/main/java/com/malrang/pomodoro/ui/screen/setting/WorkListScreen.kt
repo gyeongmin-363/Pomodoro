@@ -210,9 +210,13 @@ fun WorkListScreen(
                         uiState.workPresets.forEachIndexed { index, preset ->
                             val isSelected = preset.id == uiState.currentWorkId
 
+                            // [수정] 프리셋이 1개 이하일 경우 삭제 불가능하게 설정
+                            val isDeleteEnabled = uiState.workPresets.size > 1
+
                             WorkPresetItem(
                                 preset = preset,
                                 isSelected = isSelected,
+                                isDeleteEnabled = isDeleteEnabled, // [수정] 파라미터 전달
                                 onSelect = {
                                     // 선택되지 않은 아이템을 클릭했을 때만 선택 다이얼로그 트리거
                                     if (!isSelected) {

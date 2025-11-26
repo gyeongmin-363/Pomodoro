@@ -21,7 +21,6 @@ data class BackupData(
     val backupTimestamp: Long = System.currentTimeMillis(),
 
     // --- 실제 백업할 데이터들 ---
-    val settings: Settings,
     val workPresets: List<WorkPreset>,
     val dailyStats: List<DailyStat>
 )
