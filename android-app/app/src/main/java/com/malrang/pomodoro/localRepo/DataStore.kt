@@ -76,6 +76,23 @@ class PomodoroRepository(private val context: Context) {
         }
     }
 
+    // [추가] 현재 활성화된 WorkPreset을 가져옵니다.
+    // 저장된 ID가 없거나 유효하지 않으면 첫 번째 프리셋을 선택하고 저장합니다.
+    suspend fun getActiveWorkPreset(): WorkPreset {
+        val presets = loadWorkPresets() // 프리셋 로드 (없으면 생성됨)
+        val currentId = loadCurrentWorkId()
+
+        // 저장된 ID와 일치하는 프리셋을 찾거나, 없으면 첫 번째 프리셋 선택
+        val targetPreset = presets.find { it.id == currentId } ?: presets.first()
+
+        // 현재 ID가 없거나 잘못되어 기본값을 선택한 경우, 이를 저장하여 동기화
+        if (currentId != targetPreset.id) {
+            saveCurrentWorkId(targetPreset.id)
+        }
+
+        return targetPreset
+    }
+
     // [백업용] 모든 프리셋 리스트 조회 (기본값 생성 로직 없음)
     suspend fun getAllWorkPresets(): List<WorkPreset> {
         return dao.getAllWorkPresets().map { it.toDomain() }
@@ -100,7 +117,6 @@ class PomodoroRepository(private val context: Context) {
     suspend fun restoreAllData(
         stats: List<DailyStat>,
         presets: List<WorkPreset>,
-        settings: Settings
     ) {
         // [수정] 유효성 검사 (통계 또는 프리셋이 있어야 함)
         require(stats.isNotEmpty() || presets.isNotEmpty()) {
@@ -120,8 +136,6 @@ class PomodoroRepository(private val context: Context) {
                 dao.insertWorkPresets(presets.map { it.toEntity() })
             }
 
-            // *참고: settings는 현재 WorkPreset에 포함되어 복원되므로
-            // 별도 테이블 삽입 로직은 없으나, 추후 전역 설정 관리가 필요할 경우 여기서 처리합니다.
         }
     }
 

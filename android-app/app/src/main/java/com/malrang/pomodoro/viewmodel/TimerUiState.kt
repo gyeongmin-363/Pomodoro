@@ -41,17 +41,16 @@ class TimerViewModel(
                     )
                 }
             } else {
-                val workPresets = localRepo.loadWorkPresets()
-                val currentWorkId = localRepo.loadCurrentWorkId()
-                val currentSettings = workPresets.find { it.id == currentWorkId }?.settings
-                if (currentSettings != null) {
-                    _uiState.update {
-                        it.copy(
-                            timeLeft = currentSettings.studyTime * 60,
-                            currentMode = Mode.STUDY,
-                            totalSessions = 0
-                        )
-                    }
+                // [수정] 저장된 상태가 없다면(첫 실행 등), 활성 프리셋의 설정을 가져와 초기화
+                val activePreset = localRepo.getActiveWorkPreset()
+                val currentSettings = activePreset.settings
+
+                _uiState.update {
+                    it.copy(
+                        timeLeft = currentSettings.studyTime * 60,
+                        currentMode = Mode.STUDY,
+                        totalSessions = 0
+                    )
                 }
             }
         }

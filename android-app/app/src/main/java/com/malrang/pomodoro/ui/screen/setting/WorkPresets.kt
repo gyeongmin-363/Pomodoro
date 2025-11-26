@@ -22,6 +22,7 @@ import com.malrang.pomodoro.dataclass.ui.WorkPreset
 fun WorkPresetItem(
     preset: WorkPreset,
     isSelected: Boolean,
+    isDeleteEnabled: Boolean = true, // [수정] 삭제 가능 여부 파라미터 추가
     onSelect: () -> Unit,
     onRename: () -> Unit,
     onEditSettings: () -> Unit,
@@ -79,12 +80,15 @@ fun WorkPresetItem(
                         tint = if(isSelected) contentColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.tertiary
                     )
                 }
-                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+
+                // [수정] 삭제 버튼에 enabled 속성 및 색상 처리 적용
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp), enabled = isDeleteEnabled) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "삭제",
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.error
+                        // 비활성화 시 흐린 색상 적용
+                        tint = if (isDeleteEnabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
             }
