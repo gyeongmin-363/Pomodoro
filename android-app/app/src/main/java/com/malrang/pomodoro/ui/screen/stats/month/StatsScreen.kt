@@ -44,7 +44,6 @@ import java.time.YearMonth
 @Composable
 fun StatsScreen(
     statsViewModel: StatsViewModel,
-    onNavigateTo: (Screen) -> Unit,
     onNavigateToDetail: (LocalDate) -> Unit
 ) {
     val state by statsViewModel.uiState.collectAsState()
@@ -86,13 +85,6 @@ fun StatsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { onNavigateTo(Screen.Main) }) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로가기",
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
                 StatsFilterDropdown(
                     currentFilter = state.selectedFilter,
                     options = state.filterOptions,

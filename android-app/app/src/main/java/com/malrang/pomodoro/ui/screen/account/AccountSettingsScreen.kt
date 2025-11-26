@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen.account
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,7 +32,6 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 @Composable
 fun AccountSettingsScreen(
     authViewModel: AuthViewModel,
-    onNavigateTo: (Screen) -> Unit
 ) {
     val authState by authViewModel.authState.collectAsState()
     val backupState by authViewModel.backupState.collectAsState()
@@ -59,11 +59,6 @@ fun AccountSettingsScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("계정 설정", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { onNavigateTo(Screen.Main) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
@@ -130,7 +125,7 @@ fun AuthenticatedAccountContent(
     if (showDeleteConfirmDialog) {
         ModernConfirmDialog(
             title = "회원 탈퇴",
-            content = { Text("정말로 계정을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.") },
+            content = { Text("정말로 계정을 삭제하시겠습니까?\n서버에 저장된 데이터는 없어지며, 기기에는 앱 삭제 전까지 데이터가 유지됩니다.") },
             onConfirm = { onDeleteAccount(); showDeleteConfirmDialog = false },
             onDismissRequest = { showDeleteConfirmDialog = false },
             confirmText = "탈퇴 확인"
@@ -187,7 +182,7 @@ fun AuthenticatedAccountContent(
             ActionButtonCard(
                 title = "데이터 백업",
                 description = "현재 데이터를 서버에 저장합니다.",
-                icon = Icons.Default.Face,
+                icon = R.drawable.cloud_upload_24px,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 isLoading = isLoading,
@@ -200,7 +195,7 @@ fun AuthenticatedAccountContent(
             ActionButtonCard(
                 title = "데이터 복원",
                 description = "서버에서 데이터를 불러옵니다.",
-                icon = Icons.Default.Face,
+                icon = R.drawable.cloud_download_24px,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 isLoading = isLoading,
@@ -241,7 +236,7 @@ fun AuthenticatedAccountContent(
 fun ActionButtonCard(
     title: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    @DrawableRes icon: Int,
     containerColor: Color,
     contentColor: Color,
     isLoading: Boolean,
@@ -259,7 +254,7 @@ fun ActionButtonCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = icon,
+                painter = painterResource(id = icon),
                 contentDescription = null,
                 tint = contentColor,
                 modifier = Modifier.size(24.dp)
