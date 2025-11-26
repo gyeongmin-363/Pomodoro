@@ -4,9 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.localRepo.PomodoroRepository
-import com.malrang.pomodoro.networkRepo.SupabaseProvider
-import com.malrang.pomodoro.networkRepo.SupabaseRepository
-import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,10 +16,9 @@ data class StatsUiState(
     val filterOptions: List<String> = listOf("전체")
 )
 
-// [수정] SupabaseRepository 주입 추가
 class StatsViewModel(
     private val repository: PomodoroRepository,
-    private val supabaseRepository: SupabaseRepository
+    // [삭제] supabaseRepository 제거
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
@@ -55,26 +51,16 @@ class StatsViewModel(
         _uiState.update { it.copy(selectedFilter = filter) }
     }
 
-    // [수정] 데이터 저장 시 자동 동기화 로직 추가
+    // [수정] 자동 동기화 로직 제거 (로컬 저장만 수행)
     private fun updateDailyStat(date: String, transform: (DailyStat) -> DailyStat) {
         viewModelScope.launch {
             val currentStat = _uiState.value.dailyStats[date] ?: DailyStat(date)
             val updatedStat = transform(currentStat)
 
-            // 1. 로컬 저장 (항상 수행)
+            // 1. 로컬 저장 (백업을 위해 updatedAt 갱신 필요 시 transform 내부나 여기서 처리)
             repository.saveDailyStat(updatedStat)
 
-            // 2. 서버 저장 (자동 동기화 ON & 로그인 상태일 때만)
-            val isAutoSync = repository.isAutoSyncEnabled()
-            val userId = SupabaseProvider.client.auth.currentUserOrNull()?.id
-
-            if (isAutoSync && userId != null) {
-                try {
-                    supabaseRepository.upsertDailyStat(userId, updatedStat)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+            // [삭제] 서버 자동 동기화 로직 제거됨
 
             // UI 상태 업데이트
             _uiState.update { state ->
@@ -87,7 +73,9 @@ class StatsViewModel(
 
     // 회고 저장
     fun saveRetrospect(date: String, retrospect: String) {
-        updateDailyStat(date) { it.copy(retrospect = retrospect) }
+        updateDailyStat(date) {
+            it.copy(retrospect = retrospect, updatedAt = System.currentTimeMillis())
+        }
     }
 
     // 체크리스트 아이템 추가
@@ -98,7 +86,7 @@ class StatsViewModel(
             if (!newChecklist.containsKey(task)) {
                 newChecklist[task] = false
             }
-            current.copy(checklist = newChecklist)
+            current.copy(checklist = newChecklist, updatedAt = System.currentTimeMillis())
         }
     }
 
@@ -107,7 +95,7 @@ class StatsViewModel(
         updateDailyStat(date) { current ->
             val newChecklist = current.checklist.toMutableMap()
             newChecklist.remove(task)
-            current.copy(checklist = newChecklist)
+            current.copy(checklist = newChecklist, updatedAt = System.currentTimeMillis())
         }
     }
 
@@ -117,7 +105,7 @@ class StatsViewModel(
             val newChecklist = current.checklist.toMutableMap()
             val currentState = newChecklist[task] ?: false
             newChecklist[task] = !currentState
-            current.copy(checklist = newChecklist)
+            current.copy(checklist = newChecklist, updatedAt = System.currentTimeMillis())
         }
     }
 
@@ -131,7 +119,7 @@ class StatsViewModel(
                 newChecklist.remove(oldTask)
                 newChecklist[newTask] = status
             }
-            current.copy(checklist = newChecklist)
+            current.copy(checklist = newChecklist, updatedAt = System.currentTimeMillis())
         }
     }
 }

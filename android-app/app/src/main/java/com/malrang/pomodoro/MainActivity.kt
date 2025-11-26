@@ -43,11 +43,10 @@ import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
 
-    // [수정] Application 싱글톤 접근 헬퍼
     private val pomodoroApp: PomodoroApplication
         get() = application as PomodoroApplication
 
-    // 1. 로컬 전용 뷰모델 (싱글톤 repo 주입)
+    // 1. 로컬 전용 뷰모델
     private val timerViewModel: TimerViewModel by viewModels {
         AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
     }
@@ -57,27 +56,16 @@ class MainActivity : ComponentActivity() {
     private val backgroundViewModel: BackgroundViewModel by viewModels {
         AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
     }
-
-    // 2. 네트워크/Supabase 관련 뷰모델 (싱글톤 repo 주입)
     private val settingsViewModel: SettingsViewModel by viewModels {
-        AuthVMFactory(
-            application,
-            SupabaseProvider.client,
-            pomodoroApp.pomodoroRepository,
-            pomodoroApp.supabaseRepository
-        )
+        AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
     }
     private val statsViewModel: StatsViewModel by viewModels {
-        AuthVMFactory(
-            application,
-            SupabaseProvider.client,
-            pomodoroApp.pomodoroRepository,
-            pomodoroApp.supabaseRepository
-        )
+        AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
     }
+
+    // 2. 네트워크/Supabase 관련 뷰모델
     private val authViewModel: AuthViewModel by viewModels {
         AuthVMFactory(
-            application,
             SupabaseProvider.client,
             pomodoroApp.pomodoroRepository,
             pomodoroApp.supabaseRepository
@@ -85,7 +73,6 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    // 서비스 데이터 업데이트 수신 (통계 화면 갱신용)
     private val dataUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == TimerService.ACTION_DATA_UPDATED) {
@@ -94,7 +81,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // 타이머 상태 업데이트 수신
     private val updateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == TimerService.ACTION_STATUS_UPDATE) {
@@ -120,7 +106,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SupabaseProvider.client.handleDeeplinks(intent)
 
-        // 브로드캐스트 리시버 등록
         val intentFilter = IntentFilter(TimerService.ACTION_DATA_UPDATED)
         registerReceiver(dataUpdateReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
 
@@ -137,8 +122,8 @@ class MainActivity : ComponentActivity() {
                             permissionViewModel = permissionViewModel,
                             statsViewModel = statsViewModel,
                             authViewModel = authViewModel,
-                            backgroundViewModel = backgroundViewModel,
-                            onSyncClick = { authViewModel.requestManualSync() }
+                            backgroundViewModel = backgroundViewModel
+                            // [삭제] onSyncClick 제거됨 (백업/복원 버튼이 UI 내부에 있음)
                         )
                     }
                 }
@@ -146,11 +131,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // [삭제] onStart에서 checkAndSyncOnStart() 호출 제거
     override fun onStart() {
         super.onStart()
         val filter = IntentFilter(TimerService.ACTION_STATUS_UPDATE)
         ContextCompat.registerReceiver(this, updateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        authViewModel.checkAndSyncOnStart()
     }
 
     override fun onStop() {

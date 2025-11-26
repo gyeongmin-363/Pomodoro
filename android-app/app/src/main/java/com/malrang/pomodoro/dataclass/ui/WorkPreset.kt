@@ -16,6 +16,5 @@ data class WorkPreset(
         name = name,
         settings = settings,
         updatedAt = System.currentTimeMillis(),
-        isDeleted = false
     )
 }

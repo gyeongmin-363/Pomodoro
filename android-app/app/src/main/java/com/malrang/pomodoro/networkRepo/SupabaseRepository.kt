@@ -1,85 +1,46 @@
 package com.malrang.pomodoro.networkRepo
 
-import com.malrang.pomodoro.dataclass.ui.DailyStat
-import com.malrang.pomodoro.dataclass.ui.WorkPreset
-import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class SupabaseRepository(
-    private val postgrest: Postgrest,
-    private val storage: Storage,
+    private val storage: Storage
 ) {
 
-    // --- Daily Stats (통계) ---
-    suspend fun upsertDailyStat(userId: String, stat: DailyStat) {
+    companion object {
+        private const val BUCKET_NAME = "backups"
+        private const val FILE_NAME = "data.json"
+    }
+
+    /**
+     * [백업 데이터 업로드]
+     * 앱의 모든 데이터를 JSON 문자열로 변환한 뒤, Supabase Storage에 파일로 저장합니다.
+     * 경로: backups/{userId}/data.json
+     */
+    suspend fun uploadBackup(userId: String, backupJson: String) {
         withContext(Dispatchers.IO) {
-            val dto = DailyStatDto(
-                user_id = userId,
-                date = stat.date,
-                total_study_time = stat.totalStudyTimeInMinutes,
-                study_time_by_work = stat.studyTimeByWork,
-                break_time_by_work = stat.breakTimeByWork,
-                checklist = stat.checklist ?: emptyMap(),
-                retrospect = stat.retrospect
-            )
-            postgrest["daily_stats"].upsert(dto) {
-                onConflict = "user_id, date"
+            val bucket = storage[BUCKET_NAME]
+            val path = "$userId/$FILE_NAME"
+
+            // [수정됨] upsert 옵션은 람다 블록 {} 안에서 설정해야 합니다.
+            bucket.upload(path, backupJson.toByteArray()) {
+                upsert = true
             }
         }
     }
 
-    suspend fun getDailyStats(userId: String): List<DailyStat> {
+    /**
+     * [백업 데이터 다운로드]
+     * Supabase Storage에서 사용자의 백업 파일(JSON)을 다운로드합니다.
+     */
+    suspend fun downloadBackup(userId: String): String {
         return withContext(Dispatchers.IO) {
-            val result = postgrest["daily_stats"].select {
-                filter { eq("user_id", userId) }
-            }.decodeList<DailyStatDto>()
+            val bucket = storage[BUCKET_NAME]
+            val path = "$userId/$FILE_NAME"
 
-            result.map { dto ->
-                DailyStat(
-                    date = dto.date,
-                    studyTimeByWork = dto.study_time_by_work,
-                    breakTimeByWork = dto.break_time_by_work,
-                    checklist = dto.checklist ?: emptyMap(),
-                    retrospect = dto.retrospect
-                )
-            }
-        }
-    }
-
-    // --- Work Presets (프리셋) ---
-
-    suspend fun upsertWorkPresets(userId: String, presets: List<WorkPreset>) {
-        withContext(Dispatchers.IO) {
-            val dtos = presets.map { WorkPresetDto(it.id, userId, it.name, it.settings) }
-            if (dtos.isNotEmpty()) {
-                postgrest["work_presets"].upsert(dtos) {
-                    onConflict = "id"
-                }
-            }
-        }
-    }
-
-    suspend fun getWorkPresets(userId: String): List<WorkPreset> {
-        return withContext(Dispatchers.IO) {
-            postgrest["work_presets"].select {
-                filter { eq("user_id", userId) }
-            }.decodeList<WorkPresetDto>().map {
-                WorkPreset(id = it.id, name = it.name, settings = it.settings)
-            }
-        }
-    }
-
-    // [추가] 프리셋 삭제 기능
-    suspend fun deleteWorkPreset(userId: String, presetId: String) {
-        withContext(Dispatchers.IO) {
-            postgrest["work_presets"].delete {
-                filter {
-                    eq("user_id", userId)
-                    eq("id", presetId)
-                }
-            }
+            // Private 버킷이므로 인증된 요청(downloadAuthenticated)을 사용합니다.
+            bucket.downloadAuthenticated(path).decodeToString()
         }
     }
 }

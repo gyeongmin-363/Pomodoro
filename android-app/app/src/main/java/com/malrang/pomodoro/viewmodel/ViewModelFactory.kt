@@ -31,6 +31,12 @@ class AppViewModelFactory(
             modelClass.isAssignableFrom(BackgroundViewModel::class.java) -> {
                 BackgroundViewModel(pomodoroRepository)
             }
+            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
+                SettingsViewModel(pomodoroRepository)
+            }
+            modelClass.isAssignableFrom(StatsViewModel::class.java) -> {
+                StatsViewModel(pomodoroRepository)
+            }
             else -> {
                 throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
             }
@@ -44,7 +50,6 @@ class AppViewModelFactory(
  * [수정] Repository들을 생성자로 주입받음
  */
 class AuthVMFactory(
-    private val app: Application,
     private val supabase: SupabaseClient,
     private val pomodoroRepository: PomodoroRepository, // 외부 주입
     private val supabaseRepository: SupabaseRepository  // 외부 주입
@@ -55,12 +60,6 @@ class AuthVMFactory(
         return when {
             modelClass.isAssignableFrom(AuthViewModel::class.java) -> {
                 AuthViewModel(supabase, pomodoroRepository, supabaseRepository)
-            }
-            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
-                SettingsViewModel(pomodoroRepository, supabaseRepository)
-            }
-            modelClass.isAssignableFrom(StatsViewModel::class.java) -> {
-                StatsViewModel(pomodoroRepository, supabaseRepository)
             }
             else -> {
                 throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
