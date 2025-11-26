@@ -28,7 +28,7 @@ object SupabaseProvider {
             // ✅ Ktor 엔진 명시
             httpEngine = OkHttp.create()
             // 모듈 설치
-            install(Postgrest)
+//            install(Postgrest)
             install(Auth){
                 host = "auth"
                 scheme = "pixbbo"
@@ -36,7 +36,7 @@ object SupabaseProvider {
                 defaultExternalAuthAction = ExternalAuthAction.CustomTabs()
                 // 필요시 flowType = FlowType.PKCE
             }
-            install(Realtime)
+//            install(Realtime)
             install(Storage)
         }
     }

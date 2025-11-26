@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.room.withTransaction // [추가] 트랜잭션 처리를 위해 필요
 import com.malrang.pomodoro.dataclass.ui.BlockMode
 import com.malrang.pomodoro.dataclass.ui.DailyStat
 import com.malrang.pomodoro.dataclass.ui.Mode
@@ -32,8 +33,6 @@ object DSKeys {
     val CUSTOM_TEXT_COLOR = intPreferencesKey("custom_text_color")
     val BACKGROUND_TYPE = stringPreferencesKey("background_type")
     val SELECTED_BG_IMAGE_PATH = stringPreferencesKey("selected_bg_image_path")
-
-    // [삭제됨] AUTO_SYNC_ENABLED
 }
 
 data class SavedTimerState(val timeLeft: Int, val currentMode: Mode, val totalSessions: Int)
@@ -98,15 +97,24 @@ class PomodoroRepository(private val context: Context) {
     }
 
     // --- [통합 복원] ---
+    // [수정됨] DAO의 Default Method 대신 Repository에서 withTransaction 사용
     suspend fun restoreAllData(stats: List<DailyStat>, presets: List<WorkPreset>) {
-        dao.restoreAllData(
-            stats = stats.map { it.toEntity() },
-            presets = presets.map { it.toEntity() }
-        )
+        database.withTransaction {
+            // 1. 기존 데이터 클리어
+            dao.deleteAllDailyStats()
+            dao.deleteAllWorkPresets()
+
+            // 2. 백업 데이터 삽입
+            if (stats.isNotEmpty()) {
+                dao.insertDailyStats(stats.map { it.toEntity() })
+            }
+            if (presets.isNotEmpty()) {
+                dao.insertWorkPresets(presets.map { it.toEntity() })
+            }
+        }
     }
 
     // --- DataStore (설정값) ---
-    // [삭제됨] 자동 동기화 관련 Flow 및 메서드 제거
 
     suspend fun loadCurrentWorkId(): String? {
         return context.dataStore.data.first()[DSKeys.CURRENT_WORK_ID]
