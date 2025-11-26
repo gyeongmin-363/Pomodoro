@@ -44,7 +44,6 @@ import java.time.YearMonth
 @Composable
 fun StatsScreen(
     statsViewModel: StatsViewModel,
-    onNavigateTo: (Screen) -> Unit,
     onNavigateToDetail: (LocalDate) -> Unit
 ) {
     val state by statsViewModel.uiState.collectAsState()

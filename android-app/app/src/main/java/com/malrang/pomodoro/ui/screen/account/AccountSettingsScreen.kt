@@ -32,7 +32,6 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 @Composable
 fun AccountSettingsScreen(
     authViewModel: AuthViewModel,
-    onNavigateTo: (Screen) -> Unit
 ) {
     val authState by authViewModel.authState.collectAsState()
     val backupState by authViewModel.backupState.collectAsState()
@@ -126,7 +125,7 @@ fun AuthenticatedAccountContent(
     if (showDeleteConfirmDialog) {
         ModernConfirmDialog(
             title = "회원 탈퇴",
-            content = { Text("정말로 계정을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.") },
+            content = { Text("정말로 계정을 삭제하시겠습니까?\n서버에 저장된 데이터는 없어지며, 기기에는 앱 삭제 전까지 데이터가 유지됩니다.") },
             onConfirm = { onDeleteAccount(); showDeleteConfirmDialog = false },
             onDismissRequest = { showDeleteConfirmDialog = false },
             confirmText = "탈퇴 확인"

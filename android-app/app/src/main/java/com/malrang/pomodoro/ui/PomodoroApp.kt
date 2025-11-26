@@ -1,5 +1,9 @@
 package com.malrang.pomodoro.ui
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -68,9 +75,9 @@ fun PomodoroApp(
     val authState by authViewModel.authState.collectAsState()
     val permissionUiState by permissionViewModel.uiState.collectAsState()
 
-    val allPermissionsGranted =
-        permissionUiState.permissions.isNotEmpty() &&
-                permissionUiState.permissions.all { it.isGranted }
+    // 권한 목록 로딩 상태 확인 (깜빡임 방지)
+    val isPermissionReady = permissionUiState.permissions.isNotEmpty()
+    val allPermissionsGranted = isPermissionReady && permissionUiState.permissions.all { it.isGranted }
 
     LaunchedEffect(authState) {
         permissionViewModel.checkAndUpdatePermissions(context)
@@ -78,7 +85,8 @@ fun PomodoroApp(
 
     val isLoading = authState is AuthViewModel.AuthState.Loading ||
             authState is AuthViewModel.AuthState.Idle ||
-            authState is AuthViewModel.AuthState.WaitingForRedirect
+            authState is AuthViewModel.AuthState.WaitingForRedirect ||
+            !isPermissionReady
 
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -87,6 +95,7 @@ fun PomodoroApp(
     } else {
         val navController = rememberNavController()
 
+        // BottomNavItem 리스트 정의
         val navItems = listOf(
             BottomNavItem.Background,
             BottomNavItem.Settings,
@@ -95,14 +104,29 @@ fun PomodoroApp(
             BottomNavItem.Account
         )
 
-        val startDestination = if (!allPermissionsGranted) Screen.Permission.name else Screen.Main.name
+        // 더블 클릭 종료 로직을 수행하는 Composable 함수
+        // 각 화면(Composable) 내부에서 호출하여 NavHost의 뒤로가기보다 우선순위를 높임
+        @Composable
+        fun DoubleBackToExit() {
+            var backPressedTime by remember { mutableLongStateOf(0L) }
+            val activity = LocalActivity.current
 
+            BackHandler {
+                if (System.currentTimeMillis() - backPressedTime < 2000) {
+                    activity?.finish()
+                } else {
+                    backPressedTime = System.currentTimeMillis()
+                    Toast.makeText(context, "'뒤로' 버튼을 한번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        val startDestination = if (!allPermissionsGranted) Screen.Permission.name else Screen.Main.name
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
         val currentRoute = currentDestination?.route
 
         val showBottomBar = currentRoute in navItems.map { it.screen.name }
-
         val navBarContainerColor = Color.Transparent
         val isMainScreen = currentRoute == Screen.Main.name
         val scaffoldContainerColor = if (isMainScreen) Color.Transparent else MaterialTheme.colorScheme.background
@@ -127,6 +151,8 @@ fun PomodoroApp(
                                 selected = selected,
                                 onClick = {
                                     navController.navigate(item.screen.name) {
+                                        // 탭 간 이동 시 스택이 무한히 쌓이는 것을 방지하기 위해 startDestination까지 pop 합니다.
+                                        // 단, 아래의 DoubleBackToExit 핸들러 덕분에 '뒤로가기' 시에는 이 스택 구조를 무시하고 종료 로직이 실행됩니다.
                                         popUpTo(navController.graph.findStartDestination().id) {
                                             saveState = true
                                         }
@@ -145,6 +171,7 @@ fun PomodoroApp(
                 startDestination = startDestination
             ) {
                 composable(Screen.Main.name) {
+                    DoubleBackToExit() // [수정] 타이머 화면에서도 더블 클릭 종료 적용
                     MainScreen(
                         timerViewModel = timerViewModel,
                         settingsViewModel = settingsViewModel,
@@ -154,10 +181,10 @@ fun PomodoroApp(
                     )
                 }
                 composable(Screen.Stats.name) {
+                    DoubleBackToExit() // [수정] 통계 화면에서 뒤로가기 시 타이머로 가지 않고 종료 로직 실행
                     Box(modifier = Modifier.padding(innerPadding)) {
                         StatsScreen(
                             statsViewModel = statsViewModel,
-                            onNavigateTo = { screen -> navController.navigate(screen.name) },
                             onNavigateToDetail = { date ->
                                 navController.navigate("${Screen.DailyDetail.name}/${date}")
                             }
@@ -165,6 +192,7 @@ fun PomodoroApp(
                     }
                 }
                 composable(Screen.Settings.name) {
+                    DoubleBackToExit() // [수정] 프리셋 화면에서 뒤로가기 시 타이머로 가지 않고 종료 로직 실행
                     Box(modifier = Modifier.padding(innerPadding)) {
                         SettingsScreen(
                             settingsViewModel = settingsViewModel,
@@ -184,6 +212,8 @@ fun PomodoroApp(
                     }
                 }
                 composable(Screen.Permission.name) {
+                    // 권한 화면은 최초 진입점이므로 별도 종료 로직이 필요할 수 있으나,
+                    // BottomNavItem이 아니므로 기본 동작(앱 종료)을 따르거나 필요 시 DoubleBackToExit() 추가 가능.
                     Box(modifier = Modifier.padding(innerPadding)) {
                         val permissionUiStateVal by permissionViewModel.uiState.collectAsState()
                         PermissionScreen(
@@ -199,6 +229,7 @@ fun PomodoroApp(
                     }
                 }
                 composable(Screen.Whitelist.name) {
+                    // Whitelist는 BottomNavItem이 아님 -> 기본 뒤로가기(popBackStack) 동작 유지
                     Box(modifier = Modifier.padding(innerPadding)) {
                         WhitelistScreen(
                             settingsViewModel = settingsViewModel,
@@ -207,14 +238,15 @@ fun PomodoroApp(
                     }
                 }
                 composable(Screen.AccountSettings.name) {
+                    DoubleBackToExit() // [수정] 계정 화면에서 뒤로가기 시 타이머로 가지 않고 종료 로직 실행
                     Box(modifier = Modifier.padding(innerPadding)) {
                         AccountSettingsScreen(
                             authViewModel = authViewModel,
-                            onNavigateTo = { navController.navigate(Screen.Main.name) }
                         )
                     }
                 }
                 composable(Screen.Background.name) {
+                    DoubleBackToExit() // [수정] 배경 화면에서 뒤로가기 시 타이머로 가지 않고 종료 로직 실행
                     Box(modifier = Modifier.padding(innerPadding)) {
                         BackgroundScreen(backgroundViewModel = backgroundViewModel)
                     }
@@ -222,6 +254,7 @@ fun PomodoroApp(
                 composable(
                     route = "${Screen.DailyDetail.name}/{dateString}"
                 ) { backStackEntry ->
+                    // 상세 화면은 BottomNavItem이 아님 -> 기본 뒤로가기 동작 유지
                     val dateString = backStackEntry.arguments?.getString("dateString")
                     DailyDetailScreen(
                         dateString = dateString,
