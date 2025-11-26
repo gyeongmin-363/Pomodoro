@@ -97,8 +97,12 @@ class PomodoroRepository(private val context: Context) {
     }
 
     // --- [통합 복원] ---
-    suspend fun restoreAllData(stats: List<DailyStat>, presets: List<WorkPreset>) {
-        // [수정] 빈 데이터 복원 방지 (데이터 손실 방지)
+    suspend fun restoreAllData(
+        stats: List<DailyStat>,
+        presets: List<WorkPreset>,
+        settings: Settings
+    ) {
+        // [수정] 유효성 검사 (통계 또는 프리셋이 있어야 함)
         require(stats.isNotEmpty() || presets.isNotEmpty()) {
             "복원할 데이터가 비어있습니다. 백업 파일에 통계나 프리셋 데이터가 포함되어 있지 않습니다."
         }
@@ -115,6 +119,9 @@ class PomodoroRepository(private val context: Context) {
             if (presets.isNotEmpty()) {
                 dao.insertWorkPresets(presets.map { it.toEntity() })
             }
+
+            // *참고: settings는 현재 WorkPreset에 포함되어 복원되므로
+            // 별도 테이블 삽입 로직은 없으나, 추후 전역 설정 관리가 필요할 경우 여기서 처리합니다.
         }
     }
 

@@ -126,18 +126,21 @@ class AuthViewModel(
                 // 2. JSON 파싱
                 val backupData = json.decodeFromString<BackupData>(jsonString)
 
-                // 3. 로컬 DB 복원 (유효성 검사 포함)
-                repository.restoreAllData(backupData.dailyStats, backupData.workPresets)
+                // 3. 로컬 DB 복원 (유효성 검사 및 설정 복원 포함)
+                // [수정] backupData.settings 파라미터 추가
+                repository.restoreAllData(
+                    stats = backupData.dailyStats,
+                    presets = backupData.workPresets,
+                    settings = backupData.settings
+                )
 
                 _backupState.value = BackupState.Success("데이터 복원이 완료되었습니다.")
                 Log.d("AuthViewModel", "복원 성공: ${user.id}")
 
             } catch (e: IllegalArgumentException) {
-                // [수정] 유효성 검사 실패 시 에러 메시지 표시
                 e.printStackTrace()
                 _backupState.value = BackupState.Error(e.message ?: "데이터 복원 중 오류가 발생했습니다.")
             } catch (e: Exception) {
-                // 기타 네트워크 오류 등
                 e.printStackTrace()
                 _backupState.value = BackupState.Error("복원 실패: 저장된 백업이 없거나 오류가 발생했습니다.")
             }
