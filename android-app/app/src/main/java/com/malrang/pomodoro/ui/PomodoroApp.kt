@@ -49,7 +49,7 @@ sealed class BottomNavItem(
     @DrawableRes val icon: Int
 ) {
     object Background : BottomNavItem(Screen.Background, "배경 설정", R.drawable.ic_wallpaper)
-    object Settings : BottomNavItem(Screen.Settings, "설정", R.drawable.ic_settings)
+    object Settings : BottomNavItem(Screen.Settings, "프리셋", R.drawable.assignment_24px)
     object Home : BottomNavItem(Screen.Main, "타이머", R.drawable.ic_play)
     object Stats : BottomNavItem(Screen.Stats, "통계", R.drawable.ic_stats)
     object Account : BottomNavItem(Screen.AccountSettings, "계정", R.drawable.ic_user_attributes_24px)

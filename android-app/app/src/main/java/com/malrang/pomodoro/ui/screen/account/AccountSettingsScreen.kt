@@ -1,5 +1,6 @@
 package com.malrang.pomodoro.ui.screen.account
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,11 +60,6 @@ fun AccountSettingsScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("계정 설정", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { onNavigateTo(Screen.Main) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
-                    }
-                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
@@ -187,7 +183,7 @@ fun AuthenticatedAccountContent(
             ActionButtonCard(
                 title = "데이터 백업",
                 description = "현재 데이터를 서버에 저장합니다.",
-                icon = Icons.Default.Face,
+                icon = R.drawable.cloud_upload_24px,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 isLoading = isLoading,
@@ -200,7 +196,7 @@ fun AuthenticatedAccountContent(
             ActionButtonCard(
                 title = "데이터 복원",
                 description = "서버에서 데이터를 불러옵니다.",
-                icon = Icons.Default.Face,
+                icon = R.drawable.cloud_download_24px,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 isLoading = isLoading,
@@ -241,7 +237,7 @@ fun AuthenticatedAccountContent(
 fun ActionButtonCard(
     title: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    @DrawableRes icon: Int,
     containerColor: Color,
     contentColor: Color,
     isLoading: Boolean,
@@ -259,7 +255,7 @@ fun ActionButtonCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = icon,
+                painter = painterResource(id = icon),
                 contentDescription = null,
                 tint = contentColor,
                 modifier = Modifier.size(24.dp)
