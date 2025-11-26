@@ -1,6 +1,8 @@
 package com.malrang.pomodoro.ui.screen.stats.month
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -20,11 +22,11 @@ import java.util.Locale
 @Composable
 fun MonthlyStatsCalendar(
     dailyStats: Map<String, DailyStat>,
-    currentMonthDate: LocalDate,     // [변경] 현재 보여지는 달
-    selectedDate: LocalDate?,        // [변경] 선택된 날짜 (Nullable)
+    currentMonthDate: LocalDate,
+    selectedDate: LocalDate?,
     selectedFilter: String,
-    onMonthChanged: (LocalDate) -> Unit, // [추가] 달 이동 콜백
-    onDateSelected: (LocalDate) -> Unit, // [추가] 날짜 선택 콜백
+    onMonthChanged: (LocalDate) -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
     onDetailRequested: (LocalDate) -> Unit
 ) {
     val headerText = "${currentMonthDate.year}년 ${currentMonthDate.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}"
@@ -36,24 +38,35 @@ fun MonthlyStatsCalendar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { onMonthChanged(currentMonthDate.minusMonths(1)) }) {
+            // 네비게이션 버튼 (작은 사각형 스타일)
+            IconButton(
+                onClick = { onMonthChanged(currentMonthDate.minusMonths(1)) },
+                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)).size(32.dp)
+            ) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     contentDescription = "이전 달",
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
                 )
             }
+
             Text(
                 text = headerText,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.onBackground
             )
-            IconButton(onClick = { onMonthChanged(currentMonthDate.plusMonths(1)) }) {
+
+            IconButton(
+                onClick = { onMonthChanged(currentMonthDate.plusMonths(1)) },
+                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)).size(32.dp)
+            ) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "다음 달",
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -64,9 +77,9 @@ fun MonthlyStatsCalendar(
         Row(Modifier.fillMaxWidth()) {
             daysOfWeek.forEach { day ->
                 val color = when (day) {
-                    "토" -> Color(0xFF90CAF9)
-                    "일" -> Color(0xFFEF9A9A)
-                    else -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                    "토" -> Color(0xFF3B82F6) // NeoBlue
+                    "일" -> Color(0xFFFF4848) // NeoRed
+                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 }
                 Text(
                     text = day,
@@ -82,9 +95,9 @@ fun MonthlyStatsCalendar(
 
         // 달력 그리드
         MonthlyCalendarGrid(
-            selectedDate = currentMonthDate, // 그리드를 그릴 기준 달
-            tappedDate = selectedDate,       // 하이라이트 할 날짜
-            onDateTap = onDateSelected,      // 클릭 시 부모에게 알림
+            selectedDate = currentMonthDate,
+            tappedDate = selectedDate,
+            onDateTap = onDateSelected,
             onDateLongTap = onDetailRequested,
             getStudyTime = { date ->
                 dailyStats[date.toString()]?.getStudyTime(selectedFilter) ?: 0

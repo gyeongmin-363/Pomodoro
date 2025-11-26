@@ -7,7 +7,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,45 +31,44 @@ fun DayCell(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    // [UI 수정] 배경이 Primary 컬러이므로 기본 텍스트는 흰색이어야 함
-    val dayTextColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary // 선택 시 배경이 흰색이 되므로 텍스트는 파란색
+    // 1. 스타일 정의
+    // Neo-Brutalism에서는 선택됨(Selected) 상태가 가장 강한 대비를 가짐 (Blue or Pink)
+    // 공부 시간(StudyTime)은 Green 계열의 채도로 표현
+
+    val shape = RoundedCornerShape(8.dp)
+
+    // 배경색 결정
+    val backgroundColor = when {
+        isSelected -> MaterialTheme.colorScheme.primary // 선택됨: 파랑(NeoBlue)
+        studyTimeMinutes == 0 -> MaterialTheme.colorScheme.surface // 0분: 흰색
+        studyTimeMinutes < 30 -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f) // 연한 초록
+        studyTimeMinutes < 60 -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f) // 중간 초록
+        studyTimeMinutes < 120 -> MaterialTheme.colorScheme.tertiary // 진한 초록
+        else -> Color(0xFF1B5E20) // 아주 진한 초록
+    }
+
+    // 텍스트 색상
+    val textColor = when {
+        isSelected -> MaterialTheme.colorScheme.onPrimary // 선택됨: 흰색
+        studyTimeMinutes >= 60 -> Color.White // 진한 배경 위: 흰색
         else -> when (date.dayOfWeek) {
-            DayOfWeek.SATURDAY -> Color(0xFF90CAF9) // 밝은 파랑
-            DayOfWeek.SUNDAY -> Color(0xFFEF9A9A) // 밝은 빨강
-            else -> Color.White // 기본 흰색
+            DayOfWeek.SATURDAY -> Color(0xFF3B82F6) // 파랑
+            DayOfWeek.SUNDAY -> Color(0xFFFF4848) // 빨강
+            else -> MaterialTheme.colorScheme.onSurface // 기본 검정
         }
     }
 
-    // 히트맵 배경색
-    // 선택되었을 땐 흰색(강조)
-    val backgroundColor = if (isSelected) {
-        Color.White
-    } else {
-        when {
-            studyTimeMinutes == 0 -> Color.Transparent
-            // [UI 수정] 파란 배경 위에서 초록색 히트맵이 잘 보이도록 색상 조정 또는 유지
-            studyTimeMinutes < 30 -> Color(0xFF9BE9A8).copy(alpha = 0.8f)
-            studyTimeMinutes < 60 -> Color(0xFF40C463).copy(alpha = 0.9f)
-            studyTimeMinutes < 120 -> Color(0xFF30A14E)
-            else -> Color(0xFF216E39)
-        }
-    }
-
-    // 오늘 날짜 테두리 (흰색으로 변경)
-    val borderModifier = if (isToday && !isSelected) {
-        Modifier.border(1.5.dp, Color.White.copy(alpha = 0.7f), CircleShape) // 모양도 원형으로 변경 가능
-    } else {
-        Modifier
-    }
+    // 테두리: 기본은 얇게, 오늘이나 선택됨은 굵게
+    val borderWidth = if (isSelected || isToday) 2.dp else 1.dp
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
 
     Box(
         modifier = Modifier
             .size(42.dp)
-            .padding(4.dp) // 간격 조금 더 줌
-            .clip(RoundedCornerShape(12.dp)) // 더 둥글게
+            .padding(2.dp)
+            .clip(shape)
             .background(backgroundColor)
-            .then(borderModifier)
+            .border(borderWidth, borderColor, shape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
@@ -79,9 +77,9 @@ fun DayCell(
     ) {
         Text(
             text = date.dayOfMonth.toString(),
-            color = if (studyTimeMinutes > 60 && !isSelected) Color.White else dayTextColor,
+            color = textColor,
             fontSize = 12.sp,
-            fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isToday || isSelected) FontWeight.Black else FontWeight.Medium
         )
     }
 }

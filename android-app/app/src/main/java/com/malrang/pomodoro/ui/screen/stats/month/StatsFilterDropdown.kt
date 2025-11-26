@@ -1,12 +1,13 @@
 package com.malrang.pomodoro.ui.screen.stats.month
 
-
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,50 +48,73 @@ fun StatsFilterDropdown(
     BackHandler(enabled = expanded) { expanded = false }
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.White.copy(alpha = 0.2f))
-                .clickable {
-                    if (System.currentTimeMillis() - dismissalTimestamp > 200) {
-                        expanded = !expanded
-                    }
+        // 드롭다운 트리거 버튼 (Neo Style)
+        Box(
+            modifier = Modifier.clickable {
+                if (System.currentTimeMillis() - dismissalTimestamp > 200) {
+                    expanded = !expanded
                 }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            }
         ) {
-            Text(
-                text = currentFilter,
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
+            // Shadow
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 3.dp, y = 3.dp)
+                    .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = {
-                expanded = false
-                dismissalTimestamp = System.currentTimeMillis()
-            },
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
-                .width(140.dp),
-            properties = PopupProperties(focusable = false, dismissOnBackPress = true, dismissOnClickOutside = true)
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = {
-                        Text(option, color = if(option == currentFilter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                    },
-                    onClick = { onFilterSelected(option); expanded = false }
+            // Content
+            Row(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                    .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = currentFilter,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // 드롭다운 메뉴
+        MaterialTheme(
+            shapes = MaterialTheme.shapes.copy(extraSmall = RoundedCornerShape(8.dp))
+        ) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = {
+                    expanded = false
+                    dismissalTimestamp = System.currentTimeMillis()
+                },
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                    .width(140.dp),
+                properties = PopupProperties(focusable = false, dismissOnBackPress = true, dismissOnClickOutside = true)
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                option,
+                                fontWeight = FontWeight.Medium,
+                                color = if(option == currentFilter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
+                        onClick = { onFilterSelected(option); expanded = false }
+                    )
+                }
             }
         }
     }

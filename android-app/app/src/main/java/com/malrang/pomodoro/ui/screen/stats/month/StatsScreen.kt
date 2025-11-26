@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,17 +15,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -34,9 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -65,111 +59,103 @@ fun StatsScreen(
         }.sumOf { it.getStudyTime(state.selectedFilter) }
     }
 
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primary)
+            .background(MaterialTheme.colorScheme.background) // NeoBackground
             .verticalScroll(scrollState)
+            .padding(24.dp)
     ) {
-        // 1. 상단 영역 (파란 배경)
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .padding(top = 16.dp, bottom = 12.dp)
+        // 1. 헤더 영역 (타이틀 + 필터)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 네비게이션 + 필터
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // 타이틀 배지
+            Box(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(8.dp))
+                    .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                StatsFilterDropdown(
-                    currentFilter = state.selectedFilter,
-                    options = state.filterOptions,
-                    onFilterSelected = { statsViewModel.updateFilter(it) }
+                Text(
+                    text = "통계 기록",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
-
-            // 캘린더
-            MonthlyStatsCalendar(
-                dailyStats = state.dailyStats,
-                currentMonthDate = currentMonthDate,
-                selectedDate = tappedDate,
-                selectedFilter = state.selectedFilter,
-                onMonthChanged = { newDate ->
-                    currentMonthDate = newDate
-                    tappedDate = null
-                },
-                onDateSelected = { date ->
-                    tappedDate = if (tappedDate == date) null else date
-                },
-                // [수정] 없는 함수 onDetailRequested 제거. 캘린더에서는 날짜 선택만 담당.
-                onDetailRequested = { /* 필요 시 구현, 현재는 하단 시트에서 상세 이동 */ }
+            // 필터 드롭다운
+            StatsFilterDropdown(
+                currentFilter = state.selectedFilter,
+                options = state.filterOptions,
+                onFilterSelected = { statsViewModel.updateFilter(it) }
             )
-
-            Spacer(Modifier.height(24.dp))
-
-            // [위치 이동] 월간 요약 (아이콘 없는 텍스트 버전)
-            MonthlySummaryCard(monthlyTotalMinutes = monthlyTotalMinutes)
         }
 
-        // 2. 하단 영역 (흰색 시트)
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = screenHeight / 2),
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            color = MaterialTheme.colorScheme.surface
+        Spacer(Modifier.height(24.dp))
+
+        // 2. 월간 요약 카드 (배너 스타일)
+        MonthlySummaryCard(monthlyTotalMinutes = monthlyTotalMinutes)
+
+        Spacer(Modifier.height(24.dp))
+
+        // 3. 캘린더 영역
+        MonthlyStatsCalendar(
+            dailyStats = state.dailyStats,
+            currentMonthDate = currentMonthDate,
+            selectedDate = tappedDate,
+            selectedFilter = state.selectedFilter,
+            onMonthChanged = { newDate ->
+                currentMonthDate = newDate
+                tappedDate = null
+            },
+            onDateSelected = { date ->
+                tappedDate = if (tappedDate == date) null else date
+            },
+            onDetailRequested = { /* Long click action if needed */ }
+        )
+
+        Spacer(Modifier.height(32.dp))
+
+        // 4. 하단 상세 정보 (애니메이션)
+        AnimatedVisibility(
+            visible = tappedDate != null,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                // 일별 상세 정보
-                AnimatedVisibility(
-                    visible = tappedDate != null,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    tappedDate?.let { date ->
-                        val stats = state.dailyStats[date.toString()]
-                        val filteredTime = stats?.getStudyTime(state.selectedFilter) ?: 0
+            tappedDate?.let { date ->
+                val stats = state.dailyStats[date.toString()]
+                val filteredTime = stats?.getStudyTime(state.selectedFilter) ?: 0
 
-                        // [수정] 불필요한 텍스트 제거하고 카드만 표시
-                        // 클릭 시 StatsScreen이 받은 onNavigateToDetail 실행
-                        DailySummaryCard(
-                            date = date,
-                            stats = stats,
-                            displayedStudyTime = filteredTime,
-                            onDetailClick = { onNavigateToDetail(date) }
-                        )
-                    }
-                }
-
-                // 날짜 미선택 시 안내 (선택 사항)
-                if (tappedDate == null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "날짜를 눌러 상세 정보를 확인해보세요",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(48.dp))
+                DailySummaryCard(
+                    date = date,
+                    stats = stats,
+                    displayedStudyTime = filteredTime,
+                    onDetailClick = { onNavigateToDetail(date) }
+                )
             }
         }
+
+        // 날짜 미선택 시 안내 메시지
+        if (tappedDate == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "날짜를 눌러 상세 정보를 확인해보세요",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(48.dp))
     }
 }
