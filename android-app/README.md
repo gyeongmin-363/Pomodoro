@@ -106,3 +106,7 @@
 - **Settings (5)**: 앱 환경 최적화 및 서버 연결 확인.
 
 **특이사항:** 타이머가 가동 중일 때 (1), (3), (4), (5) 화면으로 이동해도 상단 알림 영역에 미니 타이머가 지속적으로 표시되어 끊김 없는 UX를 제공함.
+
+<img width="2816" height="1536" alt="Gemini_Generated_Image_he5bcmhe5bcmhe5b" src="https://github.com/user-attachments/assets/0b1b4b30-7870-4e2c-a53f-1de9b48114df" /><img width="2816" height="1536" alt="Gemini_Generated_Image_ivfbxfivfbxfivfb" src="https://github.com/user-attachments/assets/f56fb45a-9659-4a5d-a955-5e4a7b539608" />
+
+
