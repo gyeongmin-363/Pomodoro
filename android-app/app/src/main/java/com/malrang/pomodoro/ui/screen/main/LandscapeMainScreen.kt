@@ -23,8 +23,6 @@ import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.viewmodel.BackgroundType
-import com.malrang.pomodoro.viewmodel.BackgroundViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 import java.io.File
@@ -33,19 +31,12 @@ import java.io.File
 fun LandscapeMainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
-    backgroundViewModel: BackgroundViewModel,
     events: MainScreenEvents,
     onNavigateTo: (Screen) -> Unit,
     paddingValues: PaddingValues
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
-    val backgroundState by backgroundViewModel.uiState.collectAsState()
-
-    val customBgColor = Color(backgroundState.customBgColor)
-    val customTextColor = Color(backgroundState.customTextColor)
-    val isImageMode = backgroundState.backgroundType == BackgroundType.IMAGE
-    val imagePath = backgroundState.selectedImagePath
 
     val titleText = when (timerState.currentMode) {
         Mode.STUDY -> "집중 시간"
@@ -56,17 +47,7 @@ fun LandscapeMainScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(customBgColor)
     ) {
-        if (isImageMode && imagePath != null) {
-            Image(
-                painter = rememberAsyncImagePainter(model = File(imagePath)),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
-        }
 
         Row(
             modifier = Modifier
@@ -110,7 +91,6 @@ fun LandscapeMainScreen(
                     text = "완료 세션: ${timerState.totalSessions}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = customTextColor
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -120,7 +100,7 @@ fun LandscapeMainScreen(
                     currentMode = timerState.currentMode,
                     totalSessions = timerState.totalSessions,
                     longBreakInterval = settingsState.settings.longBreakInterval,
-                    borderColor = customTextColor,
+                    borderColor = Color.Gray,
                     itemsPerRow = 6
                 )
             }
@@ -135,14 +115,12 @@ fun LandscapeMainScreen(
                     text = titleText,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = customTextColor.copy(alpha = 0.9f)
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
                     text = "%02d:%02d".format(timerState.timeLeft / 60, timerState.timeLeft % 60),
                     fontSize = 90.sp,
                     fontWeight = FontWeight.Black,
-                    color = customTextColor,
                     letterSpacing = 2.sp
                 )
             }

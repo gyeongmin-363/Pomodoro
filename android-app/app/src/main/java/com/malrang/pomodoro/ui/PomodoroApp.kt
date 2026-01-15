@@ -4,15 +4,17 @@ import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
-import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,17 +28,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
-import com.malrang.pomodoro.ui.screen.background.BackgroundScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
 import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
 import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
@@ -44,22 +46,22 @@ import com.malrang.pomodoro.ui.screen.stats.daliyDetail.DailyDetailScreen
 import com.malrang.pomodoro.ui.screen.stats.month.StatsScreen
 import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
-import com.malrang.pomodoro.viewmodel.BackgroundViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
+// [수정] BottomNavItem 정의: 아이콘 대신 이모지 사용, 순서 및 구성 변경
 sealed class BottomNavItem(
-    val screen: Screen,
-    val title: String,
-    @DrawableRes val icon: Int
+    val route: String,
+    val emoji: String,
+    val title: String
 ) {
-    object Background : BottomNavItem(Screen.Background, "배경 설정", R.drawable.ic_wallpaper)
-    object Settings : BottomNavItem(Screen.Settings, "프리셋", R.drawable.assignment_24px)
-    object Home : BottomNavItem(Screen.Main, "타이머", R.drawable.ic_play)
-    object Stats : BottomNavItem(Screen.Stats, "통계", R.drawable.ic_stats)
-    object Account : BottomNavItem(Screen.AccountSettings, "계정", R.drawable.ic_user_attributes_24px)
+    object Planner : BottomNavItem("planner", "📅", "플래너") // (1) 할 일 관리 (신규)
+    object Focus : BottomNavItem(Screen.Main.name, "⏱️", "집중")     // (2) 타이머 (기존 Main)
+    object Social : BottomNavItem("social", "👥", "소셜")   // (3) 같이 공부 (신규)
+    object Stats : BottomNavItem(Screen.Stats.name, "📊", "통계")     // (4) 통계
+    object Settings : BottomNavItem(Screen.Settings.name, "⚙️", "설정") // (5) 설정
 }
 
 @Composable
@@ -69,13 +71,12 @@ fun PomodoroApp(
     permissionViewModel: PermissionViewModel,
     statsViewModel: StatsViewModel,
     authViewModel: AuthViewModel,
-    backgroundViewModel: BackgroundViewModel
 ) {
     val context = LocalContext.current
     val authState by authViewModel.authState.collectAsState()
     val permissionUiState by permissionViewModel.uiState.collectAsState()
 
-    // 권한 목록 로딩 상태 확인 (깜빡임 방지)
+    // 권한 목록 로딩 상태 확인
     val isPermissionReady = permissionUiState.permissions.isNotEmpty()
     val allPermissionsGranted = isPermissionReady && permissionUiState.permissions.all { it.isGranted }
 
@@ -95,17 +96,16 @@ fun PomodoroApp(
     } else {
         val navController = rememberNavController()
 
-        // BottomNavItem 리스트 정의
+        // [수정] 네비게이션 아이템 리스트 재정의 (순서 반영)
         val navItems = listOf(
-            BottomNavItem.Background,
-            BottomNavItem.Settings,
-            BottomNavItem.Home,
+            BottomNavItem.Planner,
+            BottomNavItem.Focus,
+            BottomNavItem.Social,
             BottomNavItem.Stats,
-            BottomNavItem.Account
+            BottomNavItem.Settings
         )
 
-        // 더블 클릭 종료 로직을 수행하는 Composable 함수
-        // 각 화면(Composable) 내부에서 호출하여 NavHost의 뒤로가기보다 우선순위를 높임
+        // 더블 클릭 종료 로직
         @Composable
         fun DoubleBackToExit() {
             var backPressedTime by remember { mutableLongStateOf(0L) }
@@ -121,46 +121,67 @@ fun PomodoroApp(
             }
         }
 
-        val startDestination = if (!allPermissionsGranted) Screen.Permission.name else Screen.Main.name
+        val startDestination = if (!allPermissionsGranted) Screen.Permission.name else BottomNavItem.Focus.route
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
         val currentRoute = currentDestination?.route
 
-        val showBottomBar = currentRoute in navItems.map { it.screen.name }
-        val navBarContainerColor = Color.Transparent
-        val isMainScreen = currentRoute == Screen.Main.name
-        val scaffoldContainerColor = if (isMainScreen) Color.Transparent else MaterialTheme.colorScheme.background
+        val showBottomBar = currentRoute in navItems.map { it.route }
+        val isMainScreen = currentRoute == BottomNavItem.Focus.route
+
+        // 배경색 설정: 메인 화면일 때도 테마 배경색을 따르도록 하여 통일감 부여 (필요시 투명 처리)
+        val scaffoldContainerColor = MaterialTheme.colorScheme.background
 
         Scaffold(
             containerColor = scaffoldContainerColor,
             bottomBar = {
                 if (showBottomBar) {
-                    NavigationBar(
-                        containerColor = navBarContainerColor
-                    ) {
-                        navItems.forEach { item ->
-                            val selected = currentDestination?.hierarchy?.any { it.route == item.screen.name } == true
-                            NavigationBarItem(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(id = item.icon),
-                                        contentDescription = item.title
-                                    )
-                                },
-                                label = { Text(item.title) },
-                                selected = selected,
-                                onClick = {
-                                    navController.navigate(item.screen.name) {
-                                        // 탭 간 이동 시 스택이 무한히 쌓이는 것을 방지하기 위해 startDestination까지 pop 합니다.
-                                        // 단, 아래의 DoubleBackToExit 핸들러 덕분에 '뒤로가기' 시에는 이 스택 구조를 무시하고 종료 로직이 실행됩니다.
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
+                    // [수정] Notion Style 네비게이션 바 적용
+                    Column {
+                        // 상단 구분선 (아주 얇게)
+                        Divider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                            thickness = 0.5.dp
+                        )
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.background, // 오프화이트 배경
+                            tonalElevation = 0.dp // 그림자 제거 (Flat Design)
+                        ) {
+                            navItems.forEach { item ->
+                                val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+
+                                NavigationBarItem(
+                                    icon = {
+                                        // 아이콘 대신 이모지 텍스트 표시
+                                        Text(text = item.emoji, fontSize = 24.sp)
+                                    },
+                                    label = {
+                                        Text(
+                                            text = item.title,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    selected = selected,
+                                    onClick = {
+                                        navController.navigate(item.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            )
+                                    },
+                                    // [수정] 선택 시 배경(Indicator) 제거 및 색상 조정
+                                    colors = NavigationBarItemDefaults.colors(
+                                        indicatorColor = Color.Transparent, // 선택된 아이템 배경 투명
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -170,18 +191,36 @@ fun PomodoroApp(
                 navController = navController,
                 startDestination = startDestination
             ) {
-                composable(Screen.Main.name) {
-                    DoubleBackToExit() // [수정] 타이머 화면에서도 더블 클릭 종료 적용
+                // (1) Planner Screen (신규 플레이스홀더)
+                composable(BottomNavItem.Planner.route) {
+                    DoubleBackToExit()
+                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                        Text("📅 플래너 화면 준비 중", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+
+                // (2) Focus Screen (기존 Main)
+                composable(BottomNavItem.Focus.route) {
+                    DoubleBackToExit()
                     MainScreen(
                         timerViewModel = timerViewModel,
                         settingsViewModel = settingsViewModel,
-                        backgroundViewModel = backgroundViewModel,
                         onNavigateTo = { screen -> navController.navigate(screen.name) },
                         paddingValues = innerPadding
                     )
                 }
-                composable(Screen.Stats.name) {
-                    DoubleBackToExit() // [수정] 통계 화면에서 뒤로가기 시 타이머로 가지 않고 종료 로직 실행
+
+                // (3) Social Screen (신규 플레이스홀더)
+                composable(BottomNavItem.Social.route) {
+                    DoubleBackToExit()
+                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                        Text("👥 소셜 공부방 화면 준비 중", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+
+                // (4) Stats Screen (기존 Stats)
+                composable(BottomNavItem.Stats.route) {
+                    DoubleBackToExit()
                     Box(modifier = Modifier.padding(innerPadding)) {
                         StatsScreen(
                             statsViewModel = statsViewModel,
@@ -191,8 +230,10 @@ fun PomodoroApp(
                         )
                     }
                 }
-                composable(Screen.Settings.name) {
-                    DoubleBackToExit() // [수정] 프리셋 화면에서 뒤로가기 시 타이머로 가지 않고 종료 로직 실행
+
+                // (5) Settings Screen (기존 Settings)
+                composable(BottomNavItem.Settings.route) {
+                    DoubleBackToExit()
                     Box(modifier = Modifier.padding(innerPadding)) {
                         SettingsScreen(
                             settingsViewModel = settingsViewModel,
@@ -200,8 +241,8 @@ fun PomodoroApp(
                             onSave = {
                                 settingsViewModel.saveSettingsAndReset { newSettings ->
                                     timerViewModel.reset(newSettings)
-                                    navController.navigate(Screen.Main.name) {
-                                        popUpTo(Screen.Settings.name) { inclusive = true }
+                                    navController.navigate(BottomNavItem.Focus.route) {
+                                        popUpTo(BottomNavItem.Settings.route) { inclusive = true }
                                     }
                                 }
                             },
@@ -211,9 +252,10 @@ fun PomodoroApp(
                         )
                     }
                 }
+
+                // --- 기타 서브 화면들 ---
+
                 composable(Screen.Permission.name) {
-                    // 권한 화면은 최초 진입점이므로 별도 종료 로직이 필요할 수 있으나,
-                    // BottomNavItem이 아니므로 기본 동작(앱 종료)을 따르거나 필요 시 DoubleBackToExit() 추가 가능.
                     Box(modifier = Modifier.padding(innerPadding)) {
                         val permissionUiStateVal by permissionViewModel.uiState.collectAsState()
                         PermissionScreen(
@@ -221,15 +263,15 @@ fun PomodoroApp(
                             onPermissionResult = { permissionViewModel.onPermissionRequestResult(context) },
                             onSetPermissionAttempted = permissionViewModel::setPermissionAttemptedInSession,
                             onNavigateTo = {
-                                navController.navigate(Screen.Main.name) {
+                                navController.navigate(BottomNavItem.Focus.route) {
                                     popUpTo(Screen.Permission.name) { inclusive = true }
                                 }
                             }
                         )
                     }
                 }
+
                 composable(Screen.Whitelist.name) {
-                    // Whitelist는 BottomNavItem이 아님 -> 기본 뒤로가기(popBackStack) 동작 유지
                     Box(modifier = Modifier.padding(innerPadding)) {
                         WhitelistScreen(
                             settingsViewModel = settingsViewModel,
@@ -237,24 +279,21 @@ fun PomodoroApp(
                         )
                     }
                 }
+
                 composable(Screen.AccountSettings.name) {
-                    DoubleBackToExit() // [수정] 계정 화면에서 뒤로가기 시 타이머로 가지 않고 종료 로직 실행
+                    // 계정 설정은 이제 BottomNav가 아니므로 서브 화면으로 처리하거나, Settings 내부로 통합 필요
+                    // 현재는 별도 화면으로 유지
                     Box(modifier = Modifier.padding(innerPadding)) {
                         AccountSettingsScreen(
                             authViewModel = authViewModel,
                         )
                     }
                 }
-                composable(Screen.Background.name) {
-                    DoubleBackToExit() // [수정] 배경 화면에서 뒤로가기 시 타이머로 가지 않고 종료 로직 실행
-                    Box(modifier = Modifier.padding(innerPadding)) {
-                        BackgroundScreen(backgroundViewModel = backgroundViewModel)
-                    }
-                }
+
+
                 composable(
                     route = "${Screen.DailyDetail.name}/{dateString}"
                 ) { backStackEntry ->
-                    // 상세 화면은 BottomNavItem이 아님 -> 기본 뒤로가기 동작 유지
                     val dateString = backStackEntry.arguments?.getString("dateString")
                     DailyDetailScreen(
                         dateString = dateString,

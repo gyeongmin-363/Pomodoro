@@ -15,7 +15,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.ModernConfirmDialog
-import com.malrang.pomodoro.viewmodel.BackgroundViewModel // [추가]
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
@@ -28,7 +27,6 @@ data class MainScreenEvents(
 fun MainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
-    backgroundViewModel: BackgroundViewModel, // [추가] 파라미터 추가
     onNavigateTo: (Screen) -> Unit,
     paddingValues: PaddingValues
 ) {
@@ -80,7 +78,6 @@ fun MainScreen(
                 LandscapeMainScreen(
                     timerViewModel = timerViewModel,
                     settingsViewModel = settingsViewModel,
-                    backgroundViewModel = backgroundViewModel, // [추가] 전달
                     events = events,
                     onNavigateTo = onNavigateTo,
                     paddingValues = paddingValues
@@ -90,7 +87,6 @@ fun MainScreen(
                 PortraitMainScreen(
                     timerViewModel = timerViewModel,
                     settingsViewModel = settingsViewModel,
-                    backgroundViewModel = backgroundViewModel, // [추가] 전달
                     events = events,
                     onNavigateTo = onNavigateTo,
                     paddingValues = paddingValues

@@ -28,9 +28,6 @@ class AppViewModelFactory(
             modelClass.isAssignableFrom(PermissionViewModel::class.java) -> {
                 PermissionViewModel(pomodoroRepository)
             }
-            modelClass.isAssignableFrom(BackgroundViewModel::class.java) -> {
-                BackgroundViewModel(pomodoroRepository)
-            }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
                 SettingsViewModel(pomodoroRepository)
             }

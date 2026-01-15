@@ -34,7 +34,6 @@ import com.malrang.pomodoro.ui.theme.PomodoroTheme
 import com.malrang.pomodoro.viewmodel.AppViewModelFactory
 import com.malrang.pomodoro.viewmodel.AuthVMFactory
 import com.malrang.pomodoro.viewmodel.AuthViewModel
-import com.malrang.pomodoro.viewmodel.BackgroundViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
@@ -51,9 +50,6 @@ class MainActivity : ComponentActivity() {
         AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
     }
     private val permissionViewModel: PermissionViewModel by viewModels {
-        AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
-    }
-    private val backgroundViewModel: BackgroundViewModel by viewModels {
         AppViewModelFactory(application, pomodoroApp.pomodoroRepository)
     }
     private val settingsViewModel: SettingsViewModel by viewModels {
@@ -122,8 +118,6 @@ class MainActivity : ComponentActivity() {
                             permissionViewModel = permissionViewModel,
                             statsViewModel = statsViewModel,
                             authViewModel = authViewModel,
-                            backgroundViewModel = backgroundViewModel
-                            // [삭제] onSyncClick 제거됨 (백업/복원 버튼이 UI 내부에 있음)
                         )
                     }
                 }

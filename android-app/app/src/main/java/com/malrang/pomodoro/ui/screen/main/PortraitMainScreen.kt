@@ -1,19 +1,31 @@
 package com.malrang.pomodoro.ui.screen.main
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -22,33 +34,22 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.rememberAsyncImagePainter
 import com.malrang.pomodoro.R
 import com.malrang.pomodoro.dataclass.ui.Mode
 import com.malrang.pomodoro.dataclass.ui.Screen
-import com.malrang.pomodoro.viewmodel.BackgroundType
-import com.malrang.pomodoro.viewmodel.BackgroundViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
-import java.io.File
 
 @Composable
 fun PortraitMainScreen(
     timerViewModel: TimerViewModel,
     settingsViewModel: SettingsViewModel,
-    backgroundViewModel: BackgroundViewModel,
     events: MainScreenEvents,
     onNavigateTo: (Screen) -> Unit,
     paddingValues: PaddingValues
 ) {
     val timerState by timerViewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
-    val backgroundState by backgroundViewModel.uiState.collectAsState()
-
-    val customBgColor = Color(backgroundState.customBgColor)
-    val customTextColor = Color(backgroundState.customTextColor)
-    val isImageMode = backgroundState.backgroundType == BackgroundType.IMAGE
-    val imagePath = backgroundState.selectedImagePath
 
     val titleText = when (timerState.currentMode) {
         Mode.STUDY -> "집중 시간"
@@ -59,24 +60,7 @@ fun PortraitMainScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(customBgColor)
     ) {
-        // 배경 이미지 처리
-        if (isImageMode && imagePath != null) {
-            Image(
-                painter = rememberAsyncImagePainter(model = File(imagePath)),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            // 딤 처리
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f))
-            )
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -118,7 +102,6 @@ fun PortraitMainScreen(
                     text = titleText,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = customTextColor.copy(alpha = 0.9f)
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -128,7 +111,6 @@ fun PortraitMainScreen(
                     text = "%02d:%02d".format(timerState.timeLeft / 60, timerState.timeLeft % 60),
                     fontSize = 90.sp,
                     fontWeight = FontWeight.Black, // 가장 굵게
-                    color = customTextColor,
                     style = MaterialTheme.typography.displayLarge,
                     letterSpacing = 4.sp
                 )
@@ -150,7 +132,7 @@ fun PortraitMainScreen(
                 ) {
                     Text(
                         buildAnnotatedString {
-                            withStyle(style = SpanStyle(color = customTextColor, fontWeight = FontWeight.Medium)) { append("완료한 세션  ") }
+                            withStyle(style = SpanStyle(color = Color.Unspecified, fontWeight = FontWeight.Medium)) { append("완료한 세션  ") }
                             withStyle(
                                 style = SpanStyle(
                                     fontSize = 20.sp,
@@ -169,7 +151,7 @@ fun PortraitMainScreen(
                     currentMode = timerState.currentMode,
                     totalSessions = timerState.totalSessions,
                     longBreakInterval = settingsState.settings.longBreakInterval,
-                    borderColor = customTextColor,
+                    borderColor = Color.Gray,
                     itemsPerRow = 8
                 )
 
