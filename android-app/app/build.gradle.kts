@@ -78,13 +78,13 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-   implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
+   implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("androidx.datastore:datastore-preferences:1.1.7")
-    implementation("com.google.code.gson:gson:2.13.1")
+    implementation("androidx.datastore:datastore-preferences:1.2.0")
+    implementation("com.google.code.gson:gson:2.13.2")
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
 //    implementation("com.himanshoe:charty:2.1.0-beta03.4") 멀티라인차트가 안되어 취소
-    implementation ("io.github.ehsannarmani:compose-charts:0.1.9")
+    implementation ("io.github.ehsannarmani:compose-charts:0.2.0")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
     implementation(libs.firebase.crashlytics)
@@ -92,32 +92,33 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation(libs.androidx.animation.core)
 
-    implementation(platform("io.github.jan-tennert.supabase:bom:3.2.2"))
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.3.0"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
-    implementation("io.github.jan-tennert.supabase:serializer-jackson-android:3.2.2")
+    implementation("io.github.jan-tennert.supabase:serializer-jackson-android:3.3.0")
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
 
-    implementation("io.ktor:ktor-client-okhttp:3.2.2")
-    implementation("io.ktor:ktor-client-core:3.2.2")
-    implementation("io.ktor:ktor-client-android:3.2.2")
+    implementation("io.ktor:ktor-client-okhttp:3.3.3")
+    implementation("io.ktor:ktor-client-core:3.3.3")
+    implementation("io.ktor:ktor-client-android:3.3.3")
     implementation(libs.androidx.foundation)
 
-    implementation("androidx.navigation:navigation-compose:2.9.3")
+    implementation("androidx.navigation:navigation-compose:2.9.6")
 
-    implementation("com.google.android.gms:play-services-auth:21.4.0")
+    implementation("com.google.android.gms:play-services-auth:21.5.0")
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
-    implementation("com.airbnb.android:lottie-compose:6.6.6")
+    implementation("com.airbnb.android:lottie-compose:6.7.1")
 
-    val room_version = "2.7.2"
+    val room_version = "2.8.4"
     implementation("androidx.room:room-runtime:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
 
+    implementation("androidx.compose.material:material-icons-extended")
 
 
     testImplementation(libs.junit)

@@ -73,7 +73,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun PomodoroTheme(
     themeOption: ThemeOption = ThemeOption.SYSTEM,
-    // Neo-Brutalism 디자인을 유지하기 위해 dynamicColor 기본값은 false로 두는 것을 권장합니다.
+    // Notion Style의 일관된 브랜드 경험을 위해 dynamicColor는 false로 설정하는 것을 추천합니다.
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -96,20 +96,19 @@ fun PomodoroTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // 상태 표시줄 배경색 설정
+            // 상태 표시줄 배경색 설정 (배경색과 일치시켜 통일감 부여)
             window.statusBarColor = colorScheme.background.toArgb()
 
             // 상태 표시줄 아이콘 색상 설정
-            // Neo-Brutalism Light 모드 배경(연노랑)은 밝으므로 아이콘은 어두워야 함(!darkTheme)
-            // Dark 모드 배경(검정)은 어두우므로 아이콘은 밝아야 함(darkTheme 아닐 때 true)
+            // Notion Light 모드 배경(오프화이트)은 밝으므로 아이콘은 어두워야 함(!darkTheme)
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        // Typography는 기존에 정의된 것을 사용 (Type.kt가 있다면 주석 해제)
-         typography = Typography,
+        // Typography는 기존에 정의된 것을 사용 (JetBrains Mono 포함 여부 확인 필요)
+        typography = Typography,
         content = content
     )
 }
