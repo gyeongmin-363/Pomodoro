@@ -100,7 +100,6 @@ fun LandscapeMainScreen(
                     currentMode = timerState.currentMode,
                     totalSessions = timerState.totalSessions,
                     longBreakInterval = settingsState.settings.longBreakInterval,
-                    borderColor = Color.Gray,
                     itemsPerRow = 6
                 )
             }

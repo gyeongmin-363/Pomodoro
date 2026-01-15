@@ -20,7 +20,6 @@ fun CycleIndicator(
     currentMode: Mode,
     totalSessions: Int,
     longBreakInterval: Int,
-    borderColor: Color, // 호환성을 위해 유지하되, 내부적으로는 테마의 outline 색상 사용 권장
     itemsPerRow: Int
 ) {
     if (longBreakInterval <= 0) return
