@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.malrang.pomodoro.R
+import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.ModernConfirmDialog
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 
@@ -54,6 +55,7 @@ import com.malrang.pomodoro.viewmodel.AuthViewModel
 @Composable
 fun AccountSettingsScreen(
     authViewModel: AuthViewModel,
+    onNavigateTo: (Screen) -> Unit // 화이트리스트 화면 이동을 위해 추가
 ) {
     val authState by authViewModel.authState.collectAsState()
     val backupState by authViewModel.backupState.collectAsState()
@@ -76,12 +78,11 @@ fun AccountSettingsScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background, // NeoBackground
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    // 타이틀 배지 스타일
                     Box(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
@@ -89,7 +90,7 @@ fun AccountSettingsScreen(
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            "계정 설정",
+                            "계정 및 설정",
                             fontWeight = FontWeight.Black,
                             style = MaterialTheme.typography.titleMedium
                         )
@@ -119,12 +120,14 @@ fun AccountSettingsScreen(
                             )
                         },
                         onBackupClick = { authViewModel.backupData() },
-                        onRestoreClick = { authViewModel.restoreData() }
+                        onRestoreClick = { authViewModel.restoreData() },
+                        onWhitelistClick = { onNavigateTo(Screen.Whitelist) }
                     )
                 }
                 else -> {
                     UnauthenticatedAccountContent(
                         onLoginClick = { authViewModel.signInWithGoogle() },
+                        onWhitelistClick = { onNavigateTo(Screen.Whitelist) },
                         errorMsg = (state as? AuthViewModel.AuthState.Error)?.message
                     )
                 }
@@ -140,7 +143,8 @@ fun AuthenticatedAccountContent(
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
     onBackupClick: () -> Unit,
-    onRestoreClick: () -> Unit
+    onRestoreClick: () -> Unit,
+    onWhitelistClick: () -> Unit
 ) {
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
@@ -149,7 +153,6 @@ fun AuthenticatedAccountContent(
 
     val isLoading = backupState is AuthViewModel.BackupState.Loading
 
-    // --- 다이얼로그 (로직 유지) ---
     if (showLogoutConfirmDialog) {
         ModernConfirmDialog(
             title = "로그아웃",
@@ -206,17 +209,32 @@ fun AuthenticatedAccountContent(
         // 1. 프로필 카드
         NeoProfileCard(email = userEmail)
 
-        // 2. 백업 및 복원 섹션
+        // 2. 앱 설정 섹션 (화이트리스트)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            NeoSectionTitle("앱 설정")
+            Spacer(modifier = Modifier.height(12.dp))
+
+            NeoActionCard(
+                title = "차단 앱 관리",
+                description = "모든 Work에 공통 적용되는 허용 앱 목록",
+                icon = R.drawable.ic_skip, // 적절한 아이콘으로 변경 가능
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                isLoading = false,
+                onClick = onWhitelistClick
+            )
+        }
+
+        // 3. 백업 및 복원 섹션
         Column(modifier = Modifier.fillMaxWidth()) {
             NeoSectionTitle("클라우드 백업")
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 백업 버튼 (Primary Color)
             NeoActionCard(
                 title = "데이터 백업",
                 description = "현재 데이터를 서버에 저장",
                 icon = R.drawable.cloud_upload_24px,
-                containerColor = MaterialTheme.colorScheme.primaryContainer, // Blue-ish
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 isLoading = isLoading,
                 onClick = { showBackupConfirmDialog = true }
@@ -224,24 +242,22 @@ fun AuthenticatedAccountContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 복원 버튼 (Secondary Color - Pink)
             NeoActionCard(
                 title = "데이터 복원",
                 description = "서버 데이터 불러오기",
                 icon = R.drawable.cloud_download_24px,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer, // Pink-ish
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 isLoading = isLoading,
                 onClick = { showRestoreConfirmDialog = true }
             )
         }
 
-        // 3. 계정 작업 섹션
+        // 4. 계정 작업 섹션
         Column(modifier = Modifier.fillMaxWidth()) {
             NeoSectionTitle("계정 작업")
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 로그아웃 버튼
             NeoButton(
                 text = "로그아웃",
                 onClick = { showLogoutConfirmDialog = true },
@@ -252,7 +268,6 @@ fun AuthenticatedAccountContent(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 탈퇴 버튼 (Error Color)
             NeoButton(
                 text = "회원 탈퇴",
                 onClick = { showDeleteConfirmDialog = true },
@@ -267,107 +282,9 @@ fun AuthenticatedAccountContent(
 }
 
 @Composable
-fun NeoSectionTitle(text: String) {
-    Box(
-        modifier = Modifier
-            .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(4.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSecondary
-        )
-    }
-}
-
-// 재사용 가능한 Neo 스타일 액션 카드
-@Composable
-fun NeoActionCard(
-    title: String,
-    description: String,
-    @DrawableRes icon: Int,
-    containerColor: Color,
-    contentColor: Color,
-    isLoading: Boolean,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(12.dp)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(80.dp)
-            .clickable(enabled = !isLoading, onClick = onClick)
-    ) {
-        // Shadow
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .offset(x = 4.dp, y = 4.dp)
-                .background(MaterialTheme.colorScheme.outline, shape)
-        )
-
-        // Content
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(containerColor, shape)
-                .border(2.dp, MaterialTheme.colorScheme.outline, shape)
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Icon Box
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Color.White.copy(alpha = 0.3f), CircleShape)
-                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = icon),
-                        contentDescription = null,
-                        tint = contentColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Black,
-                        color = contentColor
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = contentColor.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = contentColor,
-                        strokeWidth = 3.dp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun UnauthenticatedAccountContent(
     onLoginClick: () -> Unit,
+    onWhitelistClick: () -> Unit,
     errorMsg: String?
 ) {
     Column(
@@ -377,11 +294,18 @@ fun UnauthenticatedAccountContent(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // 비로그인 상태에서도 화이트리스트 설정 가능하도록 버튼 배치
+        NeoButton(
+            text = "차단 앱(화이트리스트) 설정",
+            onClick = onWhitelistClick,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
         // 로그인 안내 카드
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Shadow
+        Box(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -389,7 +313,6 @@ fun UnauthenticatedAccountContent(
                     .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
             )
 
-            // Content
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -415,25 +338,22 @@ fun UnauthenticatedAccountContent(
                 )
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // 구글 로그인 버튼 (Neo Style)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                         .clickable(onClick = onLoginClick)
                 ) {
-                    // Button Shadow
                     Box(
                         modifier = Modifier
                             .matchParentSize()
                             .offset(x = 3.dp, y = 3.dp)
                             .background(MaterialTheme.colorScheme.outline, RoundedCornerShape(28.dp))
                     )
-                    // Button Surface
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.White, RoundedCornerShape(28.dp)) // 구글은 흰색 배경 유지
+                            .background(Color.White, RoundedCornerShape(28.dp))
                             .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(28.dp)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -479,12 +399,106 @@ fun UnauthenticatedAccountContent(
 }
 
 @Composable
+fun NeoSectionTitle(text: String) {
+    Box(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(4.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSecondary
+        )
+    }
+}
+
+@Composable
+fun NeoActionCard(
+    title: String,
+    description: String,
+    @DrawableRes icon: Int,
+    containerColor: Color,
+    contentColor: Color,
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(12.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .clickable(enabled = !isLoading, onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .offset(x = 4.dp, y = 4.dp)
+                .background(MaterialTheme.colorScheme.outline, shape)
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(containerColor, shape)
+                .border(2.dp, MaterialTheme.colorScheme.outline, shape)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White.copy(alpha = 0.3f), CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = icon),
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                        color = contentColor
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = contentColor,
+                        strokeWidth = 3.dp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun NeoProfileCard(email: String) {
     val initial = email.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     val shape = RoundedCornerShape(16.dp)
 
     Box(modifier = Modifier.fillMaxWidth()) {
-        // Shadow
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -492,7 +506,6 @@ fun NeoProfileCard(email: String) {
                 .background(MaterialTheme.colorScheme.outline, shape)
         )
 
-        // Card Content
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -501,11 +514,10 @@ fun NeoProfileCard(email: String) {
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .background(MaterialTheme.colorScheme.secondary, CircleShape) // Pink Avatar
+                    .background(MaterialTheme.colorScheme.secondary, CircleShape)
                     .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -516,28 +528,11 @@ fun NeoProfileCard(email: String) {
                     color = MaterialTheme.colorScheme.onSecondary
                 )
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = email,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
+            Text(text = email, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
-
-            Box(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = "Google 계정",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
-                )
+            Box(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                Text(text = "Google 계정", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -559,7 +554,6 @@ fun NeoButton(
             .height(50.dp)
             .clickable(enabled = enabled, onClick = onClick)
     ) {
-        // Shadow
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -567,7 +561,6 @@ fun NeoButton(
                 .background(MaterialTheme.colorScheme.outline, shape)
         )
 
-        // Content
         Box(
             modifier = Modifier
                 .fillMaxSize()

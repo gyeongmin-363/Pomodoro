@@ -219,6 +219,7 @@ fun PomodoroApp(
                     Box(modifier = Modifier.padding(innerPadding)) {
                         AccountSettingsScreen(
                             authViewModel = authViewModel,
+                            onNavigateTo = { screen -> navController.navigate(screen.name) }
                         )
                     }
                 }

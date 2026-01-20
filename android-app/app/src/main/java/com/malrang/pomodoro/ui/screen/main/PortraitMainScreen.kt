@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -75,14 +77,12 @@ fun PortraitMainScreen(
 
     val listState = rememberLazyListState()
 
-    // --- 상태 관리 ---
     var presetIdToSelect by remember { mutableStateOf<String?>(null) }
     var presetForOptions by remember { mutableStateOf<WorkPreset?>(null) }
     var presetToRename by remember { mutableStateOf<WorkPreset?>(null) }
     var newPresetName by remember { mutableStateOf("") }
     var presetToDelete by remember { mutableStateOf<WorkPreset?>(null) }
 
-    // 1. 단순 선택 시 확인 다이얼로그 (실행 중일 때)
     if (presetIdToSelect != null) {
         ModernConfirmDialog(
             onDismissRequest = { presetIdToSelect = null },
@@ -98,7 +98,6 @@ fun PortraitMainScreen(
         )
     }
 
-    // 2. 롱클릭 시 나타나는 옵션 다이얼로그 (상세 정보 + 버튼들)
     if (presetForOptions != null) {
         val preset = presetForOptions!!
         ModernConfirmDialog(
@@ -108,7 +107,6 @@ fun PortraitMainScreen(
             onConfirm = { presetForOptions = null },
             content = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // 상세 정보 요약 박스
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -127,8 +125,6 @@ fun PortraitMainScreen(
                             })
                         }
                     }
-
-                    // 관리 버튼들
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -157,7 +153,6 @@ fun PortraitMainScreen(
         )
     }
 
-    // 3. 이름 수정 다이얼로그
     if (presetToRename != null) {
         ModernConfirmDialog(
             onDismissRequest = { presetToRename = null },
@@ -179,7 +174,6 @@ fun PortraitMainScreen(
         )
     }
 
-    // 4. 삭제 확인 다이얼로그
     if (presetToDelete != null) {
         ModernConfirmDialog(
             onDismissRequest = { presetToDelete = null },
@@ -208,13 +202,13 @@ fun PortraitMainScreen(
             LazyRow(
                 state = listState,
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 24.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // 1. 기존 프리셋 목록
                 items(settingsState.workPresets) { preset ->
                     val isSelected = preset.id == settingsState.currentWorkId
-
                     WorkPresetTab(
                         name = preset.name,
                         studyTime = preset.settings.studyTime,
@@ -231,16 +225,18 @@ fun PortraitMainScreen(
                                 }
                             }
                         },
-                        onLongClick = {
-                            presetForOptions = preset
-                        }
+                        onLongClick = { presetForOptions = preset }
                     )
+                }
+
+                // 2. [추가] Work 추가 버튼
+                item {
+                    AddWorkTab(onClick = { settingsViewModel.addWorkPreset() })
                 }
             }
 
             Spacer(Modifier.weight(1f))
 
-            // 2. 메인 타이머 영역
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -259,7 +255,6 @@ fun PortraitMainScreen(
 
             Spacer(Modifier.weight(1f))
 
-            // 3. 하단 컨트롤 영역
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -336,6 +331,23 @@ fun PortraitMainScreen(
 // --- 보조 컴포넌트들 ---
 
 @Composable
+private fun AddWorkTab(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(bottom = 4.dp, end = 4.dp)
+    ) {
+        Box(modifier = Modifier.size(width = 60.dp, height = 50.dp).offset(x = 4.dp, y = 4.dp).background(MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)))
+        Box(
+            modifier = Modifier.size(width = 60.dp, height = 50.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "추가", tint = MaterialTheme.colorScheme.onSurface)
+        }
+    }
+}
+
+@Composable
 private fun InfoRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(text = label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -346,11 +358,7 @@ private fun InfoRow(label: String, value: String) {
 @Composable
 private fun OptionButton(text: String, modifier: Modifier = Modifier, isError: Boolean = false, onClick: () -> Unit) {
     Box(
-        modifier = modifier
-            .background(if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-            .border(2.dp, if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+        modifier = modifier.background(if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp)).border(2.dp, if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(text = text, fontWeight = FontWeight.Black, color = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface)
@@ -359,31 +367,16 @@ private fun OptionButton(text: String, modifier: Modifier = Modifier, isError: B
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun WorkPresetTab(
-    name: String,
-    studyTime: Int,
-    shortBreakTime: Int,
-    longBreakTime: Int,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
+private fun WorkPresetTab(name: String, studyTime: Int, shortBreakTime: Int, longBreakTime: Int, isSelected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
     val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     val shadowColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surface
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface
 
-    Box(
-        modifier = Modifier
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(bottom = 4.dp, end = 4.dp)
-    ) {
+    Box(modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(bottom = 4.dp, end = 4.dp)) {
         Box(modifier = Modifier.matchParentSize().offset(x = 4.dp, y = 4.dp).background(shadowColor, RoundedCornerShape(12.dp)))
         Box(
-            modifier = Modifier
-                .background(backgroundColor, RoundedCornerShape(12.dp))
-                .border(width = if (isSelected) 3.dp else 2.dp, color = borderColor, shape = RoundedCornerShape(12.dp))
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.background(backgroundColor, RoundedCornerShape(12.dp)).border(width = if (isSelected) 3.dp else 2.dp, color = borderColor, shape = RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(text = name, fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold, color = contentColor)
