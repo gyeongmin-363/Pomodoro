@@ -246,6 +246,12 @@ fun PomodoroApp(
                                     }
                                 }
                             },
+                            // 추가: 설정 수정 취소 시 집중(Focus) 화면으로 이동
+                            onCancel = {
+                                navController.navigate(BottomNavItem.Focus.route) {
+                                    popUpTo(BottomNavItem.Settings.route) { inclusive = true }
+                                }
+                            },
                             onPresetSelected = { newSettings ->
                                 timerViewModel.reset(newSettings)
                             }

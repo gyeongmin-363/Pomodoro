@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,7 +67,8 @@ import android.provider.Settings as AndroidSettings
 fun SettingsDetailScreen(
     settingsViewModel: SettingsViewModel,
     onNavigateTo: (Screen) -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    onCancel: () -> Unit // 추가: 취소/뒤로가기 시 집중 화면 이동을 위한 콜백
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
     val settings = uiState.draftSettings
@@ -93,12 +93,15 @@ fun SettingsDetailScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { settingsViewModel.stopEditingWorkPreset() }) {
+                    IconButton(onClick = {
+                        settingsViewModel.stopEditingWorkPreset()
+                        onCancel() // 뒤로가기 클릭 시 집중 화면으로 이동
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background, // 배경색과 통일
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onSecondary,
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
@@ -106,8 +109,8 @@ fun SettingsDetailScreen(
         },
         bottomBar = {
             Surface(
-                shadowElevation = 0.dp, // 플랫하게
-                border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline), // 상단 테두리 느낌
+                shadowElevation = 0.dp,
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
@@ -116,9 +119,11 @@ fun SettingsDetailScreen(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // 취소 버튼 (Outlined 스타일 + Bold)
                     OutlinedButton(
-                        onClick = { settingsViewModel.stopEditingWorkPreset() },
+                        onClick = {
+                            settingsViewModel.stopEditingWorkPreset()
+                            onCancel() // 취소 버튼 클릭 시 집중 화면으로 이동
+                        },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(8.dp),
                         border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
@@ -129,7 +134,6 @@ fun SettingsDetailScreen(
                         Text("취소", fontWeight = FontWeight.Bold)
                     }
 
-                    // 저장 버튼 (Solid 스타일 + Hard Shadow 느낌을 위해 border 추가)
                     Button(
                         onClick = { showSaveDialog = true },
                         modifier = Modifier.weight(1f).height(50.dp),
@@ -140,7 +144,7 @@ fun SettingsDetailScreen(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 4.dp, // 기본 그림자 대신
+                            defaultElevation = 4.dp,
                             pressedElevation = 0.dp
                         )
                     ) {
@@ -155,7 +159,7 @@ fun SettingsDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background) // NeoBackground
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
@@ -228,7 +232,6 @@ fun SettingsDetailScreen(
                     ) {
                         blockOptions.forEach { (mode, text) ->
                             val isSelected = settings.blockMode == mode
-                            // 선택된 카드는 Primary + Border, 아니면 Surface + Border
                             val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
                             val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                             val borderWidth = if (isSelected) 3.dp else 2.dp
@@ -266,7 +269,6 @@ fun SettingsDetailScreen(
                     }
                     Spacer(Modifier.height(12.dp))
 
-                    // 설명 텍스트도 박스 안에 넣어서 강조
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

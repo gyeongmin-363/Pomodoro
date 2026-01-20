@@ -13,19 +13,23 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
     onNavigateTo: (Screen) -> Unit,
     onSave: () -> Unit,
+    onCancel: () -> Unit, // 추가
     onPresetSelected: (Settings) -> Unit
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
 
+    // 시스템 뒤로가기 버튼 클릭 시에도 집중 화면으로 이동하도록 수정
     BackHandler(enabled = uiState.editingWorkPreset != null) {
         settingsViewModel.stopEditingWorkPreset()
+        onCancel()
     }
 
     if (uiState.editingWorkPreset != null) {
         SettingsDetailScreen(
             settingsViewModel = settingsViewModel,
             onNavigateTo = onNavigateTo,
-            onSave = onSave
+            onSave = onSave,
+            onCancel = onCancel // 전달
         )
     } else {
         WorkListScreen(
