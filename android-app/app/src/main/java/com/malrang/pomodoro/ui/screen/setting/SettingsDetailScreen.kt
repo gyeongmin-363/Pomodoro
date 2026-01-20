@@ -1,50 +1,22 @@
 package com.malrang.pomodoro.ui.screen.setting
 
 import android.content.Intent
+import android.provider.Settings as AndroidSettings
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,8 +31,6 @@ import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.service.AccessibilityUtils
 import com.malrang.pomodoro.ui.ModernConfirmDialog
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
-import android.provider.Settings as AndroidSettings
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,26 +38,44 @@ fun SettingsDetailScreen(
     settingsViewModel: SettingsViewModel,
     onNavigateTo: (Screen) -> Unit,
     onSave: () -> Unit,
-    onCancel: () -> Unit // 추가: 취소/뒤로가기 시 집중 화면 이동을 위한 콜백
+    onCancel: () -> Unit
 ) {
     val uiState by settingsViewModel.uiState.collectAsState()
     val settings = uiState.draftSettings
-    val title = uiState.editingWorkPreset?.name ?: "설정"
+    val editingPreset = uiState.editingWorkPreset
     val context = LocalContext.current
     var showSaveDialog by remember { mutableStateOf(false) }
 
+    // 화면 진입 시 초기화
     LaunchedEffect(Unit) {
-        settingsViewModel.initializeDraftSettings()
+        if (editingPreset != null) {
+            settingsViewModel.initializeDraftSettings()
+        }
     }
 
-    if (settings == null) return
+    // 시스템 뒤로가기 버튼 처리
+    BackHandler {
+        settingsViewModel.stopEditingWorkPreset()
+        onCancel()
+    }
+
+    // 수정할 데이터가 없으면 즉시 복귀
+    if (editingPreset == null || settings == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        LaunchedEffect(editingPreset, settings) {
+            if (editingPreset == null) onCancel()
+        }
+        return
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "$title 상세 설정",
+                        "${editingPreset.name} 상세 설정",
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.background(MaterialTheme.colorScheme.secondary).padding(4.dp)
                     )
@@ -95,7 +83,7 @@ fun SettingsDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = {
                         settingsViewModel.stopEditingWorkPreset()
-                        onCancel() // 뒤로가기 클릭 시 집중 화면으로 이동
+                        onCancel()
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로가기")
                     }
@@ -109,20 +97,17 @@ fun SettingsDetailScreen(
         },
         bottomBar = {
             Surface(
-                shadowElevation = 0.dp,
                 border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
                         onClick = {
                             settingsViewModel.stopEditingWorkPreset()
-                            onCancel() // 취소 버튼 클릭 시 집중 화면으로 이동
+                            onCancel()
                         },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(8.dp),
@@ -142,10 +127,6 @@ fun SettingsDetailScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 4.dp,
-                            pressedElevation = 0.dp
                         )
                     ) {
                         Icon(painterResource(R.drawable.ic_save), contentDescription = null, modifier = Modifier.size(16.dp))
@@ -198,100 +179,49 @@ fun SettingsDetailScreen(
             }
 
             SettingSection(title = "알림 및 피드백") {
-                SwitchItem(
-                    label = "알림음 사용",
-                    checked = settings.soundEnabled,
-                    onCheckedChange = { settingsViewModel.toggleSound(it) }
-                )
+                SwitchItem(label = "알림음 사용", checked = settings.soundEnabled, onCheckedChange = { settingsViewModel.toggleSound(it) })
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 2.dp, color = MaterialTheme.colorScheme.outline)
-                SwitchItem(
-                    label = "진동 사용",
-                    checked = settings.vibrationEnabled,
-                    onCheckedChange = { settingsViewModel.toggleVibration(it) }
-                )
+                SwitchItem(label = "진동 사용", checked = settings.vibrationEnabled, onCheckedChange = { settingsViewModel.toggleVibration(it) })
                 HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 2.dp, color = MaterialTheme.colorScheme.outline)
-                SwitchItem(
-                    label = "자동 시작",
-                    description = "휴식/공부 종료 후 다음 타이머 자동 시작",
-                    checked = settings.autoStart,
-                    onCheckedChange = { settingsViewModel.toggleAutoStart(it) }
-                )
+                SwitchItem(label = "자동 시작", description = "휴식/공부 종료 후 다음 타이머 자동 시작", checked = settings.autoStart, onCheckedChange = { settingsViewModel.toggleAutoStart(it) })
             }
 
             SettingSection(title = "차단 모드") {
                 Column(Modifier.padding(16.dp)) {
-                    val blockOptions = listOf(
-                        BlockMode.NONE to "없음",
-                        BlockMode.PARTIAL to "부분",
-                        BlockMode.FULL to "완전"
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    val blockOptions = listOf(BlockMode.NONE to "없음", BlockMode.PARTIAL to "부분", BlockMode.FULL to "완전")
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         blockOptions.forEach { (mode, text) ->
                             val isSelected = settings.blockMode == mode
-                            val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                            val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                            val borderWidth = if (isSelected) 3.dp else 2.dp
-
                             Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(60.dp)
-                                    .clickable {
-                                        if (mode != BlockMode.NONE && !AccessibilityUtils.isAccessibilityServiceEnabled(context)) {
-                                            Toast.makeText(context, "[설치된 앱]->[포커스루트] 접근성 권한 허용이 필요합니다.", Toast.LENGTH_LONG).show()
-                                            val intent = Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)
-                                            context.startActivity(intent)
-                                        } else {
-                                            settingsViewModel.updateBlockMode(mode)
-                                        }
-                                    },
-                                colors = CardDefaults.cardColors(containerColor = containerColor),
+                                modifier = Modifier.weight(1f).height(60.dp).clickable {
+                                    if (mode != BlockMode.NONE && !AccessibilityUtils.isAccessibilityServiceEnabled(context)) {
+                                        Toast.makeText(context, "[설치된 앱]->[포커스루트] 접근성 권한 허용이 필요합니다.", Toast.LENGTH_LONG).show()
+                                        context.startActivity(Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS))
+                                    } else { settingsViewModel.updateBlockMode(mode) }
+                                },
+                                colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface),
                                 shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(borderWidth, MaterialTheme.colorScheme.outline)
+                                border = BorderStroke(if (isSelected) 3.dp else 2.dp, MaterialTheme.colorScheme.outline)
                             ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = text,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = contentColor
-                                    )
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
                                 }
                             }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                            .padding(8.dp)
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp)).padding(8.dp)) {
                         Text(
                             text = when (settings.blockMode) {
                                 BlockMode.NONE -> "앱 사용을 제한하지 않습니다."
                                 BlockMode.PARTIAL -> "화이트리스트에 있는 앱만 허용합니다."
                                 BlockMode.FULL -> "기본 전화/문자를 제외한 모든 앱을 차단합니다."
                             },
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
+                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                         )
                     }
                 }
             }
-
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -301,10 +231,7 @@ fun SettingsDetailScreen(
             onDismissRequest = { showSaveDialog = false },
             title = "설정 저장",
             confirmText = "저장하기",
-            onConfirm = {
-                onSave()
-                showSaveDialog = false
-            },
+            onConfirm = { onSave(); showSaveDialog = false },
             text = "설정을 저장하면 현재 진행 중인 타이머가 초기화됩니다.\n계속 진행하시겠습니까?"
         )
     }

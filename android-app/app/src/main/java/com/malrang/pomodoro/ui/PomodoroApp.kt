@@ -1,10 +1,8 @@
 package com.malrang.pomodoro.ui
 
-import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,27 +39,28 @@ import com.malrang.pomodoro.dataclass.ui.Screen
 import com.malrang.pomodoro.ui.screen.account.AccountSettingsScreen
 import com.malrang.pomodoro.ui.screen.main.MainScreen
 import com.malrang.pomodoro.ui.screen.permission.PermissionScreen
-import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
-import com.malrang.pomodoro.ui.screen.stats.daliyDetail.DailyDetailScreen
+import com.malrang.pomodoro.ui.screen.setting.SettingsDetailScreen
 import com.malrang.pomodoro.ui.screen.stats.month.StatsScreen
 import com.malrang.pomodoro.ui.screen.whitelist.WhitelistScreen
+import com.malrang.pomodoro.ui.screen.stats.daliyDetail.DailyDetailScreen
+import com.malrang.pomodoro.ui.screen.setting.SettingsScreen
 import com.malrang.pomodoro.viewmodel.AuthViewModel
 import com.malrang.pomodoro.viewmodel.PermissionViewModel
 import com.malrang.pomodoro.viewmodel.SettingsViewModel
 import com.malrang.pomodoro.viewmodel.StatsViewModel
 import com.malrang.pomodoro.viewmodel.TimerViewModel
 
-// [수정] BottomNavItem 정의: 아이콘 대신 이모지 사용, 순서 및 구성 변경
 sealed class BottomNavItem(
     val route: String,
     val emoji: String,
     val title: String
 ) {
-    object Planner : BottomNavItem("planner", "📅", "플래너") // (1) 할 일 관리 (신규)
-    object Focus : BottomNavItem(Screen.Main.name, "⏱️", "집중")     // (2) 타이머 (기존 Main)
-    object Social : BottomNavItem("social", "👥", "소셜")   // (3) 같이 공부 (신규)
-    object Stats : BottomNavItem(Screen.Stats.name, "📊", "통계")     // (4) 통계
-    object Settings : BottomNavItem(Screen.Settings.name, "⚙️", "설정") // (5) 설정
+    object Planner : BottomNavItem("planner", "📅", "플래너")
+    object Focus : BottomNavItem(Screen.Main.name, "⏱️", "집중")
+    object Social : BottomNavItem("social", "👥", "소셜")
+    object Stats : BottomNavItem(Screen.Stats.name, "📊", "통계")
+    // [수정] Settings 탭의 route를 AccountSettings로 변경
+    object Settings : BottomNavItem(Screen.AccountSettings.name, "⚙️", "계정")
 }
 
 @Composable
@@ -76,7 +75,6 @@ fun PomodoroApp(
     val authState by authViewModel.authState.collectAsState()
     val permissionUiState by permissionViewModel.uiState.collectAsState()
 
-    // 권한 목록 로딩 상태 확인
     val isPermissionReady = permissionUiState.permissions.isNotEmpty()
     val allPermissionsGranted = isPermissionReady && permissionUiState.permissions.all { it.isGranted }
 
@@ -96,7 +94,6 @@ fun PomodoroApp(
     } else {
         val navController = rememberNavController()
 
-        // [수정] 네비게이션 아이템 리스트 재정의 (순서 반영)
         val navItems = listOf(
             BottomNavItem.Planner,
             BottomNavItem.Focus,
@@ -105,7 +102,6 @@ fun PomodoroApp(
             BottomNavItem.Settings
         )
 
-        // 더블 클릭 종료 로직
         @Composable
         fun DoubleBackToExit() {
             var backPressedTime by remember { mutableLongStateOf(0L) }
@@ -127,34 +123,25 @@ fun PomodoroApp(
         val currentRoute = currentDestination?.route
 
         val showBottomBar = currentRoute in navItems.map { it.route }
-        val isMainScreen = currentRoute == BottomNavItem.Focus.route
-
-        // 배경색 설정: 메인 화면일 때도 테마 배경색을 따르도록 하여 통일감 부여 (필요시 투명 처리)
-        val scaffoldContainerColor = MaterialTheme.colorScheme.background
 
         Scaffold(
-            containerColor = scaffoldContainerColor,
+            containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 if (showBottomBar) {
-                    // [수정] Notion Style 네비게이션 바 적용
                     Column {
-                        // 상단 구분선 (아주 얇게)
                         Divider(
                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                             thickness = 0.5.dp
                         )
                         NavigationBar(
-                            containerColor = MaterialTheme.colorScheme.background, // 오프화이트 배경
-                            tonalElevation = 0.dp // 그림자 제거 (Flat Design)
+                            containerColor = MaterialTheme.colorScheme.background,
+                            tonalElevation = 0.dp
                         ) {
                             navItems.forEach { item ->
                                 val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
 
                                 NavigationBarItem(
-                                    icon = {
-                                        // 아이콘 대신 이모지 텍스트 표시
-                                        Text(text = item.emoji, fontSize = 24.sp)
-                                    },
+                                    icon = { Text(text = item.emoji, fontSize = 24.sp) },
                                     label = {
                                         Text(
                                             text = item.title,
@@ -172,9 +159,8 @@ fun PomodoroApp(
                                             restoreState = true
                                         }
                                     },
-                                    // [수정] 선택 시 배경(Indicator) 제거 및 색상 조정
                                     colors = NavigationBarItemDefaults.colors(
-                                        indicatorColor = Color.Transparent, // 선택된 아이템 배경 투명
+                                        indicatorColor = Color.Transparent,
                                         selectedIconColor = MaterialTheme.colorScheme.primary,
                                         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                         selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -191,7 +177,6 @@ fun PomodoroApp(
                 navController = navController,
                 startDestination = startDestination
             ) {
-                // (1) Planner Screen (신규 플레이스홀더)
                 composable(BottomNavItem.Planner.route) {
                     DoubleBackToExit()
                     Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -199,7 +184,6 @@ fun PomodoroApp(
                     }
                 }
 
-                // (2) Focus Screen (기존 Main)
                 composable(BottomNavItem.Focus.route) {
                     DoubleBackToExit()
                     MainScreen(
@@ -210,7 +194,6 @@ fun PomodoroApp(
                     )
                 }
 
-                // (3) Social Screen (신규 플레이스홀더)
                 composable(BottomNavItem.Social.route) {
                     DoubleBackToExit()
                     Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -218,7 +201,6 @@ fun PomodoroApp(
                     }
                 }
 
-                // (4) Stats Screen (기존 Stats)
                 composable(BottomNavItem.Stats.route) {
                     DoubleBackToExit()
                     Box(modifier = Modifier.padding(innerPadding)) {
@@ -231,35 +213,39 @@ fun PomodoroApp(
                     }
                 }
 
-                // (5) Settings Screen (기존 Settings)
+                // [수정] 5번째 탭을 AccountSettingsScreen으로 연결
                 composable(BottomNavItem.Settings.route) {
                     DoubleBackToExit()
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        SettingsScreen(
+                        AccountSettingsScreen(
+                            authViewModel = authViewModel,
+                        )
+                    }
+                }
+
+
+                // [기존 SettingsScreen 로직 유지] 상세 설정 이동 등을 위해 필요할 수 있음
+                composable(Screen.Settings.name) {
+                    Box(modifier = Modifier.padding(innerPadding)) {
+                        SettingsDetailScreen(
                             settingsViewModel = settingsViewModel,
                             onNavigateTo = { screen -> navController.navigate(screen.name) },
                             onSave = {
                                 settingsViewModel.saveSettingsAndReset { newSettings ->
                                     timerViewModel.reset(newSettings)
                                     navController.navigate(BottomNavItem.Focus.route) {
-                                        popUpTo(BottomNavItem.Settings.route) { inclusive = true }
+                                        popUpTo(Screen.Settings.name) { inclusive = true }
                                     }
                                 }
                             },
-                            // 추가: 설정 수정 취소 시 집중(Focus) 화면으로 이동
                             onCancel = {
                                 navController.navigate(BottomNavItem.Focus.route) {
-                                    popUpTo(BottomNavItem.Settings.route) { inclusive = true }
+                                    popUpTo(Screen.Settings.name) { inclusive = true }
                                 }
-                            },
-                            onPresetSelected = { newSettings ->
-                                timerViewModel.reset(newSettings)
                             }
                         )
                     }
                 }
-
-                // --- 기타 서브 화면들 ---
 
                 composable(Screen.Permission.name) {
                     Box(modifier = Modifier.padding(innerPadding)) {
@@ -286,20 +272,7 @@ fun PomodoroApp(
                     }
                 }
 
-                composable(Screen.AccountSettings.name) {
-                    // 계정 설정은 이제 BottomNav가 아니므로 서브 화면으로 처리하거나, Settings 내부로 통합 필요
-                    // 현재는 별도 화면으로 유지
-                    Box(modifier = Modifier.padding(innerPadding)) {
-                        AccountSettingsScreen(
-                            authViewModel = authViewModel,
-                        )
-                    }
-                }
-
-
-                composable(
-                    route = "${Screen.DailyDetail.name}/{dateString}"
-                ) { backStackEntry ->
+                composable("${Screen.DailyDetail.name}/{dateString}") { backStackEntry ->
                     val dateString = backStackEntry.arguments?.getString("dateString")
                     DailyDetailScreen(
                         dateString = dateString,
